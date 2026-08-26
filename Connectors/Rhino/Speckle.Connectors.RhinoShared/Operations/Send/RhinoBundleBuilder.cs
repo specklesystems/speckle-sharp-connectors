@@ -595,12 +595,15 @@ public class RhinoBundleBuilder(
         {
           int ord = def.NextMemberOrdinal();
           bool hasSolid = mg.Solid is not null;
+          var gs = new List<BundleGeometry>();
           if (mg.Solid is { } solidBytes)
           {
-            def.AddMemberRawGeometry(member, solidBytes, RawEncodingFormats.RHINO_3DM, ord);
+            // A member's solid rides DEFINES next to its display meshes AND takes the member's geometry-plane
+            // appearance — the pipeline send did the same (a standalone object's SOLID does not).
+            gs.Add(def.AddMemberRawGeometry(member, solidBytes, RawEncodingFormats.RHINO_3DM, ord));
           }
-          var gs = AddMemberDisplay(def, member, mg.Display, ord, out string? memberSkip).ToList();
-          geometriesByObjectId[memberId] = gs; // display meshes only, as for standalone objects
+          gs.AddRange(AddMemberDisplay(def, member, mg.Display, ord, out string? memberSkip));
+          geometriesByObjectId[memberId] = gs;
           // Same rule as a standalone object: display fragments present, none encodable, no solid → nothing
           // renderable made the bundle, so the report card must not stand on the Collect-phase SUCCESS.
           if (
