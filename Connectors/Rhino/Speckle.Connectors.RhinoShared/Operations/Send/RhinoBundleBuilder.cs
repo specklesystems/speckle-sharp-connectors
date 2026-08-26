@@ -551,7 +551,7 @@ public class RhinoBundleBuilder(
     // Named camera viewpoints (collected on the UI thread in phase 1) → envelope.camera_views.parquet.
     foreach (var cameraView in model.CameraViews)
     {
-      bundle.CameraView(cameraView);
+      bundle.AddCameraView(cameraView);
     }
     // Default scene view = the Rhino layer tree (IN_COLLECTION): BundleBuilder declares it when none is set.
   }

@@ -238,11 +238,10 @@ public sealed class SendOperation<T>(
     uiProgress.Report(new("Uploading...", null));
     SendResult sent = await threadContext.RunOnWorkerAsync(() =>
       bundleSender!.SendAsync(
-        new Uri(sendInfo.Account.serverInfo.url),
+        sendInfo.Account,
         sendInfo.ProjectId,
         sendInfo.ModelId,
         bundle,
-        sendInfo.Account.token,
         new SendOptions(FileName: fileName, FileSizeBytes: fileSizeBytes),
         cancellationToken
       )
