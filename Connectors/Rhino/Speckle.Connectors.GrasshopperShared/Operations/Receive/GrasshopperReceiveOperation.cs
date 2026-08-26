@@ -58,6 +58,7 @@ public class GrasshopperReceiveOperation
 
     double? previousPercentage = null;
     _progressDisplayManager.Begin();
+#pragma warning disable CS0618 // Type or member is obsolete
     Base commitObject = await _operations
       .Receive2(
         new Uri(account.serverInfo.url),
@@ -93,6 +94,7 @@ public class GrasshopperReceiveOperation
         }),
         cancellationToken: cancellationToken
       )
+#pragma warning restore CS0618 // Type or member is obsolete
       .ConfigureAwait(false);
 
     await apiClient
