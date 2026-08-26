@@ -9,6 +9,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
@@ -121,9 +122,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // ObjectByGeometry only covers DISPLAY edges, so it can't reach a block-definition member (a member has no
     // render edge by design). The graph-native join (DEFINES_MEMBER 25 / PLACES 24) inverts that missing direction
     // on the object plane — member↔geometry joins on (definition, member ordinal), immune to the content-hash-dedup
-    // collision a geometry-K-keyed inversion cannot distinguish. Bundles predating the vocab (no rel 25) fall back
-    // to the @speckle.* member stamps [ENG-9110].
-    var memberIndex = DefinitionMemberIndexes.Build(rels, bundle.Properties);
+    // collision a geometry-K-keyed inversion cannot distinguish [ENG-9110].
+    var memberIndex = DefinitionMemberIndexes.Build(rels);
     session.SetStat("memberStamps", memberIndex.ObjectByGeometry.Count + memberIndex.ObjectByInstance.Count);
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
@@ -195,10 +195,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
 
           var name = ObjectName(bundle, objK);
-          bundle.Properties.TryGetValue(objK, out var objProps);
+          var objProps = bundle.ObjectProperties(objK);
           // Type Parameters / System Type Parameters, deduped once per type on send (ENG-9136) — resolved here
           // alongside the instance-scoped properties above.
-          bundle.TypePropertiesByObject.TryGetValue(objK, out var objTypeProps);
+          var objTypeProps = bundle.TypeProperties(objK);
           var ids = new List<Guid>();
           foreach (var (geomK, geom) in geometries)
           {
@@ -551,8 +551,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, int> colorByObject,
     string appId,
     string? name,
-    Dictionary<string, object?>? properties,
-    Dictionary<string, object?>? typeProperties
+    PropertyView properties,
+    PropertyView typeProperties
   )
   {
     var atts = new ObjectAttributes { LayerIndex = layerIndex };
@@ -699,8 +699,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       // the placement's own properties → user strings, same as an atomic object [ENG-9111]. Type-scoped first,
       // instance-scoped second, so a colliding key is won by the instance value [ENG-9136].
-      bundle.Properties.TryGetValue(objK, out var instProps);
-      bundle.TypePropertiesByObject.TryGetValue(objK, out var instTypeProps);
+      var instProps = bundle.ObjectProperties(objK);
+      var instTypeProps = bundle.TypeProperties(objK);
       RhinoArtefactUserStrings.Apply(atts, instTypeProps);
       RhinoArtefactUserStrings.Apply(atts, instProps);
       // Prefer a material painted directly on THIS placement (OBJECT_HAS_MATERIAL re-keyed onto its INSTANCE node,
@@ -1080,8 +1080,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     // Type-scoped first, instance-scoped second, so a colliding key is won by the instance value — the same
     // precedence BakeObject applies to a top-level object [ENG-9136].
-    bundle.Properties.TryGetValue(memberObjK, out var props);
-    bundle.TypePropertiesByObject.TryGetValue(memberObjK, out var typeProps);
+    var props = bundle.ObjectProperties(memberObjK);
+    var typeProps = bundle.TypeProperties(memberObjK);
     RhinoArtefactUserStrings.Apply(atts, typeProps);
     RhinoArtefactUserStrings.Apply(atts, props);
     if (MemberColor(bundle, memberObjK, geometryK) is int argb)
@@ -1451,35 +1451,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   private static string ObjectUnits(ArtefactBundle bundle, int objK) =>
-    bundle.Properties.TryGetValue(objK, out var props)
-    && props.TryGetValue("units", out var v)
-    && v is string s
-    && s.Length > 0
-      ? s
-      : bundle.Units;
+    bundle.ObjectProperties(objK).GetString("units") is { Length: > 0 } s ? s : bundle.Units;
 
   // The object's source type ("type" scalar, e.g. the Rhino ObjectType or the Revit category), or null when absent.
   private static string? ObjectType(ArtefactBundle bundle, int objK) =>
-    bundle.Properties.TryGetValue(objK, out var props)
-    && props.TryGetValue("type", out var v)
-    && v is string s
-    && s.Length > 0
-      ? s
-      : null;
+    bundle.ObjectProperties(objK).GetString("type") is { Length: > 0 } s ? s : null;
 
   // The send side stores "name" as (Attributes.Name || sourceType) alongside the "type" scalar (== sourceType), so an
   // unnamed object has name == type. Returns the real name only when it's present and differs from type; null otherwise
   // (missing, empty, or the sourceType fallback) so unnamed objects stay unnamed on receive.
   private static string? ObjectName(ArtefactBundle bundle, int objK)
   {
-    if (!bundle.Properties.TryGetValue(objK, out var props))
+    var props = bundle.ObjectProperties(objK);
+    if (props.GetString("name") is { Length: > 0 } name)
     {
-      return null;
-    }
-    if (props.TryGetValue("name", out var nv) && nv is string name && name.Length > 0)
-    {
-      var type = props.TryGetValue("type", out var tv) && tv is string t ? t : null;
-      return string.Equals(name, type, StringComparison.Ordinal) ? null : name;
+      return string.Equals(name, props.GetString("type"), StringComparison.Ordinal) ? null : name;
     }
     return null;
   }

@@ -111,6 +111,9 @@ public sealed class ReceiveOperation(
     {
       throw new SpeckleException("Version referenced object is null and cannot do a receive operation.");
     }
+    // Legacy fallback: versions with no artefact bundle (pre-conversion, or an old server). Bundle-era receives
+    // bake through IArtifactHostObjectBuilder above and never reach this.
+#pragma warning disable CS0618
     Base commitObject = await operations.Receive2(
       new Uri(account.serverInfo.url),
       receiveInfo.ProjectId,
@@ -119,6 +122,7 @@ public sealed class ReceiveOperation(
       onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
       cancellationToken: cancellationToken
     );
+#pragma warning restore CS0618
 
     cancellationToken.ThrowIfCancellationRequested();
     return commitObject;

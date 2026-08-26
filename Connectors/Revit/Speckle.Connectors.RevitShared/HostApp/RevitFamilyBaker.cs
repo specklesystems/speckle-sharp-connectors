@@ -326,7 +326,7 @@ public sealed class RevitFamilyBaker : IDisposable
   public Dictionary<int, string> BuildMemberSubcategoryNames(ArtefactBundle bundle, ArtefactRelations rels)
   {
     var names = new Dictionary<int, string>();
-    var memberIndex = DefinitionMemberIndexes.Build(rels, bundle.Properties);
+    var memberIndex = DefinitionMemberIndexes.Build(rels);
     foreach (var kv in memberIndex.ObjectByGeometry)
     {
       var segments = SceneViewResolver.Segments(bundle, kv.Value);
