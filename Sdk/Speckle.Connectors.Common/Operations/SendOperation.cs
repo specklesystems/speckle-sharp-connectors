@@ -8,6 +8,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Bundles;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Helpers;
@@ -38,7 +39,9 @@ public sealed class SendOperation<T>(
   ISendPipelineFactory sendPipelineFactory,
   IAssemblyCompatibilityCheck compatabilityCheck,
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null,
-  IArtifactRootObjectBuilder<T>? artifactRootObjectBuilder = null
+  IArtifactRootObjectBuilder<T>? artifactRootObjectBuilder = null,
+  IArtifactBundleBuilder<T>? artifactBundleBuilder = null,
+  IBundleSender? bundleSender = null
 ) : ISendOperation<T>
 {
   /// <param name="useArtifacts">
@@ -67,6 +70,11 @@ public sealed class SendOperation<T>(
       // netstandard2.0 too, so it runs on the net48 plugins as well as net8), it owns the whole write+upload and
       // creates the version via the v2 endpoints. Takes precedence over the packfile / legacy ingestion paths.
       // useArtifacts is a Grasshopper-only opt-out - see the param docs.
+      // Preferred: the connector converts into a BundleBuilder and the SDK ships it (Send3 / IBundleSender).
+      if (artifactBundleBuilder != null && bundleSender != null && useArtifacts)
+      {
+        return await SendViaBundle(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
+      }
       if (artifactRootObjectBuilder != null && useArtifacts)
       {
         return await SendViaArtifacts(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
@@ -206,6 +214,51 @@ public sealed class SendOperation<T>(
       );
       throw;
     }
+  }
+
+  /// <summary>
+  /// The Speckle 2026.9.0 send: the connector's <see cref="IArtifactBundleBuilder{T}"/> converts into a
+  /// <see cref="BundleBuilder"/>, then <see cref="IBundleSender"/> creates the ingestion (server pre-allocated
+  /// version id), finishes the bundle under that id, uploads it over the v2 artifacts rail and reports failure or
+  /// cancellation to the server. The version's <c>referencedObject</c> is the bundle reference.
+  /// </summary>
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaBundle(
+    IReadOnlyList<T> objects,
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+    IProgress<CardProgress> uiProgress,
+    CancellationToken cancellationToken
+  )
+  {
+    ArtifactBundleBuild built = await artifactBundleBuilder!.Build(
+      objects,
+      sendInfo.ProjectId,
+      uiProgress,
+      cancellationToken
+    );
+    using BundleBuilder bundle = built.Bundle;
+
+    // Finish + upload on a worker thread: the parquet finalize is sync-over-async and deadlocks on a UI dispatcher.
+    uiProgress.Report(new("Uploading...", null));
+    SendResult sent = await threadContext.RunOnWorkerAsync(() =>
+      bundleSender!.SendAsync(
+        new Uri(sendInfo.Account.serverInfo.url),
+        sendInfo.ProjectId,
+        sendInfo.ModelId,
+        bundle,
+        sendInfo.Account.token,
+        new SendOptions(FileName: fileName, FileSizeBytes: fileSizeBytes),
+        cancellationToken
+      )
+    );
+
+    // The version exists once the server finishes ingesting; the ingestion id is what the DUI subscribes on.
+    return (
+      new SendOperationResult(sent.BundleReference, new Dictionary<Id, ObjectReference>(), built.ConversionResults),
+      sent.VersionId,
+      sent.IngestionId
+    );
   }
 
   private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaArtifacts(
