@@ -27,9 +27,19 @@ public enum ArtefactDirection
 /// </list>
 /// Designed so a problematic run can be diagnosed offline (the connector <c>ILogger</c> only reaches Seq). Logging is
 /// best-effort: any IO failure degrades to a no-op and never breaks the send/receive.
+/// <para>
+/// This is a development diagnostic: it is only active in <c>DEBUG</c> and <c>LOCAL</c> builds. Release builds get a
+/// disabled session that buffers nothing, touches no files and emits no summary, so callers stay unchanged.
+/// </para>
 /// </summary>
 public sealed class ArtefactSessionLog : IDisposable
 {
+#if DEBUG || LOCAL
+  private const bool IS_ENABLED_BY_BUILD = true;
+#else
+  private const bool IS_ENABLED_BY_BUILD = false;
+#endif
+
   private const int SLOWEST_COUNT = 15;
   private const int MAX_FAILURES_IN_SUMMARY = 200;
 
@@ -53,9 +63,13 @@ public sealed class ArtefactSessionLog : IDisposable
   private readonly List<(string AppId, long Ms)> _slowest = new();
   private readonly Stack<string> _phaseStack = new();
 
-  private readonly string? _ndjsonPath;
-  private readonly string? _summaryPath;
   private bool _disposed;
+
+  /// <summary>False for the Release no-op session: nothing is buffered, written or logged.</summary>
+  private bool IsEnabled { get; }
+
+  private string? NdjsonPath { get; }
+  private string? SummaryPath { get; }
 
   private ArtefactSessionLog(
     string connector,
@@ -63,7 +77,8 @@ public sealed class ArtefactSessionLog : IDisposable
     string? project,
     string? model,
     string? versionId,
-    ILogger? logger
+    ILogger? logger,
+    bool enabled
   )
   {
     _connector = connector;
@@ -72,8 +87,15 @@ public sealed class ArtefactSessionLog : IDisposable
     _model = model;
     _versionId = versionId;
     _logger = logger;
+    IsEnabled = enabled;
 
-    (_ndjsonPath, _summaryPath) = TryResolvePaths(connector, direction, versionId, _startedAt);
+    if (!enabled)
+    {
+      _disposed = true; // nothing to flush; Dispose becomes a no-op
+      return;
+    }
+
+    (NdjsonPath, SummaryPath) = TryResolvePaths(connector, direction, versionId, _startedAt);
 
     Write(
       "session_start",
@@ -86,7 +108,10 @@ public sealed class ArtefactSessionLog : IDisposable
     );
   }
 
-  /// <summary>Opens a new session log for one send/receive run. Always returns a usable instance (file IO is best-effort).</summary>
+  /// <summary>
+  /// Opens a new session log for one send/receive run. Always returns a usable instance (file IO is best-effort).
+  /// In Release builds the returned session is disabled and does no work.
+  /// </summary>
   public static ArtefactSessionLog Start(
     string connector,
     ArtefactDirection direction,
@@ -94,11 +119,15 @@ public sealed class ArtefactSessionLog : IDisposable
     string? model,
     string? versionId,
     ILogger? logger = null
-  ) => new(connector, direction, project, model, versionId, logger);
+  ) => new(connector, direction, project, model, versionId, logger, IS_ENABLED_BY_BUILD);
 
   /// <summary>Records one converted/baked object: its identity, outcome and elapsed time. Failures are also surfaced in the summary.</summary>
   public void RecordObject(string appId, string? type, Status status, string? error = null, long elapsedMs = 0)
   {
+    if (!IsEnabled)
+    {
+      return;
+    }
     lock (_lock)
     {
       _statusCounts.TryGetValue(status, out int existing);
@@ -125,6 +154,10 @@ public sealed class ArtefactSessionLog : IDisposable
   /// <summary>Increments a named counter (e.g. <c>"atomicBaked"</c>, <c>"nonGeometricSkipped"</c>) shown in the summary.</summary>
   public void Increment(string counter, long by = 1)
   {
+    if (!IsEnabled)
+    {
+      return;
+    }
     lock (_lock)
     {
       _counters.TryGetValue(counter, out long existing);
@@ -135,6 +168,10 @@ public sealed class ArtefactSessionLog : IDisposable
   /// <summary>Sets a bundle/run statistic (e.g. <c>"objects"</c>, <c>"geometryBlobs"</c>, <c>"definitions"</c>) shown in the summary.</summary>
   public void SetStat(string name, long value)
   {
+    if (!IsEnabled)
+    {
+      return;
+    }
     lock (_lock)
     {
       _stats[name] = value;
@@ -144,6 +181,10 @@ public sealed class ArtefactSessionLog : IDisposable
   /// <summary>Opens a timed phase scope; dispose it to record the elapsed time. Object records made inside are stamped with the phase name.</summary>
   public IDisposable Phase(string name)
   {
+    if (!IsEnabled)
+    {
+      return NoOpScope.Instance;
+    }
     lock (_lock)
     {
       _phaseStack.Push(name);
@@ -212,8 +253,8 @@ public sealed class ArtefactSessionLog : IDisposable
 
       var summary = BuildSummary();
       _logger?.LogInformation("Artefact {Direction} session summary:\n{Summary}", _direction, summary);
-      TryWriteFile(_ndjsonPath, string.Join(Environment.NewLine, _lines));
-      TryWriteFile(_summaryPath, summary);
+      TryWriteFile(NdjsonPath, string.Join(Environment.NewLine, _lines));
+      TryWriteFile(SummaryPath, summary);
     }
   }
 
@@ -423,6 +464,13 @@ public sealed class ArtefactSessionLog : IDisposable
       sb.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
     }
     return sb.ToString();
+  }
+
+  private sealed class NoOpScope : IDisposable
+  {
+    public static readonly NoOpScope Instance = new();
+
+    public void Dispose() { }
   }
 
   private sealed class PhaseScope : IDisposable
