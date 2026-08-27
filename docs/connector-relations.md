@@ -398,6 +398,12 @@ graph LR
 
 `ElementUnpacker` explodes every placed group into its members before conversion, so the group instance is never an object — membership is recovered from each member's `Element.GroupId`, and because that unpacking recurses, `GroupId` always names the **innermost** group (one `IN_GROUP` edge per element). Nesting is the CONTAINER parent chain (`def_ref`), walked from each group's own `GroupId`. Containers are keyed per model container, so a linked file placed twice gets one group tier per placement. Attached detail groups are excluded (annotation, not model topology). The container name is the group TYPE name — the same string that ships as the `groupName` property.
 
+**Object labels** — `name` · `category` · `family` · `type` (ENG-9354)
+
+`name` is `$"{category} - {target.Name}"`, `category` is `Category.Name` (a DirectShape uses its cleaned built-in name instead — `OST_MEPSpaces` → `Spaces`), and `category`/`familyName`/`typeName` all fall back to the literal `"none"`, never `""`. Those four scalars are the labels the selection panel and scene tree show and the strings name-based search, dashboards and automations match on, so they have to read the same whichever producer published the model.
+
+**Decision (2026-08-27, ENG-9354): the CONNECTOR is the reference and rvextract follows it.** rvextract emitted the bare element name and `""` for the absent cases, so the same wall was `Walls - Generic - 200mm` from Revit and `Generic - 200mm` from a `.rvt` upload. The connector's prefixed names are already in every published version, so moving this side would have been a rename with a migration note attached — rvextract moved instead (`speckle-converters` PR #106, rules in `native/rvextract/src/naming_revit.h`). **Don't drop the prefix or the `"none"` defaults here** without re-opening that decision; `speckle-converters/docs/rvextract-vs-revit-connector.md` carries the measured parity numbers and the residual per-class differences in the base `Element.Name` values.
+
 - **Nodes:** CONTAINER `"Model"` (per source doc) · CONTAINER `"Group"` (per placed model group) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)
 - **Receive:** ● native — DirectShape + DirectShapeLibrary instances, reference-point reversal
