@@ -40,9 +40,15 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// nodes. The receive-side twin of the send-side <c>RevitArtifactRootObjectBuilder</c>.
 /// </summary>
 /// <remarks>
-/// <para><b>Grouping.</b> Revit has no layers; each baked element is stamped with its model marker in the Comments
-/// parameter so a re-receive can collect-and-delete the prior bake cheaply (a deliberate choice to avoid the slow v1
-/// Revit-Group baking). Element category comes from the object's <c>category</c>/<c>builtInCategory</c> property.</para>
+/// <para><b>Grouping and tracking [ENG-8805].</b> Revit has no layers, so — as in v1 — everything baked lands in one
+/// pinned, named top-level <see cref="Group"/> (<c>Project {project}: Model {model}</c>), which is both the user's
+/// handle on a received model (one click to select, move or delete it) and this receive's tracking key: a re-receive
+/// deletes the prior Group and its members. An earlier iteration of this builder skipped the Group for speed and
+/// stamped each element's <b>Comments</b> parameter with the marker instead; that hijacked a user-visible,
+/// schedulable field, and because the same field was the tracking key, a user editing it orphaned the element into a
+/// duplicate on the next receive. What survives of the marker is written to a hidden <see cref="RevitReceiveManifest"/>
+/// instead, keyed on project/model <i>ids</i> so a rename on the web no longer strands the prior bake.
+/// Element category comes from the object's <c>category</c>/<c>builtInCategory</c> property.</para>
 /// <para><b>Raw solids [ENG-8800].</b> An imported solid carries no material of its own (unlike a tessellated mesh,
 /// which bakes one into every face), so DirectShape solids are painted in a follow-up transaction after the bake
 /// commits — an element's faces aren't queryable before then. Meshes remain the shadow for whatever the importer
@@ -67,7 +73,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly RevitUtils _revitUtils;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<RevitHostObjectArtefactBuilder> _logger;
-  private readonly RevitGroupBaker _groupBaker;
+  private readonly RevitReceiveTracker _tracker;
   private readonly RevitViewBaker _viewBaker;
   private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
   private readonly RevitFamilyBaker _familyBaker;
@@ -87,7 +93,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     RevitUtils revitUtils,
     ISdkActivityFactory activityFactory,
     ILogger<RevitHostObjectArtefactBuilder> logger,
-    RevitGroupBaker groupBaker,
+    RevitReceiveTracker tracker,
     RevitViewBaker viewBaker,
     ITypedConverter<Base, List<GeometryObject>> geometryConverter,
     RevitFamilyBaker familyBaker,
@@ -103,7 +109,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _revitUtils = revitUtils;
     _activityFactory = activityFactory;
     _logger = logger;
-    _groupBaker = groupBaker;
+    _tracker = tracker;
     _viewBaker = viewBaker;
     _geometryConverter = geometryConverter;
     _familyBaker = familyBaker;
@@ -113,23 +119,23 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   public Task<HostObjectBuilderResult> Build(
     ArtefactBundle bundle,
-    string projectName,
-    string modelName,
+    ArtefactReceiveTarget target,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
     // Revit API is main-thread-affine and mutations require a transaction → everything runs on the main thread.
-    _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
+    _threadContext.RunOnMain(() => BakeAll(bundle, target, onOperationProgressed, cancellationToken));
 
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private HostObjectBuilderResult BakeAll(
     ArtefactBundle bundle,
-    string projectName,
-    string modelName,
+    ArtefactReceiveTarget target,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
+    var projectName = target.ProjectName;
+    var modelName = target.ModelName;
     var marker = $"Project {projectName}: Model {modelName}";
     using var activity = _activityFactory.Start("Build (artefact)");
     using var session = ArtefactSessionLog.Start(
@@ -175,12 +181,20 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // TessellatedFace), so they are painted with the object's material — but only once the bake transaction has
     // committed, since an element's faces aren't queryable before then. Same ordering as v1 RevitHostObjectBuilder.
     var paintTargets = new List<(ElementId Element, ElementId Material)>();
+    // Members of the top-level group, collected as they are baked and grouped in one go after the bake commits
+    // [ENG-8805]. Threaded explicitly rather than accumulated in RevitGroupBaker's own state, matching how
+    // bakedObjectIds and paintTargets are already carried through this builder.
+    var groupMembers = new List<ElementId>();
+    // Materials this receive creates (never ones it reuses) — recorded in the manifest so the NEXT receive can
+    // delete exactly these.
+    var createdMaterialUniqueIds = new List<string>();
 
-    // 0 — clean a previous receive of this model (delete marked DirectShapes; reset the geometry-instance library).
+    // 0 — clean a previous receive of this model (its group + the materials it created; reset the geometry-instance
+    // library).
     _transactionManager.StartTransaction(true, "Pre receive clean");
     try
     {
-      PreClean(doc, marker);
+      PreClean(doc, marker, target);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -199,7 +213,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       Dictionary<int, ElementId> materialIdByNode;
       using (session.Phase("Materials"))
       {
-        materialIdByNode = CreateMaterials(doc, bundle);
+        materialIdByNode = CreateMaterials(doc, bundle, createdMaterialUniqueIds);
       }
       var materialIdByGeometry = new Dictionary<int, ElementId>();
       foreach (var kv in rels.MaterialByGeometry)
@@ -220,10 +234,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           materialIdByGeometry,
           validCategories,
           categoryCache,
-          marker,
           bakedObjectIds,
           conversionResults,
           paintTargets,
+          groupMembers,
           session,
           onOperationProgressed,
           cancellationToken
@@ -244,9 +258,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               bundle,
               rels,
               materialIdByNode,
-              marker,
               bakedObjectIds,
               conversionResults,
+              groupMembers,
               session,
               cancellationToken
             );
@@ -260,10 +274,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               materialIdByGeometry,
               validCategories,
               categoryCache,
-              marker,
               bakedObjectIds,
               conversionResults,
               paintTargets,
+              groupMembers,
               session,
               cancellationToken
             );
@@ -309,6 +323,36 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
 
+    // 5 — collect everything baked into one pinned top-level group, then record what this receive produced
+    // [ENG-8805]. Own transaction, after painting: an element's faces only exist once the bake commits, and painting
+    // a group member risks group-inconsistency warnings — same bake → paint → group order as v1.
+    using (session.Phase("Grouping"))
+    {
+      session.SetStat("groupMembers", groupMembers.Count);
+      _transactionManager.StartTransaction(true, "Grouping");
+      try
+      {
+        _tracker.BakeGroupAndRecord(
+          doc,
+          marker,
+          target.ProjectId,
+          target.ModelId,
+          groupMembers,
+          createdMaterialUniqueIds
+        );
+        _transactionManager.CommitTransaction();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // Revit refuses some element combinations (already grouped, differing design options/worksets). Leaving the
+        // elements loose costs organization and one-click selection, but it must never cost the user the geometry
+        // they just received — so fall back to recording the receive without a group.
+        _transactionManager.RollbackTransaction();
+        _logger.LogError(ex, "Artefact receive grouping failed for '{Marker}'", marker);
+        RecordWithoutGroup(doc, marker, target, createdMaterialUniqueIds);
+      }
+    }
+
     return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
   }
 
@@ -321,10 +365,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<int, ElementId> materialIdByGeometry,
     Dictionary<string, ElementId> validCategories,
     Dictionary<string, ElementId> categoryCache,
-    string marker,
     List<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
     List<(ElementId Element, ElementId Material)> paintTargets,
+    List<ElementId> groupMembers,
     ArtefactSessionLog session,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -382,7 +426,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         var ds = DirectShape.CreateElement(doc, ResolveCategory(doc, props, validCategories, categoryCache));
         SetNameSafe(ds, PropString(props, "name"));
         ds.SetShape(geometry);
-        StampMarker(ds, marker);
+        groupMembers.Add(ds.Id);
 
         if (fromSolid)
         {
@@ -414,10 +458,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<int, ElementId> materialIdByGeometry,
     Dictionary<string, ElementId> validCategories,
     Dictionary<string, ElementId> categoryCache,
-    string marker,
     List<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
     List<(ElementId Element, ElementId Material)> paintTargets,
+    List<ElementId> groupMembers,
     ArtefactSessionLog session,
     CancellationToken cancellationToken
   )
@@ -588,7 +632,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         var ds = DirectShape.CreateElement(doc, ResolveCategory(doc, props, validCategories, categoryCache));
         SetNameSafe(ds, PropString(props, "name"));
         ds.SetShape(geometry);
-        StampMarker(ds, marker);
+        groupMembers.Add(ds.Id);
 
         if (defPaintMaterialByNode.TryGetValue(defNodeK, out var paintMaterial))
         {
@@ -778,9 +822,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactBundle bundle,
     ArtefactRelations rels,
     Dictionary<int, ElementId> materialIdByNode,
-    string marker,
     List<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
+    List<ElementId> groupMembers,
     ArtefactSessionLog session,
     CancellationToken cancellationToken
   )
@@ -816,9 +860,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       bundle,
       rels,
       symbolByDefNode,
-      marker,
       bakedObjectIds,
       conversionResults,
+      groupMembers,
       session,
       cancellationToken
     );
@@ -953,9 +997,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactBundle bundle,
     ArtefactRelations rels,
     Dictionary<int, FamilySymbol> symbolByDefNode,
-    string marker,
     List<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
+    List<ElementId> groupMembers,
     ArtefactSessionLog session,
     CancellationToken cancellationToken
   )
@@ -1011,7 +1055,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             units,
             _converterSettings.Current.ReferencePointTransform
           ) ?? throw new ConversionException("Failed to place family instance");
-        StampMarker(instance, marker);
+        groupMembers.Add(instance.Id);
 
         bakedObjectIds.Add(instance.UniqueId);
         conversionResults.Add(new(Status.SUCCESS, source, instance.UniqueId, "FamilyInstance", null, srcType));
@@ -1357,7 +1401,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
-  private Dictionary<int, ElementId> CreateMaterials(Document doc, ArtefactBundle bundle)
+  private Dictionary<int, ElementId> CreateMaterials(
+    Document doc,
+    ArtefactBundle bundle,
+    List<string> createdMaterialUniqueIds
+  )
   {
     var idByNode = new Dictionary<int, ElementId>();
     // Dedup on name + the full colour signature. Name alone is not enough (older bundles carry no name, so every
@@ -1376,7 +1424,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         var key = MaterialKey(node);
         if (!byKey.TryGetValue(key, out var id))
         {
-          id = FindOrCreateMaterial(doc, node);
+          id = FindOrCreateMaterial(doc, node, createdMaterialUniqueIds);
           byKey[key] = id;
         }
         idByNode[kv.Key] = id;
@@ -1400,7 +1448,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       node.Roughness ?? 1.0
     );
 
-  private ElementId FindOrCreateMaterial(Document doc, ArtefactNode node)
+  private ElementId FindOrCreateMaterial(Document doc, ArtefactNode node, List<string> createdMaterialUniqueIds)
   {
     int argb = node.Argb ?? unchecked((int)0xFFFFFFFF);
     double opacity = Clamp01(node.Opacity ?? 1.0);
@@ -1438,6 +1486,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     material.Transparency = (int)((1 - opacity) * 100);
     material.Shininess = (int)(metalness * 128);
     material.Smoothness = (int)((1 - roughness) * 100);
+    // Recorded (unlike the reuse branches above, which return a material the document already owned) so the next
+    // receive can delete exactly what this one created [ENG-8805].
+    createdMaterialUniqueIds.Add(material.UniqueId);
     return id;
   }
 
@@ -1626,45 +1677,37 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── clean ─────────────────────────────────────────────────────────────────────────────────────────────
-  private void PreClean(Document doc, string marker)
+  /// <summary>Removes what a previous receive of this model left in the document, and resets the per-document
+  /// geometry-instance library the converter shares. See <see cref="RevitReceiveTracker"/> for the cleanup order.</summary>
+  private void PreClean(Document doc, string marker, ArtefactReceiveTarget target)
   {
     DirectShapeLibrary.GetDirectShapeLibrary(doc).Reset();
-    // A previous receive of this model may predate ENG-9101, when the family setting delegated the whole receive to
-    // the v1 builder and left a pinned top-level Group of real families — not tracked by the Comments marker below.
-    _groupBaker.PurgeGroups(marker);
-    // Same marker convention, but View3D isn't a DirectShape, so it's not covered by the collector loop below either.
-    _viewBaker.PurgeArtefactViews(marker);
-    var toDelete = new List<ElementId>();
-    // DirectShape (BakeAtomic/BakeInstances) and FamilyInstance (BakeInstancesAsFamilies) both stamp the same
-    // Comments marker, so cleaning up both covers whichever setting the prior receive used.
-    CollectMarked(doc, typeof(DirectShape), marker, toDelete);
-    CollectMarked(doc, typeof(FamilyInstance), marker, toDelete);
-    if (toDelete.Count > 0)
-    {
-      doc.Delete(toDelete);
-    }
+    _tracker.PurgePriorReceive(doc, marker, target.ProjectId, target.ModelId);
+    RevitReceiveTracker.PurgeMarkedElements(doc, marker);
   }
 
-  private static void CollectMarked(Document doc, Type elementClass, string marker, List<ElementId> toDelete)
+  // Grouping failed, but the materials this receive created still have to be cleanable next time.
+  private void RecordWithoutGroup(
+    Document doc,
+    string marker,
+    ArtefactReceiveTarget target,
+    IReadOnlyCollection<string> createdMaterialUniqueIds
+  )
   {
-    using var collector = new FilteredElementCollector(doc);
-    foreach (var element in collector.OfClass(elementClass))
+    _transactionManager.StartTransaction(true, "Speckle receive manifest");
+    try
     {
-      if (
-        element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() is string c
-        && string.Equals(c, marker, StringComparison.Ordinal)
-      )
-      {
-        toDelete.Add(element.Id);
-      }
+      _tracker.Record(doc, marker, target.ProjectId, target.ModelId, createdMaterialUniqueIds);
+      _transactionManager.CommitTransaction();
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _transactionManager.RollbackTransaction();
+      _logger.LogError(ex, "Could not record the Speckle receive manifest for '{Marker}'", marker);
     }
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────
-  // Element, not DirectShape, so the same stamp works for FamilyInstances baked by BakeInstancesAsFamilies.
-  private static void StampMarker(Element element, string marker) =>
-    element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.Set(marker);
-
   private void SetNameSafe(DirectShape ds, string? name)
   {
     if (name is not { Length: > 0 })

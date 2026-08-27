@@ -105,6 +105,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RevitFamilyBaker>();
     serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
+    serviceCollection.AddScoped<RevitReceiveManifest>();
+    serviceCollection.AddScoped<RevitReceiveTracker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
     serviceCollection.AddScoped<RevitViewBaker>();
     serviceCollection.AddScoped<RevitViewManager>();

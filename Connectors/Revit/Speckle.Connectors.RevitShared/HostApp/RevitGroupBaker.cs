@@ -23,17 +23,40 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
   public void AddToTopLevelGroup(Element revitElement) => _elementIdsForTopLevelGroup.Add(revitElement.Id);
 
-  public void BakeGroupForTopLevel(string baseGroupName)
+  public string? BakeGroupForTopLevel(string baseGroupName) =>
+    BakeGroupForTopLevel(baseGroupName, _elementIdsForTopLevelGroup);
+
+  /// <summary>Bakes <paramref name="elementIds"/> into one pinned, named top-level group and returns its UniqueId
+  /// (null when there was nothing to group).</summary>
+  /// <remarks>The explicit-collection overload exists for the artefact receive path, which threads its own member
+  /// list through the bake rather than accumulating into this service's state.</remarks>
+  public string? BakeGroupForTopLevel(string baseGroupName, IReadOnlyCollection<ElementId> elementIds)
   {
-    if (_elementIdsForTopLevelGroup.Count == 0)
+    if (elementIds.Count == 0)
     // if no elements were successfully converted, instead of throwing when creating a new group, we should just return and let object conversion exceptions bubble up.
     {
-      return;
+      return null;
     }
 
-    var docGroup = _converterSettings.Current.Document.Create.NewGroup(_elementIdsForTopLevelGroup);
+    var docGroup = _converterSettings.Current.Document.Create.NewGroup(elementIds.ToList());
     docGroup.GroupType.Name = _revitUtils.RemoveInvalidChars(baseGroupName);
     docGroup.Pinned = true;
+    return docGroup.UniqueId;
+  }
+
+  /// <summary>Deletes one previously baked group (and its members) by UniqueId — the rename-proof counterpart to
+  /// <see cref="PurgeGroups"/>, which can only find a group whose name still matches the current project/model.</summary>
+  public void PurgeGroupById(string groupUniqueId)
+  {
+    var document = _converterSettings.Current.Document;
+    if (document.GetElement(groupUniqueId) is not Group group)
+    {
+      return; // already gone, or the user ungrouped it — nothing to delete
+    }
+
+    var subgroupTypeIds = new List<ElementId>() { group.GroupType.Id };
+    CollectSubGroupTypeIds(document, group, subgroupTypeIds);
+    document.Delete(subgroupTypeIds);
   }
 
   public void PurgeGroups(string baseGroupName)

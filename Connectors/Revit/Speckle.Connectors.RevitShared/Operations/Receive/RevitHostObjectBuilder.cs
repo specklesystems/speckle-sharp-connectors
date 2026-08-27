@@ -47,7 +47,8 @@ public sealed class RevitHostObjectBuilder(
   RevitFamilyBaker familyBaker,
   DirectShapeUnpackStrategy directShapeUnpackStrategy,
   FamilyUnpackStrategy familyUnpackStrategy,
-  RevitPreBakeSetupService preBakeSetupService
+  RevitPreBakeSetupService preBakeSetupService,
+  RevitReceiveTracker receiveTracker
 ) : IHostObjectBuilder, IDisposable
 {
   public Task<HostObjectBuilderResult> Build(
@@ -197,11 +198,20 @@ public sealed class RevitHostObjectBuilder(
       transactionManager.CommitTransaction();
     }
 
-    // 7 - Create group
+    // 7 - Create the group AND record it, so the next receive can clean up exactly what this one produced
+    // [ENG-8805]. This path has no project/model ids to key the record on, so it is found again by the marker name —
+    // the same rename-fragility v1 always had.
     {
       using var _ = activityFactory.Start("Grouping");
       transactionManager.StartTransaction(true, "Grouping");
-      groupManager.BakeGroupForTopLevel(baseGroupName);
+      receiveTracker.BakeGroupAndRecord(
+        converterSettings.Current.Document,
+        baseGroupName,
+        null,
+        null,
+        null, // members were accumulated through groupManager.AddToTopLevelGroup during the bake
+        materialBaker.CreatedMaterialUniqueIds
+      );
       transactionManager.CommitTransaction();
     }
 
@@ -368,35 +378,11 @@ public sealed class RevitHostObjectBuilder(
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
     revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it looks legit
-    groupManager.PurgeGroups(baseGroupName);
-    materialBaker.PurgeMaterials(baseGroupName);
-    PurgePriorArtefactDirectBake(baseGroupName);
-  }
-
-  // A previous receive of this model may have gone through the artefact direct-bake path (RevitHostObjectArtefactBuilder,
-  // used when ReceiveInstancesAsFamilies was off) and left Comments-marker-stamped DirectShapes behind — those aren't
-  // members of a Revit Group, so PurgeGroups above won't find them. Clean them up here too.
-  private void PurgePriorArtefactDirectBake(string marker)
-  {
     var doc = converterSettings.Current.Document;
-    var toDelete = new List<ElementId>();
-    using (var collector = new FilteredElementCollector(doc))
-    {
-      foreach (var element in collector.OfClass(typeof(DirectShape)))
-      {
-        if (
-          element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() is string c
-          && string.Equals(c, marker, StringComparison.Ordinal)
-        )
-        {
-          toDelete.Add(element.Id);
-        }
-      }
-    }
-    if (toDelete.Count > 0)
-    {
-      doc.Delete(toDelete);
-    }
+    receiveTracker.PurgePriorReceive(doc, baseGroupName, null, null);
+    // A previous receive of this model may have gone through the artefact direct-bake path and left
+    // Comments-marker-stamped elements behind — those are in no Revit Group, so the purge above won't find them.
+    RevitReceiveTracker.PurgeMarkedElements(doc, baseGroupName);
   }
 
   public void Dispose() => transactionManager.Dispose();

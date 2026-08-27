@@ -31,6 +31,14 @@ public class RevitMaterialBaker
     _converterSettings = converterSettings;
   }
 
+  private readonly List<string> _createdMaterialUniqueIds = new();
+
+  /// <summary>UniqueIds of the Materials this receive <b>created</b> in the project document — recorded into the
+  /// receive manifest so the next receive can delete exactly these [ENG-8805]. Materials that were reused (an existing
+  /// document material matched by name) are deliberately absent: they are the user's, not ours to delete. Materials
+  /// created inside a family document are absent too — their UniqueIds are meaningless in the project document.</summary>
+  public IReadOnlyCollection<string> CreatedMaterialUniqueIds => _createdMaterialUniqueIds;
+
   private ElementId? FindExistingMaterialByName(string? materialName, Document document)
   {
     if (string.IsNullOrWhiteSpace(materialName))
@@ -150,6 +158,12 @@ public class RevitMaterialBaker
     revitMaterial.Shininess = (int)(metalness * 128);
     revitMaterial.Smoothness = (int)(smoothness * 100);
 
+    // Only project-document materials are trackable: a family document's UniqueIds don't resolve in the project.
+    if (document.Equals(_converterSettings.Current.Document))
+    {
+      _createdMaterialUniqueIds.Add(revitMaterial.UniqueId);
+    }
+
     return revitMaterial.Id;
   }
 
@@ -183,19 +197,40 @@ public class RevitMaterialBaker
     return objectIdAndMaterialIndexMap;
   }
 
-  public void PurgeMaterials(string baseGroupName)
+  /// <summary>
+  /// Deletes the Materials a previous receive of this model created, identified by the UniqueIds it recorded in the
+  /// receive manifest (<see cref="RevitReceiveManifest"/>).
+  /// </summary>
+  /// <remarks>
+  /// <para>Replaces a name-based purge that deleted every Material whose name <i>contained</i> the base group name.
+  /// That predicate never matched anything this baker creates — <see cref="BakeMaterial"/> names materials after the
+  /// Speckle material alone, with no project/model suffix — so it was a no-op that nonetheless carried an unscoped
+  /// delete: a user's own material named after the project or model would have been removed [ENG-8805].</para>
+  /// <para>Call this only after the prior bake's elements are gone, so the materials being deleted are no longer
+  /// painted onto anything this receive is about to replace.</para>
+  /// </remarks>
+  public void PurgeMaterials(IReadOnlyCollection<string> materialUniqueIds)
   {
-    var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
+    if (materialUniqueIds.Count == 0)
+    {
+      return;
+    }
+
     var document = _converterSettings.Current.Document;
+    var toDelete = new List<ElementId>();
+    foreach (var uniqueId in materialUniqueIds)
+    {
+      // Anything but a Material means the id was recycled by another element — never delete on a stale match.
+      if (document.GetElement(uniqueId) is Material material)
+      {
+        toDelete.Add(material.Id);
+      }
+    }
 
-    using var collector = new FilteredElementCollector(document);
-    var materialIds = collector
-      .OfClass(typeof(Material))
-      .Where(m => m.Name.Contains(validBaseGroupName))
-      .Select(m => m.Id)
-      .ToList();
-
-    document.Delete(materialIds);
+    if (toDelete.Count > 0)
+    {
+      document.Delete(toDelete);
+    }
   }
 
   /// <summary>

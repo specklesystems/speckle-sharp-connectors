@@ -102,12 +102,13 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   public Task<HostObjectBuilderResult> Build(
     ArtefactBundle bundle,
-    string projectName,
-    string modelName,
+    ArtefactReceiveTarget target,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
-    _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
+    _threadContext.RunOnMain(() =>
+      BakeAll(bundle, target.ProjectName, target.ModelName, onOperationProgressed, cancellationToken)
+    );
 
 #pragma warning disable CA1506
   private HostObjectBuilderResult BakeAll(
