@@ -156,13 +156,8 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "2026.9.0-alpha.7",
-        "contentHash": "88z0WI3/V/j0j/5TvhZJMw2KMPyo3YPFa8CZPBP62AEP9lp4Fclb4lxfcIlL4C6IcNybeFklbAG9spwgbVKpcQ=="
-      },
-      "Speckle.Sdk.Parquet": {
-        "type": "Transitive",
-        "resolved": "2026.9.0-alpha.7",
-        "contentHash": "MMWeAOp1XAu7la9ITWlslwrkjALoim4JIsxXX/Bvjamr/kNEh5C0CMUoobUuyL5ClUYBLDHUfK8l8UZLxvMoLg=="
+        "resolved": "2026.9.0-beta.1",
+        "contentHash": "PlQIth7soCysa4tIFoK81V+r0Rch/NS6Mcnp3RUrEIhMW71cWl04SS2jF/grw5pIhwrOmLQJHF/GLSzefIoLvQ=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -217,7 +212,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[2026.9.0-alpha.7, )"
+          "Speckle.Sdk": "[2026.9.0-beta.1, )"
         }
       },
       "speckle.connectors.dui": {
@@ -239,7 +234,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Sdk": "[2026.9.0-alpha.7, )"
+          "Speckle.Sdk": "[2026.9.0-beta.1, )"
         }
       },
       "speckle.converters.rhino8": {
@@ -262,9 +257,9 @@
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[2026.9.0-alpha.7, )",
-        "resolved": "2026.9.0-alpha.7",
-        "contentHash": "3jH8eJlIjPxD1cXC3ft8y/LfjmkCgiLYgeWG/61nTpfuhwdqYDbjnV6sTXcKLsQp9KuHK88qcIBs2cjqfsbQiA==",
+        "requested": "[2026.9.0-beta.1, )",
+        "resolved": "2026.9.0-beta.1",
+        "contentHash": "288kVZAFtDw9ttohB06vYGtSh5t7yice28tRoeoxxzVAqp1RHQpb5fUEiYAsNNC2wwIR3a8eeegkYV5vE47B0g==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Data.Sqlite": "7.0.5",
@@ -272,8 +267,7 @@
           "Microsoft.Extensions.ObjectPool": "8.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "2026.9.0-alpha.7",
-          "Speckle.Sdk.Parquet": "2026.9.0-alpha.7"
+          "Speckle.Sdk.Dependencies": "2026.9.0-beta.1"
         }
       }
     },
