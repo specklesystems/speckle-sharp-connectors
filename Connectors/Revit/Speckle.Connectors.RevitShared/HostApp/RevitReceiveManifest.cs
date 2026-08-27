@@ -10,17 +10,11 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// place instead of accumulating one per receive.</param>
 /// <param name="GroupUniqueId">UniqueId of the top-level Group the bake was collected into, or null when the bake
 /// predates grouping (or grouping failed).</param>
-/// <param name="MaterialUniqueIds">UniqueIds of the Materials that receive <b>created</b> — never ones it reused
-/// from the document, which belong to the user.</param>
-public sealed record RevitReceiveRecord(
-  DataStorage Storage,
-  string? GroupUniqueId,
-  IReadOnlyCollection<string> MaterialUniqueIds
-);
+public sealed record RevitReceiveRecord(DataStorage Storage, string? GroupUniqueId);
 
 /// <summary>
 /// The per-model receive manifest: a hidden <see cref="DataStorage"/> element carrying, in Extensible Storage, what
-/// the last receive of one model put into this document (its top-level Group and the Materials it created).
+/// the last receive of one model put into this document — its top-level Group.
 /// </summary>
 /// <remarks>
 /// <para>This is the tracking key that replaces the <c>Comments</c> parameter marker [ENG-8805]. Two properties matter:
@@ -45,11 +39,10 @@ public class RevitReceiveManifest
   private const string FIELD_MODEL_ID = "modelId";
   private const string FIELD_MARKER = "marker";
   private const string FIELD_GROUP = "groupUniqueId";
-  private const string FIELD_MATERIALS = "materialUniqueIds";
 
-  // Newline-delimited rather than an ES array field: Revit's array fields refuse an empty collection, and a receive
-  // that created no materials is perfectly normal.
-  private const char MATERIAL_SEPARATOR = '\n';
+  // Reserved. Materials are deliberately never purged (see RevitMaterialBaker), so nothing is recorded here — but the
+  // field stays in the schema, written empty, because the schema shape must keep matching records already in the wild.
+  private const string FIELD_MATERIALS = "materialUniqueIds";
 
   private readonly ILogger<RevitReceiveManifest> _logger;
 
@@ -96,14 +89,7 @@ public class RevitReceiveManifest
         }
 
         var group = entity.Get<string>(FIELD_GROUP);
-        var materials = entity.Get<string>(FIELD_MATERIALS);
-        return new RevitReceiveRecord(
-          storage,
-          string.IsNullOrEmpty(group) ? null : group,
-          string.IsNullOrEmpty(materials)
-            ? Array.Empty<string>()
-            : materials.Split([MATERIAL_SEPARATOR], StringSplitOptions.RemoveEmptyEntries)
-        );
+        return new RevitReceiveRecord(storage, string.IsNullOrEmpty(group) ? null : group);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -122,8 +108,7 @@ public class RevitReceiveManifest
     string? projectId,
     string? modelId,
     string marker,
-    string? groupUniqueId,
-    IReadOnlyCollection<string> materialUniqueIds
+    string? groupUniqueId
   )
   {
     try
@@ -139,7 +124,7 @@ public class RevitReceiveManifest
       entity.Set(FIELD_MODEL_ID, modelId ?? string.Empty);
       entity.Set(FIELD_MARKER, marker);
       entity.Set(FIELD_GROUP, groupUniqueId ?? string.Empty);
-      entity.Set(FIELD_MATERIALS, string.Join(MATERIAL_SEPARATOR.ToString(), materialUniqueIds));
+      entity.Set(FIELD_MATERIALS, string.Empty);
       storage.SetEntity(entity);
     }
     catch (Exception ex) when (!ex.IsFatal())

@@ -13,28 +13,24 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// <c>RevitHostObjectBuilder</c> and the artefact <c>RevitHostObjectArtefactBuilder</c> — go through here, so a
 /// document that has been received into by either is cleaned up correctly by the other.</para>
 /// <para>Cleanup runs newest tracking mechanism first, because a document can hold a bake from any generation of this
-/// connector: the manifest's Group by UniqueId (rename-proof), then the manifest's Materials, then a name-based Group
-/// purge for bakes that predate the manifest, then the transitional Comments-marker sweep for the generation of the
-/// artefact builder that tracked elements by stamping that parameter.</para>
+/// connector: the manifest's Group by UniqueId (rename-proof), then a name-based Group purge for bakes that predate
+/// the manifest, then the transitional Comments-marker sweep for the generation of the artefact builder that tracked
+/// elements by stamping that parameter.</para>
+/// <para>Materials are NOT part of this — receive reuses them by name and never writes over one, so they neither
+/// accumulate nor need purging, and a user's edits to a received material survive a re-receive. See
+/// <see cref="RevitMaterialBaker"/>.</para>
 /// <para>Callers must have an open transaction; every method mutates the document.</para>
 /// </remarks>
 public class RevitReceiveTracker
 {
   private readonly RevitReceiveManifest _manifest;
   private readonly RevitGroupBaker _groupBaker;
-  private readonly RevitMaterialBaker _materialBaker;
   private readonly RevitViewBaker _viewBaker;
 
-  public RevitReceiveTracker(
-    RevitReceiveManifest manifest,
-    RevitGroupBaker groupBaker,
-    RevitMaterialBaker materialBaker,
-    RevitViewBaker viewBaker
-  )
+  public RevitReceiveTracker(RevitReceiveManifest manifest, RevitGroupBaker groupBaker, RevitViewBaker viewBaker)
   {
     _manifest = manifest;
     _groupBaker = groupBaker;
-    _materialBaker = materialBaker;
     _viewBaker = viewBaker;
   }
 
@@ -52,9 +48,6 @@ public class RevitReceiveTracker
     {
       _groupBaker.PurgeGroupById(priorGroup);
     }
-
-    // Groups first, so these materials are no longer painted onto anything this receive is replacing.
-    _materialBaker.PurgeMaterials(_prior?.MaterialUniqueIds ?? []);
 
     // Bakes that predate the manifest — including v1 bakes, and the artefact builder's pre-ENG-9101 delegation to it.
     _groupBaker.PurgeGroups(marker);
@@ -81,9 +74,8 @@ public class RevitReceiveTracker
   }
 
   /// <summary>
-  /// Bakes <paramref name="groupMembers"/> into the pinned top-level group and records it, together with the
-  /// materials this receive created, for the next receive to clean up. Returns the group's UniqueId, or null when
-  /// there was nothing to group.
+  /// Bakes <paramref name="groupMembers"/> into the pinned top-level group and records it for the next receive to
+  /// clean up. Returns the group's UniqueId, or null when there was nothing to group.
   /// </summary>
   /// <param name="groupMembers">The elements to group, or null to use whatever was accumulated through
   /// <see cref="RevitGroupBaker.AddToTopLevelGroup"/> — the v1 builder collects members that way.</param>
@@ -92,27 +84,21 @@ public class RevitReceiveTracker
     string marker,
     string? projectId,
     string? modelId,
-    IReadOnlyCollection<ElementId>? groupMembers,
-    IReadOnlyCollection<string> createdMaterialUniqueIds
+    IReadOnlyCollection<ElementId>? groupMembers
   )
   {
     var groupUniqueId = groupMembers is null
       ? _groupBaker.BakeGroupForTopLevel(marker)
       : _groupBaker.BakeGroupForTopLevel(marker, groupMembers);
 
-    _manifest.Write(doc, _prior?.Storage, projectId, modelId, marker, groupUniqueId, createdMaterialUniqueIds);
+    _manifest.Write(doc, _prior?.Storage, projectId, modelId, marker, groupUniqueId);
     return groupUniqueId;
   }
 
-  /// <summary>Records this receive without baking a group — for when grouping failed, so the manifest still carries
-  /// the materials to clean up next time.</summary>
-  public void Record(
-    Document doc,
-    string marker,
-    string? projectId,
-    string? modelId,
-    IReadOnlyCollection<string> createdMaterialUniqueIds
-  ) => _manifest.Write(doc, _prior?.Storage, projectId, modelId, marker, null, createdMaterialUniqueIds);
+  /// <summary>Records this receive without a group — for when grouping failed, so the next receive still knows this
+  /// model was received into this document.</summary>
+  public void Record(Document doc, string marker, string? projectId, string? modelId) =>
+    _manifest.Write(doc, _prior?.Storage, projectId, modelId, marker, null);
 
   private static void CollectMarked(Document doc, Type elementClass, string marker, List<ElementId> toDelete)
   {

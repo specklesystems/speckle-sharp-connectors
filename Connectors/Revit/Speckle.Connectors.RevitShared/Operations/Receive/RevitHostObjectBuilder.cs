@@ -34,7 +34,6 @@ public sealed class RevitHostObjectBuilder(
   ITransactionManager transactionManager,
   ISdkActivityFactory activityFactory,
   RevitGroupBaker groupManager,
-  RevitMaterialBaker materialBaker,
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
   IThreadContext threadContext,
@@ -209,8 +208,7 @@ public sealed class RevitHostObjectBuilder(
         baseGroupName,
         null,
         null,
-        null, // members were accumulated through groupManager.AddToTopLevelGroup during the bake
-        materialBaker.CreatedMaterialUniqueIds
+        null // members were accumulated through groupManager.AddToTopLevelGroup during the bake
       );
       transactionManager.CommitTransaction();
     }

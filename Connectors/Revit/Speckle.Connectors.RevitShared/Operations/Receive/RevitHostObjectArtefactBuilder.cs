@@ -185,9 +185,6 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // [ENG-8805]. Threaded explicitly rather than accumulated in RevitGroupBaker's own state, matching how
     // bakedObjectIds and paintTargets are already carried through this builder.
     var groupMembers = new List<ElementId>();
-    // Materials this receive creates (never ones it reuses) — recorded in the manifest so the NEXT receive can
-    // delete exactly these.
-    var createdMaterialUniqueIds = new List<string>();
 
     // 0 — clean a previous receive of this model (its group + the materials it created; reset the geometry-instance
     // library).
@@ -213,7 +210,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       Dictionary<int, ElementId> materialIdByNode;
       using (session.Phase("Materials"))
       {
-        materialIdByNode = CreateMaterials(doc, bundle, createdMaterialUniqueIds);
+        materialIdByNode = CreateMaterials(doc, bundle);
       }
       var materialIdByGeometry = new Dictionary<int, ElementId>();
       foreach (var kv in rels.MaterialByGeometry)
@@ -332,14 +329,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       _transactionManager.StartTransaction(true, "Grouping");
       try
       {
-        _tracker.BakeGroupAndRecord(
-          doc,
-          marker,
-          target.ProjectId,
-          target.ModelId,
-          groupMembers,
-          createdMaterialUniqueIds
-        );
+        _tracker.BakeGroupAndRecord(doc, marker, target.ProjectId, target.ModelId, groupMembers);
         _transactionManager.CommitTransaction();
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -349,7 +339,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         // they just received — so fall back to recording the receive without a group.
         _transactionManager.RollbackTransaction();
         _logger.LogError(ex, "Artefact receive grouping failed for '{Marker}'", marker);
-        RecordWithoutGroup(doc, marker, target, createdMaterialUniqueIds);
+        RecordWithoutGroup(doc, marker, target);
       }
     }
 
@@ -1401,11 +1391,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
-  private Dictionary<int, ElementId> CreateMaterials(
-    Document doc,
-    ArtefactBundle bundle,
-    List<string> createdMaterialUniqueIds
-  )
+  private Dictionary<int, ElementId> CreateMaterials(Document doc, ArtefactBundle bundle)
   {
     var idByNode = new Dictionary<int, ElementId>();
     // Dedup on name + the full colour signature. Name alone is not enough (older bundles carry no name, so every
@@ -1424,7 +1410,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         var key = MaterialKey(node);
         if (!byKey.TryGetValue(key, out var id))
         {
-          id = FindOrCreateMaterial(doc, node, createdMaterialUniqueIds);
+          id = FindOrCreateMaterial(doc, node);
           byKey[key] = id;
         }
         idByNode[kv.Key] = id;
@@ -1448,7 +1434,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       node.Roughness ?? 1.0
     );
 
-  private ElementId FindOrCreateMaterial(Document doc, ArtefactNode node, List<string> createdMaterialUniqueIds)
+  private ElementId FindOrCreateMaterial(Document doc, ArtefactNode node)
   {
     int argb = node.Argb ?? unchecked((int)0xFFFFFFFF);
     double opacity = Clamp01(node.Opacity ?? 1.0);
@@ -1464,21 +1450,18 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     var name = _revitUtils.RemoveInvalidChars(label);
 
-    // A Revit material is identified by name, so re-receives reuse the existing element — but only when its colour
-    // still matches. Two source materials can legitimately share a name with different colours (Rhino allows it);
-    // suffixing the ARGB keeps the second one from silently inheriting the first one's appearance. Names are only
-    // authoritative now that producers carry them; the colour-derived fallback label was already unique per colour.
-    var revitColor = new Color((byte)((argb >> 16) & 0xFF), (byte)((argb >> 8) & 0xFF), (byte)(argb & 0xFF));
+    // A Revit material is identified by name: an existing one is reused AS IS, and its properties are never written
+    // back over. That is deliberate and matches the v1 builder (RevitMaterialBaker.BakeMaterial) — a user who
+    // recolours a received material keeps that edit across re-receives instead of having it reverted [ENG-8805].
+    // The trade-off, also inherited from v1: two source materials that share a name but not a colour collapse onto
+    // whichever one the document already holds.
     var existing = FindMaterialByName(doc, name);
-    if (existing is not null && !SameColor(existing.Color, revitColor))
-    {
-      name = _revitUtils.RemoveInvalidChars($"{label} {(uint)argb:X8}");
-      existing = FindMaterialByName(doc, name);
-    }
     if (existing is not null)
     {
       return existing.Id;
     }
+
+    var revitColor = new Color((byte)((argb >> 16) & 0xFF), (byte)((argb >> 8) & 0xFF), (byte)(argb & 0xFF));
 
     var id = Material.Create(doc, name);
     var material = (Material)doc.GetElement(id);
@@ -1486,9 +1469,6 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     material.Transparency = (int)((1 - opacity) * 100);
     material.Shininess = (int)(metalness * 128);
     material.Smoothness = (int)((1 - roughness) * 100);
-    // Recorded (unlike the reuse branches above, which return a material the document already owned) so the next
-    // receive can delete exactly what this one created [ENG-8805].
-    createdMaterialUniqueIds.Add(material.UniqueId);
     return id;
   }
 
@@ -1500,11 +1480,6 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       .Cast<Material>()
       .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
   }
-
-  // An existing material with no valid colour counts as a match — there is nothing to compare against, and minting a
-  // suffixed duplicate on every receive would be worse than reusing it.
-  private static bool SameColor(Color existing, Color wanted) =>
-    !existing.IsValid || (existing.Red == wanted.Red && existing.Green == wanted.Green && existing.Blue == wanted.Blue);
 
   private static double Clamp01(double v) =>
     v < 0 ? 0
@@ -1686,18 +1661,13 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     RevitReceiveTracker.PurgeMarkedElements(doc, marker);
   }
 
-  // Grouping failed, but the materials this receive created still have to be cleanable next time.
-  private void RecordWithoutGroup(
-    Document doc,
-    string marker,
-    ArtefactReceiveTarget target,
-    IReadOnlyCollection<string> createdMaterialUniqueIds
-  )
+  // Grouping failed, but the receive still has to be on record so the next one knows this model was received here.
+  private void RecordWithoutGroup(Document doc, string marker, ArtefactReceiveTarget target)
   {
     _transactionManager.StartTransaction(true, "Speckle receive manifest");
     try
     {
-      _tracker.Record(doc, marker, target.ProjectId, target.ModelId, createdMaterialUniqueIds);
+      _tracker.Record(doc, marker, target.ProjectId, target.ModelId);
       _transactionManager.CommitTransaction();
     }
     catch (Exception ex) when (!ex.IsFatal())
