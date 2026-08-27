@@ -85,33 +85,30 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     session.SetStat("propertySetDefsReused", _propertySetBaker.DefinitionsReused);
   }
 
+  // Only objects that actually carry property sets are materialized (ToNested) — the definition synthesis walks
+  // the "Property Sets" subtree, and everything else stays columnar.
   private static IEnumerable<Dictionary<string, object?>> EnumeratePropertyTrees(ArtefactBundle bundle)
   {
-    foreach (var props in bundle.Properties.Values)
+    var table = bundle.PropertyTable!;
+    foreach (int objK in table.KeysWith("properties.Property Sets").Distinct())
     {
-      if (props.TryGetValue("properties", out var treeObj) && treeObj is Dictionary<string, object?> tree)
-      {
-        yield return tree;
-      }
+      yield return table.Under(objK, "properties").ToNested();
     }
   }
 
   protected override void PostBakeEntity(
     Entity entity,
-    Dictionary<string, object?>? properties,
+    PropertyView properties,
     Transaction tr,
     ArtefactSessionLog session
   )
   {
-    if (
-      properties is not null
-      && properties.TryGetValue("properties", out var tree)
-      && tree is Dictionary<string, object?> propertyTree
-      && propertyTree.ContainsKey("Property Sets")
-    )
+    var tree = properties.Under("properties");
+    if (tree.Under("Property Sets").Count > 0)
     {
+      // The baker walks the nested shape; materialize it for this entity only.
       session.Increment(
-        _propertySetBaker.TryBakePropertySets(entity, propertyTree, tr) ? "propertySetsBaked" : "propertySetsFailed"
+        _propertySetBaker.TryBakePropertySets(entity, tree.ToNested(), tr) ? "propertySetsBaked" : "propertySetsFailed"
       );
     }
   }
@@ -124,15 +121,13 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
       {
         continue;
       }
-      if (
-        bundle.Properties.TryGetValue(kv.Key, out var props)
-        && props.TryGetValue("properties", out var treeObj)
-        && treeObj is Dictionary<string, object?> tree
-        && tree.TryGetValue(ProxyKeys.PROPERTYSET_DEFINITIONS, out var defsObj)
-        && defsObj is Dictionary<string, object?> definitions
-      )
+      var definitionsView = bundle
+        .ObjectProperties(kv.Key)
+        .Under("properties")
+        .Under(ProxyKeys.PROPERTYSET_DEFINITIONS);
+      if (definitionsView.Count > 0)
       {
-        return definitions;
+        return definitionsView.ToNested();
       }
       return null;
     }

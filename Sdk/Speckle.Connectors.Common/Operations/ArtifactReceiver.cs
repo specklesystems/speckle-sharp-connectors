@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.Utils;
+using Speckle.Sdk.Bundles;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Pipelines.Progress;
@@ -49,6 +50,8 @@ public class ArtifactReceiver(
         receiveInfo.ModelId,
         receiveInfo.SelectedVersionId,
         bundleDir,
+        // a host connector never reads viewer.dat/idx — they're the viewer's own artefacts, and the biggest files
+        ReceiveOptions.Default.ShouldDownload,
         cancellationToken
       )
       .ConfigureAwait(false);
@@ -70,7 +73,11 @@ public class ArtifactReceiver(
     );
 
     onOperationProgressed.Report(new("Reading artefacts...", null));
-    return await ArtefactBundleReader.ReadAsync(bundleDir, cancellationToken).ConfigureAwait(false);
+    // Geometry eager (the bake needs all of it), properties columnar: a PropertyTable instead of a dictionary tree
+    // per object — ~4× less memory on property-heavy (Revit / IFC) bundles.
+    return await ArtefactBundleReader
+      .ReadAsync(bundleDir, new ArtefactReadOptions(LoadGeometry: true, ColumnarProperties: true), cancellationToken)
+      .ConfigureAwait(false);
   }
 
   /// <summary>

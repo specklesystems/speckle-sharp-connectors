@@ -91,7 +91,7 @@ public static class ServiceRegistration
     // Speckle 4.0 client-side artefact send. The SDK producer types build on every connector TFM (netstandard2.0
     // for the net48 plugin + net8/net10), so this is registered everywhere. Registering it auto-activates
     // SendOperation's SendViaArtifacts path (the ctor param is optional).
-    serviceCollection.AddScoped<IArtifactRootObjectBuilder<RhinoObject>, RhinoArtifactRootObjectBuilder>();
+    serviceCollection.AddScoped<IBundleBuilder<RhinoObject>, RhinoBundleBuilder>();
     serviceCollection.AddSingleton<
       Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
       Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory

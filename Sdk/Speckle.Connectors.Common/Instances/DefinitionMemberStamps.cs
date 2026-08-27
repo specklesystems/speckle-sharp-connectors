@@ -18,7 +18,7 @@ namespace Speckle.Connectors.Common.Instances;
 /// <para><b>Cross-connector contract.</b> The keys and the join are the SketchUp connector's, which solved the
 /// same problem for tags first [ENG-8851]. A SketchUp member owns exactly one geometry so it writes a bare
 /// integer; a Rhino member can own several (a lossless 3dm solid AND its display meshes, which receive chooses
-/// between per member), so the geometry stamp is a comma-joined list. <see cref="Read"/> accepts both forms.</para>
+/// between per member), so the geometry stamp is a comma-joined list. both forms are accepted.</para>
 /// <para><b>The invariant this relies on.</b> A member's object row has no render edge, so every consumer that
 /// walks objects must skip render-less ones or the member bakes twice. Both C# receive paths already do —
 /// the Rhino native builder gates on DISPLAY/SOLID/DISPLAY_INSTANCE, and <c>ObjectsArtifactReader</c> drops an
@@ -54,60 +54,6 @@ public static class DefinitionMemberStamps
   /// of its own, so this is the only handle its definition has on it.</summary>
   public static KeyValuePair<string, object?>[] InstanceStamp(int instanceK) =>
     [new(INSTANCE_PATH, instanceK.ToString(CultureInfo.InvariantCulture))];
-
-  /// <summary>
-  /// Inverts the stamps of a whole bundle in one pass: geometry K → owning member object K, and INSTANCE node K →
-  /// owning member object K. Feed it <c>ArtefactBundle.Properties</c>. Objects with no stamp (every top-level
-  /// object, and every member in a pre-ENG-9110 bundle) contribute nothing, so both maps are empty on older
-  /// bundles and callers fall back to their previous behaviour.
-  /// </summary>
-  public static DefinitionMemberIndex Read(IReadOnlyDictionary<int, Dictionary<string, object?>> propertiesByObject)
-  {
-    var byGeometry = new Dictionary<int, int>();
-    var byInstance = new Dictionary<int, int>();
-    foreach (var kv in propertiesByObject)
-    {
-      if (kv.Value.TryGetValue(STAMP_ROOT, out var root) && root is Dictionary<string, object?> stamps)
-      {
-        foreach (int geometryK in ParseKs(stamps, GEOMETRY_KEY))
-        {
-          byGeometry[geometryK] = kv.Key; // a member owns several geometry Ks; all of them point back at it
-        }
-        foreach (int instanceK in ParseKs(stamps, INSTANCE_KEY))
-        {
-          byInstance[instanceK] = kv.Key;
-        }
-      }
-    }
-    return new DefinitionMemberIndex(byGeometry, byInstance);
-  }
-
-  // A stamp value arrives either as a comma-joined string or as a bare number, and BOTH occur for bundles this very
-  // class wrote: eav infers a type per value, so "7,8" stays a string (no thousands separator is admitted under the
-  // invariant culture) while a single-K "7" is coerced to a number and read back as a double. SketchUp's integer
-  // stamp lands in the same numeric branch. Unparseable fragments are skipped rather than thrown: a stamp is an
-  // optimisation over a lost layer, never a reason to fail a receive.
-  private static List<int> ParseKs(Dictionary<string, object?> stamps, string key)
-  {
-    var result = new List<int>();
-    if (!stamps.TryGetValue(key, out var value) || value is null)
-    {
-      return result;
-    }
-    if (value is double d)
-    {
-      result.Add((int)d);
-      return result;
-    }
-    foreach (var part in Convert.ToString(value, CultureInfo.InvariantCulture)?.Split(',') ?? [])
-    {
-      if (int.TryParse(part.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int k))
-      {
-        result.Add(k);
-      }
-    }
-    return result;
-  }
 }
 
 /// <summary>The inverted <see cref="DefinitionMemberStamps"/> of one bundle: from a K reachable inside a
@@ -123,14 +69,11 @@ public sealed record DefinitionMemberIndex(
 /// </summary>
 public static class DefinitionMemberIndexes
 {
-  /// <summary>
-  /// The graph-native join (<c>DEFINES_MEMBER</c> 25 / <c>PLACES</c> 24) when the bundle carries it, else the
-  /// <c>@speckle.*</c> stamps. Both invert the same direction; a bundle predating the vocab has only the stamps.
-  /// </summary>
-  public static DefinitionMemberIndex Build(
-    ArtefactRelations rels,
-    IReadOnlyDictionary<int, Dictionary<string, object?>> propertiesByObject
-  ) => TryFromRels(rels) ?? DefinitionMemberStamps.Read(propertiesByObject);
+  private static readonly DefinitionMemberIndex s_empty = new(new Dictionary<int, int>(), new Dictionary<int, int>());
+
+  /// <summary>The graph-native join (<c>DEFINES_MEMBER</c> 25 / <c>PLACES</c> 24). Empty when the bundle has no
+  /// definition members.</summary>
+  public static DefinitionMemberIndex Build(ArtefactRelations rels) => TryFromRels(rels) ?? s_empty;
 
   // Member ↔ geometry joins on (definition, member ordinal), which is immune to the content-hash-dedup collision a
   // geometry-K-keyed inversion cannot distinguish.

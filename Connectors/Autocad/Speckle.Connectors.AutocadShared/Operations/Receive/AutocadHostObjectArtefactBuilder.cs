@@ -12,6 +12,7 @@ using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
@@ -227,7 +228,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           continue;
         }
 
-        bundle.Properties.TryGetValue(objK, out var props);
+        var props = bundle.ObjectProperties(objK);
         var source = Source(appId);
         var srcType = SrcType(props);
         var sw = Stopwatch.StartNew();
@@ -1067,7 +1068,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         continue;
       }
-      bundle.Properties.TryGetValue(objK, out var props);
+      var props = bundle.ObjectProperties(objK);
       var source = Source(appId);
       var srcType = SrcType(props);
       var sw = Stopwatch.StartNew();
@@ -1337,7 +1338,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       return (null, null);
     }
     string layer = ResolveMemberLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
-    bundle.Properties.TryGetValue(memberObjK, out var memberProps);
+    var memberProps = bundle.ObjectProperties(memberObjK);
     return (layer, NativeColorFromProperties(memberProps));
   }
 
@@ -1393,7 +1394,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       nestedRef.MaterialId = material;
     }
-    bundle.Properties.TryGetValue(memberObjK, out var props);
+    var props = bundle.ObjectProperties(memberObjK);
     if (NativeColorFromProperties(props) is AcadColor native)
     {
       nestedRef.Color = native; // ACI / explicit ByBlock recorded by the sender [ENG-9117]
@@ -1729,13 +1730,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   /// index (so CTB plot styles, standards checks and index-reading scripts keep working), and an explicitly
   /// ByBlock entity comes back inheriting rather than pinned to a fixed RGB [ENG-9117]. A bundle from any other
   /// host (or an older AutoCAD send) carries neither key, and the caller falls back to the ARGB edge.</summary>
-  private static AcadColor? NativeColorFromProperties(Dictionary<string, object?>? props)
+  private static AcadColor? NativeColorFromProperties(PropertyView props)
   {
-    if (
-      props is null
-      || !props.TryGetValue(AutocadColorSemanticKeys.SOURCE, out var source)
-      || source is not string src
-    )
+    if (props.GetString(AutocadColorSemanticKeys.SOURCE) is not { } src)
     {
       return null;
     }
@@ -1863,12 +1860,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   private static string ObjectUnits(ArtefactBundle bundle, int objK) =>
-    bundle.Properties.TryGetValue(objK, out var props)
-    && props.TryGetValue("units", out var v)
-    && v is string s
-    && s.Length > 0
-      ? s
-      : bundle.Units;
+    bundle.ObjectProperties(objK).GetString("units") is { Length: > 0 } s ? s : bundle.Units;
 
   // Deletes the previous receive of this model — through the SAME per-card janitors the legacy builder's
   // PreReceiveDeepClean uses (they match on Contains, and both paths now stamp with the same SPK- prefix), so a
@@ -1921,15 +1913,13 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   protected virtual void PostBakeEntity(
     AcadEntity entity,
-    Dictionary<string, object?>? properties,
+    PropertyView properties,
     Transaction tr,
     ArtefactSessionLog session
   ) { }
 
-  private static string SrcType(Dictionary<string, object?>? props) =>
-    props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0
-      ? s
-      : "Speckle Object";
+  private static string SrcType(PropertyView props) =>
+    props.GetString("speckle_type") is { Length: > 0 } s ? s : "Speckle Object";
 
   /// <summary>Minimal <see cref="Base"/> carrier used only as the <c>source</c> of a conversion report entry. A plain
   /// <see cref="Base"/> (not a custom subclass) so the assembly-scanned TypeLoader accepts it.</summary>

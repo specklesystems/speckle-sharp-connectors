@@ -1,12 +1,10 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using Microsoft.Extensions.Logging;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
-using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
@@ -19,12 +17,11 @@ using Speckle.Objects;
 using Speckle.Objects.Other;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Bundles;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
-using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using RG = Rhino.Geometry;
@@ -36,10 +33,10 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
 /// <summary>
 /// Speckle 4.0 send path for Rhino: instead of building a <see cref="Speckle.Sdk.Models.Collections.Collection"/>
 /// graph of <see cref="Speckle.Objects.Data.RhinoObject"/>s and serializing it through the v1 pipeline, this
-/// drives the SDK <see cref="ObjectsArtifactPipeline"/> to write the client-side artefact triple directly —
+/// converts into the SDK's <see cref="BundleBuilder"/>, which streams the client-side artefact bundle —
 /// <c>geometries.parquet</c> (SGEO blobs + raw 3dm solid blobs), <c>eav.*.parquet</c> (properties),
-/// <c>envelope.*.parquet</c> (the relations + value-node topology graph) — then uploads the bundle via
-/// <see cref="ArtifactPipeline"/>.
+/// <c>envelope.*.parquet</c> (the relations + value-node topology graph). The SDK ships it
+/// (<see cref="IBundleSender"/>).
 /// </summary>
 /// <remarks>
 /// <para>Mirrors <c>RhinoRootObjectBuilder</c>'s convert/unpack flow (instances, materials, properties,
@@ -53,12 +50,12 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
 ///   (nested via <c>ParentLayerId</c>) with an <c>IN_COLLECTION</c> rel per object, and the default scene view
 ///   projects on <c>IN_COLLECTION</c> — so the viewer explorer reproduces the layer hierarchy. Block-definition
 ///   members carry the same edge (that is how their layer survives, ENG-9110) and are kept out of the tree by
-///   having no render edge at all, plus a <see cref="DefinitionMemberStamps"/> join back from their geometry.</item>
+///   having no render edge at all; DEFINES_MEMBER / PLACES join them back to their definition.</item>
 /// </list>
 /// <para><b>Threading.</b> Two phases. Phase 1 (<see cref="CollectOnMain"/>) runs on the Rhino UI thread —
 /// RhinoCommon (convert, unpack, layer/attribute reads) is main-thread-affine — and produces a pure-Speckle
-/// snapshot (no RhinoCommon refs). Phase 2 (<see cref="WriteBundle"/>) runs on a worker thread and builds the
-/// parquet bundle. This split is mandatory: the artefact pipeline does sync-over-async parquet IO
+/// snapshot (no RhinoCommon refs). Phase 2 (<see cref="WriteBundle"/>) runs on a worker thread and writes the
+/// bundle. This split is mandatory: the artefact pipeline does sync-over-async parquet IO
 /// (<c>ParquetWriter.CreateAsync(...).GetAwaiter().GetResult()</c>), which DEADLOCKS on the UI thread (the
 /// continuation is posted back to the blocked UI dispatcher/scheduler). Running it on a worker — no UI
 /// SynchronizationContext or TaskScheduler — lets those continuations resume on the thread pool. Same principle
@@ -69,7 +66,7 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
   "CA1506:Avoid excessive class coupling",
   Justification = "Top-level artefact send orchestrator; coupling to converters, unpackers, host API and the pipeline façade is inherent."
 )]
-public class RhinoArtifactRootObjectBuilder(
+public class RhinoBundleBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RhinoConversionSettings> converterSettings,
   RhinoInstanceUnpacker instanceUnpacker,
@@ -77,92 +74,26 @@ public class RhinoArtifactRootObjectBuilder(
   RhinoColorUnpacker colorUnpacker,
   PropertiesExtractor propertiesExtractor,
   IThreadContext threadContext,
-  IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
-  ILogger<RhinoArtifactRootObjectBuilder> logger
-) : IArtifactRootObjectBuilder<RhinoObject>
+  ILogger<RhinoBundleBuilder> logger
+) : IBundleBuilder<RhinoObject>
 {
-  public async Task<ArtifactBuildResult> BuildAndUpload(
-    IReadOnlyList<RhinoObject> objects,
-    string projectId,
-    string ingestionId,
-    string versionId,
-    Account account,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  )
-  {
-    // Bundle base name = the server pre-allocated versionId, so the parquet files carry their final names
-    // from byte one (the v2 upload signs/keys per basename). Each version gets its own scratch dir.
-    var outputDir = Path.Combine(Path.GetTempPath(), "Speckle", "artifacts", versionId);
-    Directory.CreateDirectory(outputDir);
-
-    // Per-session diagnostics (per-object timing/failures, phase timings, bundle stats) → %TEMP%\Speckle\sessions\.
-    using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Send, projectId, null, versionId, logger);
-
-    ArtifactBundleResult built = await BuildCore(
-      objects,
-      session,
-      versionId,
-      outputDir,
-      onOperationProgressed,
-      cancellationToken
-    );
-
-    // Upload on a WORKER thread too — same reasoning as the write phase (see the class <remarks>).
-    return await threadContext.RunOnWorkerAsync(async () =>
-    {
-      using var pipeline = artifactPipelineFactory.CreateInstance(
-        projectId,
-        ingestionId,
-        versionId,
-        account,
-        outputDir,
-        cancellationToken
-      );
-
-      onOperationProgressed.Report(new("Uploading...", null));
-      string finalVersionId;
-      using (session.Phase("Upload"))
-      {
-        finalVersionId = await pipeline
-          .UploadFilesAsync(built.Bundle, built.RootId, built.ObjectCount)
-          .ConfigureAwait(false);
-      }
-
-      return new ArtifactBuildResult(finalVersionId, built.RootId, built.ConversionResults);
-    });
-  }
-
   /// <summary>
-  /// Build-only entry point: converts <paramref name="objects"/> and writes the artefact bundle into
-  /// <paramref name="outputDir"/> — no auth, storage, or server API involved. For hosts that upload out of
-  /// process (the headless converter legs); <see cref="BuildAndUpload"/> is the in-process path.
+  /// Converts <paramref name="objects"/> into a <see cref="BundleBuilder"/> (unbuilt — the caller finishes and
+  /// uploads it, or <see cref="BundleBuilder.Build"/>s it for an out-of-process upload). Collect runs on the Rhino UI
+  /// thread, the bundle write on a worker — see the class remarks.
   /// </summary>
-  public async Task<ArtifactBundleResult> Build(
+  public async Task<BundleBuild> Build(
     IReadOnlyList<RhinoObject> objects,
     string? projectId,
-    string versionId,
-    string outputDir,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
-    Directory.CreateDirectory(outputDir);
-    using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Send, projectId, null, versionId, logger);
-    return await BuildCore(objects, session, versionId, outputDir, onOperationProgressed, cancellationToken);
-  }
+    // Per-session diagnostics (per-object timing/failures, phase timings, bundle stats) → %TEMP%\Speckle\sessions\.
+    // The version id is not known until the SDK creates the ingestion; the session is keyed by its start time.
+    using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Send, projectId, null, null, logger);
 
-  // Collect must run on the Rhino UI thread and the bundle write on a worker — see the class <remarks>.
-  private async Task<ArtifactBundleResult> BuildCore(
-    IReadOnlyList<RhinoObject> objects,
-    ArtefactSessionLog session,
-    string versionId,
-    string outputDir,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  )
-  {
     CollectedModel collected;
     using (session.Phase("Collect"))
     {
@@ -175,9 +106,7 @@ public class RhinoArtifactRootObjectBuilder(
     {
       using (session.Phase("Write"))
       {
-        return Task.FromResult(
-          WriteBundle(collected, session, versionId, outputDir, onOperationProgressed, cancellationToken)
-        );
+        return Task.FromResult(WriteBundle(collected, session, onOperationProgressed, cancellationToken));
       }
     });
   }
@@ -470,40 +399,78 @@ public class RhinoArtifactRootObjectBuilder(
     }
   }
 
-  // ── Phase 2 (worker thread): pure-Speckle snapshot → parquet bundle ──────────────────────────────────
+  // ── Phase 2 (worker thread): pure-Speckle snapshot → BundleBuilder (streams to parquet) ────────────
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
-  private ArtifactBundleResult WriteBundle(
+  private BundleBuild WriteBundle(
     CollectedModel model,
     ArtefactSessionLog session,
-    string versionId,
-    string outputDir,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
+    var bundle = new BundleBuilder(speckleApplication, model.Units);
+    try
+    {
+      WriteInto(bundle, model, session, onOperationProgressed, cancellationToken, out var results);
+      session.SetStat("objects", results.Count(r => r.Status == Status.SUCCESS));
+      return new BundleBuild(bundle, results);
+    }
+    catch
+    {
+      bundle.Dispose();
+      throw;
+    }
+  }
 
-    // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).
+  private void WriteInto(
+    BundleBuilder bundle,
+    CollectedModel model,
+    ArtefactSessionLog session,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken,
+    out List<SendConversionResult> results
+  )
+  {
+    // Definitions first, so they carry their proper name (a placement only knows the definition id).
+    var definitions = new Dictionary<string, BundleDefinition>(StringComparer.Ordinal);
     foreach (var defProxy in model.Definitions)
     {
-      pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
+      string defId = defProxy.applicationId.NotNull();
+      definitions[defId] = bundle.GetOrAddDefinition(defId, defProxy.name);
+    }
+    // Block-definition members render ONLY through their definition (via a placed instance's transform) — never as
+    // standalone scene objects [ENG-8782]. They keep their layer (IN_COLLECTION) and properties; their geometry and
+    // nested placements are written by the owning definition below (DEFINES / DEFINES_INSTANCE + DEFINES_MEMBER).
+    var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
+
+    var layers = new Dictionary<int, BundleContainer>();
+    var layerByLayerId = new Dictionary<string, BundleContainer>(StringComparer.Ordinal);
+    BundleContainer Layer(int layerIndex)
+    {
+      if (layers.TryGetValue(layerIndex, out var existing))
+      {
+        return existing;
+      }
+      CollectedLayer layer = model.Layers[layerIndex];
+      BundleContainer? parent =
+        layer.ParentIndex is int parentIndex && model.Layers.ContainsKey(parentIndex) ? Layer(parentIndex) : null;
+      var container = bundle.GetOrAddContainer(layer.Id, layer.Name, parent, "Layer");
+      container.Color = bundle.GetOrAddColor(layer.Argb); // layer colour as a first-class edge [rel 29 NODE_HAS_COLOR]
+      layers[layerIndex] = container;
+      layerByLayerId[layer.Id] = container;
+      return container;
     }
 
-    var layerCollectionKByIndex = new Dictionary<int, int>();
-    // object id -> its display-mesh geometry K(s): used post-loop for HAS_MATERIAL and DEFINES.
-    var geometryKsByObjectId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
-    // object id -> its INSTANCE node K, for DEFINES_INSTANCE (nested block placements).
-    var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
-    // Block-definition members (geometry + nested instances) are unpacked into model.Objects too, but they must
-    // render ONLY through their definition (DEFINES / DEFINES_INSTANCE) via a placed instance's transform — never as
-    // standalone scene objects. Without suppressing their top-level DISPLAY / DISPLAY_INSTANCE + IN_COLLECTION they
-    // also draw at the model origin (untransformed), duplicating the instance geometry [ENG-8782].
-    var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
+    // object id → its display/solid geometry (for the material + colour passes), placements, and deferred members.
+    var geometriesByObjectId = new Dictionary<string, List<BundleGeometry>>(StringComparer.Ordinal);
+    var placedObjectIds = new HashSet<string>(StringComparer.Ordinal);
+    var memberGeometry = new Dictionary<string, (List<Base> Display, byte[]? Solid)>(StringComparer.Ordinal);
+    var memberPlacements = new Dictionary<string, InstanceProxy>(StringComparer.Ordinal);
 
     // The Collect-phase results are provisional: the write phase can still drop an object's entire geometry
     // (SGEO-unencodable types). Amend those to ERROR so the report card matches the bundle contents [ENG-8826].
-    var results = model.Results.ToList();
+    results = model.Results.ToList();
     var resultIndexByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
     for (int i = 0; i < results.Count; i++)
     {
@@ -514,262 +481,266 @@ public class RhinoArtifactRootObjectBuilder(
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      int collK = GetOrAddLayerCollection(pipeline, model.Layers, co.LayerIndex, layerCollectionKByIndex);
-      string? dropReason = EmitObject(
-        pipeline,
-        co,
-        collK,
-        model.Units,
-        geometryKsByObjectId,
-        instanceKByObjectId,
-        definitionMemberIds
+      string id = co.ApplicationId;
+      bool isMember = definitionMemberIds.Contains(id);
+
+      var obj = bundle.GetOrAddObject(id);
+      obj.SetProperties(
+        co.Properties,
+        name: co.Name,
+        speckleType: co.Converted.speckle_type,
+        sourceType: co.SourceType
       );
-      if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
+      obj.Collection = Layer(co.LayerIndex);
+
+      string? dropReason = null;
+      if (co.Converted is InstanceProxy instanceProxy)
       {
-        results[ri] = new(Status.ERROR, co.ApplicationId, co.SourceType, null, new SpeckleException(dropReason));
-        session.RecordObject(co.ApplicationId, co.SourceType, Status.ERROR, dropReason, 0);
+        // block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE; a member placement
+        // is instead nested under its owning definition (DEFINES_INSTANCE + PLACES), written below.
+        if (isMember)
+        {
+          memberPlacements[id] = instanceProxy;
+        }
+        else
+        {
+          var def = definitions.TryGetValue(instanceProxy.definitionId, out var d)
+            ? d
+            : bundle.GetOrAddDefinition(instanceProxy.definitionId, null);
+          obj.Place(def, Flatten(instanceProxy.transform), instanceProxy.units, key: id);
+          placedObjectIds.Add(id);
+        }
+      }
+      else
+      {
+        var (display, solid) = SplitGeometry(co);
+        if (isMember)
+        {
+          memberGeometry[id] = (display, solid);
+        }
+        else
+        {
+          dropReason = EmitGeometry(obj, display, solid, geometriesByObjectId);
+        }
+      }
+
+      if (dropReason is not null && resultIndexByAppId.TryGetValue(id, out int ri))
+      {
+        results[ri] = new(Status.ERROR, id, co.SourceType, null, new SpeckleException(dropReason));
+        session.RecordObject(id, co.SourceType, Status.ERROR, dropReason, 0);
       }
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
-    // Layer id → its interned COLLECTION K, for the layer-sourced appearance edges (NODE_HAS_MATERIAL).
-    var collKByLayerId = new Dictionary<string, int>(StringComparer.Ordinal);
-    foreach (var kv in layerCollectionKByIndex)
-    {
-      collKByLayerId[model.Layers[kv.Key].Id] = kv.Value;
-    }
+    EmitDefinitionMembers(
+      bundle,
+      model,
+      definitions,
+      memberGeometry,
+      memberPlacements,
+      geometriesByObjectId,
+      placedObjectIds,
+      results,
+      resultIndexByAppId,
+      session
+    );
 
-    EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, collKByLayerId);
-    EmitGroups(pipeline, model.Groups, definitionMemberIds);
-
-    // Default scene view: the Rhino layer tree (IN_COLLECTION). The COLLECTION nodes' parent chain carries the
-    // nesting, so a single projection key rebuilds the full explorer hierarchy.
-    pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
+    EmitAppearance(bundle, model, geometriesByObjectId, placedObjectIds, layerByLayerId);
+    EmitGroups(bundle, model.Groups, definitionMemberIds);
 
     // Named camera viewpoints (collected on the UI thread in phase 1) → envelope.camera_views.parquet.
     foreach (var cameraView in model.CameraViews)
     {
-      pipeline.AddCameraView(cameraView);
+      bundle.AddCameraView(cameraView);
     }
-
-    pipeline.Complete();
-
-    var bundle = Directory
-      .EnumerateFiles(outputDir, versionId + ".*")
-      .Where(p => p.EndsWith(".parquet", StringComparison.Ordinal))
-      .ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.Ordinal);
-
-    var objectCount = results.Count(r => r.Status == Status.SUCCESS);
-    // The artefact path has no serialized root object — a synthetic, deterministic root id (same convention as
-    // the Revit artefact builder + the server's "synthetic root" expectation).
-    var rootId = $"binary-{versionId}";
-
-    session.SetStat("files", bundle.Count);
-    session.SetStat("objects", objectCount);
-    session.SetStat("definitions", model.Definitions.Count);
-    session.SetStat("materials", model.Materials.Count);
-    session.SetStat("layers", model.Layers.Count);
-    session.SetStat("groups", model.Groups.Count);
-
-    logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
-    return new ArtifactBundleResult(bundle, rootId, objectCount, results);
+    // Default scene view = the Rhino layer tree (IN_COLLECTION): BundleBuilder declares it when none is set.
   }
 
-  // Emits one object: eav labels + IN_COLLECTION, then a block placement (DISPLAY_INSTANCE → INSTANCE node) or
-  // geometry — the lossless 3dm SOLID blob (if present) plus the DISPLAY meshes. Pure Speckle (no RhinoCommon).
-  // Returns null on success, or a drop reason when the object had display geometry but NONE of it could be
-  // encoded (and no solid landed) — the caller downgrades the object's Collect-phase SUCCESS [ENG-8826].
-  private string? EmitObject(
-    ObjectsArtifactPipeline pipeline,
-    CollectedObject co,
-    int collK,
-    string units,
-    Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId,
-    HashSet<string> definitionMemberIds
+  // Definition members: geometry rides DEFINES on the member's ordinal (a member's solid + its display meshes share
+  // it, so receive can prefer the 3dm per member); nested placements ride DEFINES_INSTANCE + PLACES.
+  private void EmitDefinitionMembers(
+    BundleBuilder bundle,
+    CollectedModel model,
+    IReadOnlyDictionary<string, BundleDefinition> definitions,
+    IReadOnlyDictionary<string, (List<Base> Display, byte[]? Solid)> memberGeometry,
+    IReadOnlyDictionary<string, InstanceProxy> memberPlacements,
+    Dictionary<string, List<BundleGeometry>> geometriesByObjectId,
+    HashSet<string> placedObjectIds,
+    List<SendConversionResult> results,
+    IReadOnlyDictionary<string, int> resultIndexByAppId,
+    ArtefactSessionLog session
   )
   {
-    // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
-    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE) — that is what drew it untransformed at the
-    // model origin [ENG-8782]. It DOES keep the ordinary object-sourced IN_COLLECTION below, which is how its layer
-    // travels; a DefinitionMemberStamps stamp joins its geometry/instance K back to this object row so receive can
-    // find it again [ENG-9110]. Render-less objects are skipped by every consumer that walks objects, so carrying
-    // the membership costs nothing in the scene tree.
-    bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
-
-    int objK = pipeline.InternObject(co.ApplicationId);
-    pipeline.InCollection(objK, collK, 0);
-    pipeline.AddProperties(
-      co.ApplicationId,
-      co.Properties,
-      RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType)
-    );
-
-    // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
-    if (co.Converted is InstanceProxy instanceProxy)
+    foreach (var defProxy in model.Definitions)
     {
-      int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
-      int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
-      instanceKByObjectId[co.ApplicationId] = instK;
-      if (!isDefinitionMember)
+      var def = definitions[defProxy.applicationId.NotNull()];
+      foreach (string memberId in defProxy.objects)
       {
-        pipeline.DisplayInstance(objK, instK, 0);
+        // A member with neither geometry nor a placement (its conversion failed, or an unsupported type) is not
+        // interned — an object row with no rows, no edges and no layer would be pure noise in the bundle.
+        if (!memberPlacements.ContainsKey(memberId) && !memberGeometry.ContainsKey(memberId))
+        {
+          continue;
+        }
+        var member = bundle.GetOrAddObject(memberId);
+        if (memberPlacements.TryGetValue(memberId, out var nestedProxy))
+        {
+          var nested = definitions.TryGetValue(nestedProxy.definitionId, out var n)
+            ? n
+            : bundle.GetOrAddDefinition(nestedProxy.definitionId, null);
+          def.AddMemberPlacement(member, nested, Flatten(nestedProxy.transform), nestedProxy.units);
+          placedObjectIds.Add(memberId);
+        }
+        else if (memberGeometry.TryGetValue(memberId, out var mg))
+        {
+          int ord = def.NextMemberOrdinal();
+          bool hasSolid = mg.Solid is not null;
+          var gs = new List<BundleGeometry>();
+          if (mg.Solid is { } solidBytes)
+          {
+            // A member's solid rides DEFINES next to its display meshes AND takes the member's geometry-plane
+            // appearance — the pipeline send did the same (a standalone object's SOLID does not).
+            gs.Add(def.AddMemberRawGeometry(member, solidBytes, RawEncodingFormats.RHINO_3DM, ord));
+          }
+          gs.AddRange(AddMemberDisplay(def, member, mg.Display, ord, out string? memberSkip));
+          geometriesByObjectId[memberId] = gs;
+          // Same rule as a standalone object: display fragments present, none encodable, no solid → nothing
+          // renderable made the bundle, so the report card must not stand on the Collect-phase SUCCESS.
+          if (
+            mg.Display.Count > 0
+            && gs.Count == 0
+            && !hasSolid
+            && resultIndexByAppId.TryGetValue(memberId, out int mri)
+          )
+          {
+            string reason = memberSkip ?? "no display geometry could be encoded";
+            results[mri] = new(Status.ERROR, memberId, results[mri].SourceType, null, new SpeckleException(reason));
+            session.RecordObject(memberId, results[mri].SourceType, Status.ERROR, reason, 0);
+          }
+        }
       }
-      return null;
     }
+  }
 
-    // ── geometry object ───────────────────────────────────────────────────────────────────────────────
-    // Split display meshes from the lossless raw encoding (pure Speckle): Brep/Extrusion/SubD carry BOTH; a
-    // plain Mesh/Point/Curve is its own display.
+  // Split display meshes from the lossless raw encoding (pure Speckle): Brep/Extrusion/SubD carry BOTH; a plain
+  // Mesh/Point/Curve is its own display. A hatch has no IRawEncodedObject, so its Rhino-native 3dm blob (serialized
+  // in phase 1) stands in as the raw encoding.
+  private static (List<Base> Display, byte[]? Solid) SplitGeometry(CollectedObject co)
+  {
     Base rawGeometry = co.Converted;
-    List<Base> displayGeometry;
+    List<Base> display;
     RawEncoding? rawEncoding = null;
     if (rawGeometry is IDisplayValue<List<SOG.Mesh>> hasDisplay && rawGeometry is SOG.IRawEncodedObject rawEncoded)
     {
-      displayGeometry = hasDisplay.displayValue.Cast<Base>().ToList();
+      display = hasDisplay.displayValue.Cast<Base>().ToList();
       rawEncoding = rawEncoded.encodedValue;
     }
     else if (rawGeometry is IDisplayValue<List<SOG.Mesh>> hasDisplayMeshes)
     {
-      displayGeometry = hasDisplayMeshes.displayValue.Cast<Base>().ToList();
+      display = hasDisplayMeshes.displayValue.Cast<Base>().ToList();
     }
     else
     {
-      displayGeometry = [rawGeometry];
+      display = [rawGeometry];
     }
-
-    // A hatch has no IRawEncodedObject, so its Rhino-native 3dm blob (serialized in phase 1) stands in as the raw
-    // encoding — it flows through the same SOLID path as Brep/Extrusion/SubD below.
     rawEncoding ??= co.RawSolid;
+    byte[]? solid =
+      rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM
+        ? Convert.FromBase64String(rawEncoding.contents)
+        : null;
+    return (display, solid);
+  }
 
-    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids (Brep/Extrusion/SubD, and hatches).
-    // A standalone object links it via the SOLID rel; a definition member instead lets it ride DEFINES (added to gKs
-    // below) so the block reconstructs the native solid, not just its display mesh — but a member still gets NO
-    // standalone SOLID edge (it renders only through a placed instance's transform).
-    int? memberSolidK = null;
-    bool hasSolid = false;
-    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
+  // A standalone object: authoritative solid via SOLID (receive-as-solids), display meshes via DISPLAY (viewer).
+  // Returns a drop reason when every display fragment was unencodable and no solid landed — nothing renderable
+  // made the bundle; an object with no display geometry at all is NOT a drop.
+  private string? EmitGeometry(
+    BundleObject obj,
+    List<Base> display,
+    byte[]? solid,
+    Dictionary<string, List<BundleGeometry>> geometriesByObjectId
+  )
+  {
+    // Only the display meshes carry geometry-plane appearance (HAS_MATERIAL / HAS_COLOR); the raw 3dm solid is
+    // the lossless receive-as-solid payload and gets none — same as before the BundleBuilder port.
+    var gs = new List<BundleGeometry>();
+    if (solid is not null)
     {
-      byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
-      int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
-      if (isDefinitionMember)
-      {
-        memberSolidK = solidK;
-      }
-      else
-      {
-        pipeline.Solid(objK, solidK, 0);
-        hasSolid = true;
-      }
+      obj.AddRawGeometry(solid, RawEncodingFormats.RHINO_3DM, $"{obj.ApplicationId}:solid");
     }
-
-    // Renderable display meshes (and self-display primitives: points/curves the SGEO encoder supports).
-    var gKs = new List<int>();
     string? lastSkip = null;
-    if (memberSolidK is int msk)
-    {
-      gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the 3dm per member
-    }
+    int displayCount = 0;
     int ord = 0;
-    foreach (Base fragment in displayGeometry)
+    foreach (Base fragment in display)
     {
       try
       {
-        string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
-        int gK = pipeline.AddGeometry(gAppId, fragment);
-        if (!isDefinitionMember)
-        {
-          pipeline.Display(objK, gK, ord); // members render only via DEFINES through a placed instance's transform
-        }
-        gKs.Add(gK);
+        gs.Add(obj.AddGeometry(fragment, fragment.applicationId ?? $"{obj.ApplicationId}:g{ord}"));
+        displayCount++;
         ord++;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        // A display fragment the SGEO encoder doesn't support (hatch/text/…) is skipped without failing the
-        // whole object — its solid blob + properties still land.
+        // A display fragment the SGEO encoder doesn't support (text/…) is skipped without failing the whole object —
+        // its solid blob + properties still land.
         lastSkip = $"{fragment.speckle_type}: {ex.Message}";
         logger.LogWarning(
           ex,
           "Skipped unsupported display geometry {Type} on {AppId}",
           fragment.speckle_type,
-          co.ApplicationId
+          obj.ApplicationId
         );
       }
     }
-
-    geometryKsByObjectId[co.ApplicationId] = gKs;
-
-    // Every display fragment was dropped and neither a standalone SOLID nor a member solid landed (gKs would
-    // carry the member solid) → nothing renderable made the bundle; report it instead of standing on the
-    // Collect-phase SUCCESS. An object with no display geometry at all is NOT a drop.
-    return displayGeometry.Count > 0 && gKs.Count == 0 && !hasSolid
+    geometriesByObjectId[obj.ApplicationId] = gs; // display meshes only — see above
+    return display.Count > 0 && displayCount == 0 && solid is null
       ? lastSkip ?? "no display geometry could be encoded"
       : null;
   }
 
-  // Graph-native member join [bundle-spec rels 24 PLACES / 25 DEFINES_MEMBER], the object-plane replacement for
-  // the @speckle.* member stamps: DEFINES_MEMBER def → member OBJECT with ord = the same member ordinal the
-  // member's DEFINES/DEFINES_INSTANCE rows carry (join key (definition, ord) — immune to content-hash dedup,
-  // which can hand two members in different definitions the same geometry K); PLACES member object → its nested
-  // INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's job). Vocab builds emit
-  // ONLY these rels; the @speckle.* stamps are written solely by pre-vocab builds, which cannot emit them.
-  private static void EmitMemberGraphJoin(
-    ObjectsArtifactPipeline pipeline,
-    int defK,
-    string memberId,
-    int memberOrd,
-    int? instK
+  private IEnumerable<BundleGeometry> AddMemberDisplay(
+    BundleDefinition def,
+    BundleObject member,
+    List<Base> display,
+    int ord,
+    out string? lastSkip
   )
   {
-    int memberObjK = pipeline.InternObject(memberId);
-    pipeline.DefinesMember(defK, memberObjK, memberOrd);
-    if (instK is { } placementK)
+    lastSkip = null;
+    var encodable = new List<Base>(display.Count);
+    foreach (Base fragment in display)
     {
-      pipeline.Places(memberObjK, placementK);
-    }
-  }
-
-  // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL). Order matters: all
-  // referenced meshes/instances must exist (added in the object loop) before the edges that resolve them.
-  private static void EmitValueNodes(
-    ObjectsArtifactPipeline pipeline,
-    CollectedModel model,
-    Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId,
-    IReadOnlyDictionary<string, int> collKByLayerId
-  )
-  {
-    // 1) instance definitions → DEFINES (member meshes) / DEFINES_INSTANCE (nested block placements).
-    foreach (var defProxy in model.Definitions)
-    {
-      int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
-      int memberOrd = 0;
-      foreach (var memberId in defProxy.objects)
+      // Probe encodability up front so one unsupported fragment doesn't abort the member's whole geometry list.
+      if (SgeoEncoder.TryGetPrimitiveType(fragment, out _))
       {
-        if (instanceKByObjectId.TryGetValue(memberId, out var instK))
-        {
-          pipeline.DefinesInstance(defK, instK, memberOrd);
-          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK);
-        }
-        else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
-        {
-          // All geometry of one member shares its member ordinal, so receive can group the member's authoritative solid
-          // + its display mesh(es) and pick the solid over its shadow (see RhinoHostObjectArtefactBuilder.BuildDefinitions).
-          foreach (var gK in memberGKs)
-          {
-            pipeline.Defines(defK, gK, memberOrd);
-          }
-          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK: null);
-        }
-        memberOrd++;
+        encodable.Add(fragment);
+      }
+      else
+      {
+        lastSkip = $"{fragment.speckle_type}: not SGEO-encodable";
+        logger.LogWarning(
+          "Skipped unsupported display geometry {Type} on member {AppId}",
+          fragment.speckle_type,
+          member.ApplicationId
+        );
       }
     }
+    return def.AddMember(member, encodable, ord);
+  }
 
-    // 2) render materials → HAS_MATERIAL (geometry → material node). Rhino material proxies list OBJECT ids,
-    // so resolve each object to its display-mesh geometry K(s).
-    // Layer-sourced proxies list a LAYER id instead, which owns no geometry — invert the object → layer map so those
-    // land on the display geometry of every object inheriting that layer's material (MaterialFromLayer) [ENG-9108].
+  // Render materials → the geometry plane (HAS_MATERIAL) on each object's display/solid geometry; a material painted
+  // directly on a block placement rides the object plane (OBJECT_HAS_MATERIAL, rel 26); a layer-sourced material is
+  // both the authored layer assignment (NODE_HAS_MATERIAL, rel 28) and, since a layer owns no geometry, a HAS_MATERIAL
+  // on every object inheriting it (MaterialFromLayer) [ENG-9108]. Colours: same three planes, minus the layer one
+  // (layer colours already ride the layer containers).
+  private static void EmitAppearance(
+    BundleBuilder bundle,
+    CollectedModel model,
+    IReadOnlyDictionary<string, List<BundleGeometry>> geometriesByObjectId,
+    HashSet<string> placedObjectIds,
+    IReadOnlyDictionary<string, BundleContainer> layerByLayerId
+  )
+  {
     var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
     foreach (var kv in model.LayerMaterialInheritors)
     {
@@ -783,7 +754,7 @@ public class RhinoArtifactRootObjectBuilder(
     foreach (var materialProxy in model.Materials)
     {
       var value = materialProxy.value;
-      int matK = pipeline.AddMaterial(
+      var material = bundle.GetOrAddMaterial(
         materialProxy.applicationId.NotNull(),
         value.name,
         value.diffuse,
@@ -795,36 +766,29 @@ public class RhinoArtifactRootObjectBuilder(
       );
       foreach (var objectId in materialProxy.objects)
       {
-        if (geometryKsByObjectId.TryGetValue(objectId, out var gKs))
+        if (geometriesByObjectId.TryGetValue(objectId, out var gs))
         {
-          foreach (var gK in gKs)
+          foreach (var g in gs)
           {
-            pipeline.HasMaterial(gK, matK);
+            g.Material = material;
           }
         }
-        else if (instanceKByObjectId.ContainsKey(objectId))
+        else if (placedObjectIds.Contains(objectId))
         {
-          // placement-painted: a material set directly on a block placement (MaterialFromObject on the instance
-          // itself) owns no geometry to hang HAS_MATERIAL on — it lives on the object plane as
-          // OBJECT_HAS_MATERIAL [bundle-spec rel 26], which retired the HAS_MATERIAL ord=1 INSTANCE-src overload.
-          pipeline.ObjectHasMaterial(pipeline.InternObject(objectId), matK);
+          bundle.GetOrAddObject(objectId).Material = material;
         }
-        else if (collKByLayerId.TryGetValue(objectId, out int layerCollK))
+        else if (layerByLayerId.TryGetValue(objectId, out var layer))
         {
-          // The authored layer→material assignment itself [bundle-spec rel 28 NODE_HAS_MATERIAL] — receive
-          // restores it on the rebuilt layer. Weakest ladder tier; the flatten below stays the render carrier.
-          pipeline.NodeHasMaterial(layerCollK, matK);
-          // layer-sourced: the layer has no geometry of its own, so the inherited material lands on each object that
-          // draws with it. An inheritor with no geometry (a block instance) is skipped — nothing to attach to.
+          layer.Material = material;
           if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
           {
             foreach (var inheritorId in inheritors)
             {
-              if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+              if (geometriesByObjectId.TryGetValue(inheritorId, out var inheritorGs))
               {
-                foreach (var gK in inheritorGKs)
+                foreach (var g in inheritorGs)
                 {
-                  pipeline.HasMaterial(gK, matK);
+                  g.Material = material;
                 }
               }
             }
@@ -833,40 +797,32 @@ public class RhinoArtifactRootObjectBuilder(
       }
     }
 
-    // 3) by-object display colors → HAS_COLOR (geometry → COLOR node), or OBJECT_HAS_COLOR for a geometry-less
-    // placement. Same shape as materials: Rhino color proxies list OBJECT ids, so resolve each to its
-    // display-mesh geometry K(s).
     foreach (var colorProxy in model.Colors)
     {
-      int colorK = pipeline.AddColor(colorProxy.value);
+      var color = bundle.GetOrAddColor(colorProxy.value);
       foreach (var objectId in colorProxy.objects)
       {
-        if (geometryKsByObjectId.TryGetValue(objectId, out var gKs))
+        if (geometriesByObjectId.TryGetValue(objectId, out var gs))
         {
-          foreach (var gK in gKs)
+          foreach (var g in gs)
           {
-            pipeline.HasColor(gK, colorK);
+            g.Color = color;
           }
         }
-        else if (instanceKByObjectId.ContainsKey(objectId))
+        else if (placedObjectIds.Contains(objectId))
         {
-          // A colour set directly on a block placement: it owns no geometry to hang HAS_COLOR on, so it rides the
-          // object plane instead [bundle-spec rel 27 OBJECT_HAS_COLOR] — successor of the tagged HAS_COLOR (rel 6,
-          // ord=1) stopgap from ENG-8822. Rel 27 is object-sourced by definition, so no namespace tag is needed;
-          // receive folds both vintages into ColorByObject, so pre-split bundles keep resolving [ENG-9368].
           // OVERRIDE semantics: the placement's colour beats the definition geometry's own [ENG-8825].
-          pipeline.ObjectHasColor(pipeline.InternObject(objectId), colorK);
+          bundle.GetOrAddObject(objectId).Color = color;
         }
       }
     }
   }
 
-  // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
-  // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
-  // edges. Definition members get no scene edges (same suppression as IN_COLLECTION), so a group emptied by
-  // that is skipped entirely.
+  // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership: a SEPARATE axis from IN_COLLECTION (an
+  // object keeps its layer AND its groups; memberships overlap). Definition members get no scene edges, so a group
+  // emptied by that is skipped entirely.
   private static void EmitGroups(
-    ObjectsArtifactPipeline pipeline,
+    BundleBuilder bundle,
     IReadOnlyList<CollectedGroup> groups,
     HashSet<string> definitionMemberIds
   )
@@ -878,57 +834,14 @@ public class RhinoArtifactRootObjectBuilder(
       {
         continue;
       }
-      int groupK = pipeline.AddContainer(group.Id, group.Name, null, "Group");
+      var container = bundle.GetOrAddContainer(group.Id, group.Name, null, "Group");
       int ord = 0;
       foreach (string memberId in memberIds)
       {
-        pipeline.InGroup(pipeline.InternObject(memberId), groupK, ord++);
+        bundle.GetOrAddObject(memberId).AddToGroup(container, ord++);
       }
     }
   }
-
-  // Resolves (and interns once) the COLLECTION node for a layer index, building the ancestor chain from the
-  // collected layer tree so the nesting is reproduced as nested COLLECTION nodes. Cached by layer index.
-  private static int GetOrAddLayerCollection(
-    ObjectsArtifactPipeline pipeline,
-    IReadOnlyDictionary<int, CollectedLayer> layers,
-    int layerIndex,
-    Dictionary<int, int> cache
-  )
-  {
-    if (cache.TryGetValue(layerIndex, out var existing))
-    {
-      return existing;
-    }
-
-    CollectedLayer layer = layers[layerIndex];
-    int? parentK = null;
-    if (layer.ParentIndex is int parentIndex && layers.ContainsKey(parentIndex))
-    {
-      parentK = GetOrAddLayerCollection(pipeline, layers, parentIndex, cache);
-    }
-
-    // Layer colour as a first-class edge [bundle-spec rel 29 NODE_HAS_COLOR]; the argb-on-CONTAINER column
-    // stamp it replaces stays a read fallback on consumers for pre-vocab bundles.
-    int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer");
-    pipeline.NodeHasColor(collK, pipeline.AddColor(layer.Argb));
-    cache[layerIndex] = collK;
-    return collK;
-  }
-
-  private static KeyValuePair<string, object?>[] RootScalars(
-    string speckleType,
-    string name,
-    string units,
-    string sourceType
-  ) =>
-    new KeyValuePair<string, object?>[]
-    {
-      new("speckle_type", speckleType),
-      new("name", name),
-      new("units", units),
-      new("type", sourceType),
-    };
 
   // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
   private static double[] Flatten(Matrix4x4 m) =>

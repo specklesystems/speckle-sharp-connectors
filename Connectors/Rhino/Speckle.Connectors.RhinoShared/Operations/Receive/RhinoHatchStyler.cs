@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
@@ -16,17 +17,14 @@ internal static class RhinoHatchStyler
   /// co.Properties under the <c>properties.</c> path prefix). A no-op if the object carries no hatch styling.
   /// <paramref name="docUnits"/> is the receiving document's unit system — pattern scale is unit-scaled to match the
   /// geometry (the Region→Hatch Transform scales the boundary but NOT PatternScale, the same gotcha as text height).</summary>
-  public static void Apply(RhinoDoc doc, RG.Hatch hatch, Dictionary<string, object?>? objectProperties, string docUnits)
+  public static void Apply(RhinoDoc doc, RG.Hatch hatch, PropertyView objectProperties, string docUnits)
   {
-    if (
-      objectProperties is null
-      || !objectProperties.TryGetValue("properties", out var sub)
-      || sub is not Dictionary<string, object?> props
-    )
+    var props = objectProperties.Under("properties");
+    if (props.Count == 0)
     {
       return;
     }
-    if (props.TryGetValue("hatchPatternName", out var pv) && pv is string patternName && patternName.Length > 0)
+    if (props.GetString("hatchPatternName") is { Length: > 0 } patternName)
     {
       int patternIndex = ResolvePatternIndex(doc, patternName);
       if (patternIndex >= 0)
@@ -36,16 +34,15 @@ internal static class RhinoHatchStyler
     }
     // rotation/scale round-trip through EAV's numeric column, so they come back as double — the same type-stability the
     // pattern-name read above relies on (hence a plain pattern match, no numeric coercion).
-    if (props.TryGetValue("hatchRotation", out var rv) && rv is double rotation)
+    if (props.GetDouble("hatchRotation") is double rotation)
     {
       hatch.PatternRotation = rotation; // an angle — unit-independent
     }
-    if (props.TryGetValue("hatchScale", out var sv) && sv is double scale && scale > 0)
+    if (props.GetDouble("hatchScale") is double scale && scale > 0)
     {
       // The boundary geometry was scaled to doc units; PatternScale is a display length that Transform leaves alone, so
       // apply the same source→doc factor here or the pattern renders at the wrong density (e.g. m→mm makes it solid).
-      var sourceUnits =
-        objectProperties.TryGetValue("units", out var u) && u is string us && us.Length > 0 ? us : docUnits;
+      var sourceUnits = objectProperties.GetString("units") is { Length: > 0 } us ? us : docUnits;
       hatch.PatternScale = scale * Units.GetConversionFactor(sourceUnits, docUnits);
     }
   }

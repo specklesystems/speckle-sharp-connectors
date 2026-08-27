@@ -1,6 +1,7 @@
 using System.Globalization;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -18,9 +19,13 @@ internal static class RhinoArtefactUserStrings
 {
   private const string PROPERTY_PATH_DELIMITER = ".";
 
+  /// <summary>The bundle root every object property lives under (<c>properties.a</c> is Rhino user text <c>a</c>).
+  /// It is storage layout, not user data, so it never reaches the user-string key.</summary>
+  private const string PROPERTIES_ROOT_PREFIX = "properties" + PROPERTY_PATH_DELIMITER;
+
   /// <summary>
   /// Bundle plumbing rather than user data: the root scalars every object carries
-  /// (<c>RhinoArtifactRootObjectBuilder.RootScalars</c>) and the hatch styling the send side stashes for
+  /// (<c>RhinoBundleBuilder.RootScalars</c>) and the hatch styling the send side stashes for
   /// <see cref="RhinoHatchStyler"/>. All of it is either already applied to the native object (name, units, hatch
   /// pattern) or reconstructed on the next send, so writing it as user text would only add noise the user then
   /// sees in the Rhino properties panel.
@@ -49,42 +54,38 @@ internal static class RhinoArtefactUserStrings
   };
 
   /// <summary>
-  /// Flattens <paramref name="properties"/> onto <paramref name="atts"/> as user strings. A null or empty dictionary
-  /// is a no-op, so an object with no eav row costs nothing.
+  /// Writes <paramref name="properties"/> onto <paramref name="atts"/> as user strings. The keys are the bundle's
+  /// dotted paths already (a Rhino user dictionary, or the area/volume records the send side writes, arrive as
+  /// <c>group.key</c>), so nothing needs flattening — only the <c>properties.</c> root is stripped, so user text
+  /// <c>a</c> round-trips as <c>a</c>, not <c>properties.a</c>. An empty view is a no-op, so an object with no eav row
+  /// costs nothing.
   /// </summary>
-  public static void Apply(ObjectAttributes atts, Dictionary<string, object?>? properties)
+  public static void Apply(ObjectAttributes atts, PropertyView properties)
   {
-    if (properties is null || properties.Count == 0)
+    foreach (var kvp in properties)
     {
-      return;
-    }
-    Flatten(atts, properties, "");
-  }
-
-  private static void Flatten(ObjectAttributes atts, Dictionary<string, object?> dict, string keyPrefix)
-  {
-    foreach (var kvp in dict)
-    {
-      if (kvp.Key.Length == 0 || (keyPrefix.Length == 0 && s_suppressedKeys.Contains(kvp.Key)))
+      string key = kvp.Key;
+      if (key.StartsWith(PROPERTIES_ROOT_PREFIX, StringComparison.Ordinal))
+      {
+        key = key[PROPERTIES_ROOT_PREFIX.Length..];
+      }
+      if (key.Length == 0)
       {
         continue;
       }
-
-      string key = keyPrefix.Length == 0 ? kvp.Key : keyPrefix + PROPERTY_PATH_DELIMITER + kvp.Key;
-
-      // Nested groups (a Rhino user dictionary, or the area/volume records the send side writes) recurse into
-      // dot-delimited paths rather than stringifying the dictionary itself.
-      if (kvp.Value is Dictionary<string, object?> childDict)
+      // Root-scalar plumbing (name/units/type/speckle_type …) and the whole @speckle.* stamp subtree stay out of user text.
+      bool isRootScalar = key.IndexOf(PROPERTY_PATH_DELIMITER, StringComparison.Ordinal) < 0;
+      if (
+        (isRootScalar && s_suppressedKeys.Contains(key))
+        || key.StartsWith(DefinitionMemberStamps.STAMP_ROOT + PROPERTY_PATH_DELIMITER, StringComparison.Ordinal)
+      )
       {
-        Flatten(atts, childDict, key);
         continue;
       }
-
       if (IsSuppressedPath(key))
       {
         continue;
       }
-
       atts.SetUserString(key, Stringify(kvp.Value));
     }
   }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -57,6 +58,11 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// <see cref="RevitHostObjectBuilder"/>. Family definitions do not yet prefer raw solids over SGEO meshes the way
 /// <see cref="BakeAtomic"/>/<see cref="BakeInstances"/> now do — tracked as a follow-up, not a silent gap.</para>
 /// </remarks>
+[SuppressMessage(
+  "Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "A Base-free native bake necessarily touches many Revit API types (DirectShapes, families, categories, materials, levels)."
+)]
 public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
@@ -351,7 +357,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         continue;
       }
 
-      bundle.Properties.TryGetValue(objK, out var props);
+      var props = bundle.ObjectProperties(objK);
       var source = Source(appId);
       var srcType = SrcType(props);
       var sw = Stopwatch.StartNew();
@@ -548,7 +554,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         continue;
       }
-      bundle.Properties.TryGetValue(objK, out var props);
+      var props = bundle.ObjectProperties(objK);
       var source = Source(appId);
       var srcType = SrcType(props);
       var sw = Stopwatch.StartNew();
@@ -973,7 +979,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         continue;
       }
-      bundle.Properties.TryGetValue(objK, out var props);
+      var props = bundle.ObjectProperties(objK);
       var source = Source(appId);
       var srcType = SrcType(props);
       var sw = Stopwatch.StartNew();
@@ -1065,7 +1071,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         continue;
       }
-      bundle.Properties.TryGetValue(edge.Src, out var props);
+      var props = bundle.ObjectProperties(edge.Src);
       // Only the OST_* identifier is usable here: FamilyCategoryUtils.SetFamilyCategory feeds it to
       // Enum.TryParse, so the localized display name could never resolve and every received family
       // silently defaulted its category [ENG-9337].
@@ -1479,7 +1485,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // the localized category display name, else Generic Models.
   private static ElementId ResolveCategory(
     Document doc,
-    Dictionary<string, object?>? props,
+    PropertyView props,
     Dictionary<string, ElementId> validCategories,
     Dictionary<string, ElementId> cache
   )
@@ -1522,11 +1528,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
-  // The locale-independent OST_* identifier. The sender writes it under `properties`, so SetNested rebuilds it one
-  // level down — reading it off the top level, as both resolvers did, always found nothing [ENG-9337].
-  // The top-level fallback keeps a producer that emits builtInCategory as a root scalar working.
-  private static string? ReadBuiltInCategory(Dictionary<string, object?>? props) =>
-    PropStringNested(props, "properties", "builtInCategory") ?? PropString(props, "builtInCategory");
+  // The locale-independent OST_* identifier. The sender writes it under `properties.` [ENG-9337]; the root-scalar
+  // fallback keeps a producer that emits it at the top level working.
+  private static string? ReadBuiltInCategory(PropertyView props) =>
+    PropString(props, "properties.builtInCategory") ?? PropString(props, "builtInCategory");
 
   // ENG-8947 / ENG-9099: the transform that restores the source model's INTERNAL coordinates from stored
   // geometry, or null when nothing was applied. Read from modelPlacement (the only placement record):
@@ -1681,19 +1686,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
-  private static string? PropString(Dictionary<string, object?>? props, string key) =>
-    props is not null && props.TryGetValue(key, out var v) && v is string s && s.Length > 0 ? s : null;
+  private static string? PropString(PropertyView props, string key) =>
+    props.GetString(key) is { Length: > 0 } s ? s : null;
 
-  /// <summary>Reads a string one level down, e.g. <c>props["properties"]["builtInCategory"]</c>.</summary>
-  private static string? PropStringNested(Dictionary<string, object?>? props, string outerKey, string key) =>
-    props is not null && props.TryGetValue(outerKey, out var outer) && outer is Dictionary<string, object?> nested
-      ? PropString(nested, key)
-      : null;
-
-  // The object's real Speckle type for the conversion report (so it shows e.g. "Objects.Data.RevitObject > Direct
-  // Shape" instead of "Base > …" — the report's Base source is only a UI placeholder, not reconstructed data).
-  private static string SrcType(Dictionary<string, object?>? props) =>
-    PropString(props, "speckle_type") ?? "Speckle Object";
+  private static string SrcType(PropertyView props) => PropString(props, "speckle_type") ?? "Speckle Object";
 
   /// <summary>Minimal plain <see cref="Base"/> used only as the <c>source</c> of a conversion report entry (the
   /// TypeLoader only accepts assembly-scanned registered types — never a custom subclass).</summary>
