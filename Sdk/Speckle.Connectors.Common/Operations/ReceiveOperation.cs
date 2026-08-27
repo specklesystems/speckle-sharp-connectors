@@ -56,7 +56,17 @@ public sealed class ReceiveOperation(
         {
           // direct-bake path: parquet → host doc, no Base reconstruction.
           artefactRes = await artifactHostObjectBuilder
-            .Build(bundle, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+            .Build(
+              bundle,
+              new ArtefactReceiveTarget(
+                receiveInfo.ProjectId,
+                receiveInfo.ProjectName,
+                receiveInfo.ModelId,
+                receiveInfo.ModelName
+              ),
+              onOperationProgressed,
+              cancellationToken
+            )
             .ConfigureAwait(false);
         }
         else

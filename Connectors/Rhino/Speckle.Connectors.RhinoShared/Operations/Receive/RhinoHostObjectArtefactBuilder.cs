@@ -77,15 +77,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   public Task<HostObjectBuilderResult> Build(
     ArtefactBundle bundle,
-    string projectName,
-    string modelName,
+    ArtefactReceiveTarget target,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
     // All Rhino document mutation happens on the main thread in one hop (no awaits inside → no sync-over-async deadlock).
     return _threadContext.RunOnMain(() =>
-      BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken)
+      BakeAll(bundle, target.ProjectName, target.ModelName, onOperationProgressed, cancellationToken)
     );
   }
 
