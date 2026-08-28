@@ -16,7 +16,10 @@ public sealed class TsdOffsetDisplacementResultsExtractor : TsdLoadingResultsExt
       .GetOffsetDisplacementsAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
       .ConfigureAwait(false);
 
-  protected override Dictionary<string, object?> Build(IEnumerable<IElementOffsetDisplacements> items)
+  protected override Dictionary<string, object?> Build(
+    IEnumerable<IElementOffsetDisplacements> items,
+    TsdResultsContext context
+  )
   {
     var perElement = new Dictionary<string, object?>();
     foreach (var elementDisplacements in items)

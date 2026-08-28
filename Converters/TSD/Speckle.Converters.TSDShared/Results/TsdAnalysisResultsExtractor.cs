@@ -69,14 +69,17 @@ public sealed class TsdAnalysisResultsExtractor
 
     var loadings = requestedLoadings.Where(loading => solvedIdSet.Contains(loading.Id)).ToList();
 
+    // solver results are keyed by solver node index, which is a different numbering from the construction point
+    // indices the rest of the payload uses, so the extractors need the map to publish them against the right node
+    var nodes = await TsdNodeIndexMap.CreateAsync(model, cancellationToken).ConfigureAwait(false);
+    var context = new TsdResultsContext(analysis3D, loadings, nodes);
+
     var tree = new Dictionary<string, object?>();
     foreach (var resultType in selectedResultTypes)
     {
       cancellationToken.ThrowIfCancellationRequested();
       var extractor = _factory.GetExtractor(resultType);
-      tree[extractor.ResultsKey] = await extractor
-        .GetResultsAsync(analysis3D, loadings, cancellationToken)
-        .ConfigureAwait(false);
+      tree[extractor.ResultsKey] = await extractor.GetResultsAsync(context, cancellationToken).ConfigureAwait(false);
     }
 
     return tree;

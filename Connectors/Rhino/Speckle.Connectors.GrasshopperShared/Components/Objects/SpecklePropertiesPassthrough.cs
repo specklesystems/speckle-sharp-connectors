@@ -37,7 +37,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     Overwrite, // pre rewording (cnx-3177), keeping for scripts with settings saved
   }
 
-  private PropertyMode _mode = PropertyMode.Update;
+  private PropertyMode _mode = PropertyMode.Merge;
   private PropertyMode Mode
   {
     get => _mode;
@@ -109,7 +109,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     }
 
     // validate that keys and values are of valid length
-    if ((Mode == PropertyMode.Update || Mode == PropertyMode.Overwrite) && inputKeys.Count != inputValues.Count)
+    if ((Mode == PropertyMode.Merge || Mode == PropertyMode.Replace) && inputKeys.Count != inputValues.Count)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Keys and values are mismatched in length");
       return;
@@ -177,6 +177,9 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
           case PropertyMode.Remove:
             resultGoo.RemoveValueByPath(key);
             break;
+          default:
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Unsupported property mode: {Mode}");
+            return;
         }
       }
     }

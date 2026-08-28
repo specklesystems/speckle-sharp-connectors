@@ -58,6 +58,7 @@ public static class ServiceRegistration
     services.AddScoped<SendOperation<ModelObject>>();
 
     services.AddSingleton<ToSpeckleSettingsManager>();
+    services.AddSingleton<TeklaCoordinateSystemTracker>();
 
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 

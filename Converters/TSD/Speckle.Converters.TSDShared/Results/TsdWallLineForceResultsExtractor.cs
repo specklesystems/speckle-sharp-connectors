@@ -16,7 +16,7 @@ public sealed class TsdWallLineForceResultsExtractor : TsdLoadingResultsExtracto
       .GetWallLineForcesAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
       .ConfigureAwait(false);
 
-  protected override Dictionary<string, object?> Build(IEnumerable<IWallLineForces> items)
+  protected override Dictionary<string, object?> Build(IEnumerable<IWallLineForces> items, TsdResultsContext context)
   {
     var perWallLine = new Dictionary<string, object?>();
     foreach (var wallLine in items)

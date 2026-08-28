@@ -1,5 +1,6 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Converters.TeklaShared.Extensions;
 using Tekla.Structures;
 using Tekla.Structures.Model;
 
@@ -70,7 +71,7 @@ public class TeklaSelectionBinding : ISelectionBinding
 
       string globalId = modelObject.Identifier.GUID.ToString();
       objectIds.Add(globalId);
-      objectTypes.Add(modelObject.GetType().Name);
+      objectTypes.Add(modelObject.GetSpeckleType());
     }
 
     // Filter out the objects that Tekla API ignores (e.g. Construction objects with "000000.." GUID)

@@ -63,10 +63,15 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
           double areaBefore = regionToConvert.Area;
           regionToConvert.BooleanOperation(ADB.BooleanOperationType.BoolSubtract, loopRegion);
 
-          // check if the region did not change after subtraction: means the loop was a separate hatch part
+          // if the region did not change after subtraction, the loop was a separate hatch part (composite hatch):
+          // unite it as an additional filled area instead of treating it as a hole
           if (Math.Abs(areaBefore - regionToConvert.Area) < 0.00001)
           {
-            throw new ConversionException($"Composite hatches are not supported: {target}");
+            using ADB.DBObjectCollection separateRegionCollection = ADB.Region.CreateFromCurves(objCollection);
+            regionToConvert.BooleanOperation(
+              ADB.BooleanOperationType.BoolUnite,
+              (ADB.Region)separateRegionCollection[0]
+            );
           }
         }
       }
