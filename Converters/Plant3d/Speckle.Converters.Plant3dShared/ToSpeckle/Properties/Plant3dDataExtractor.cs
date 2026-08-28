@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 
@@ -10,10 +12,15 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 public class Plant3dDataExtractor
 {
   private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
+  private readonly ILogger<Plant3dDataExtractor> _logger;
 
-  public Plant3dDataExtractor(IConverterSettingsStore<Plant3dConversionSettings> settingsStore)
+  public Plant3dDataExtractor(
+    IConverterSettingsStore<Plant3dConversionSettings> settingsStore,
+    ILogger<Plant3dDataExtractor> logger
+  )
   {
     _settingsStore = settingsStore;
+    _logger = logger;
   }
 
   /// <summary>
@@ -55,9 +62,11 @@ public class Plant3dDataExtractor
         }
       }
     }
-    catch (PPDL.DLException)
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      // DataLinksManager not available or other API failure
+      // DataLinksManager unavailable, entity unlinked/orphaned from the PnP project database,
+      // or any other DataLinks API failure — degrade to no P&ID properties instead of failing the object.
+      _logger.LogWarning(ex, "Failed to read PnP DataLinks properties on object {HandleValue}", entity.Handle.Value);
     }
 
     return result;

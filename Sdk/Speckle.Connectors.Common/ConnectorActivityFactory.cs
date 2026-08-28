@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.Logging;
+using System.Runtime.CompilerServices;
+using Speckle.Connectors.Logging;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Common;
@@ -27,7 +28,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
     SdkActivityKind kind = SdkActivityKind.Internal,
     IReadOnlyDictionary<string, object?>? tags = null,
     DateTimeOffset startTime = default,
-    string source = ""
+    [CallerMemberName] string source = ""
   )
   {
     LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind), tags, startTime);
@@ -46,7 +47,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
     string? name = null,
     IReadOnlyDictionary<string, object?>? tags = null,
     DateTimeOffset startTime = default,
-    string source = ""
+    [CallerMemberName] string source = ""
   )
   {
     LoggingActivity? activity = _loggingActivityFactory.StartRemote(
@@ -85,11 +86,10 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
 
     public void RecordException(Exception e) => activity.RecordException(e);
 
-    /// <inheritdoc />
+    public string? TraceState => activity.TraceState;
+
     public string TraceParent => activity.TraceParent;
 
-    /// <inheritdoc />
-    public string? TraceState => activity.TraceState;
     public string TraceId => activity.TraceId;
     public string SpanId => activity.SpanId;
 

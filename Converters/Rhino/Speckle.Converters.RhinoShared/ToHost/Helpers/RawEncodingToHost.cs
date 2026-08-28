@@ -22,11 +22,14 @@ public static class RawEncodingToHost
     }
   }
 
-  private static List<RG.GeometryBase> Handle3dm(SO.RawEncoding encoding)
+  private static List<RG.GeometryBase> Handle3dm(SO.RawEncoding encoding) =>
+    Convert3dm(System.Convert.FromBase64String(encoding.contents));
+
+  /// <summary>Decodes a raw 3dm byte blob straight to Rhino geometry — no <c>RawEncoding</c>/base64 round-trip. Used by
+  /// the Speckle 4.0 artefact host builder, which reads the parquet SOLID blob as bytes.</summary>
+  public static List<RG.GeometryBase> Convert3dm(byte[] bytes)
   {
-    var bytes = System.Convert.FromBase64String(encoding.contents);
     var file = File3dm.FromByteArray(bytes);
-    var brepObject = file.Objects.Where(o => o.Geometry is not null).Select(o => o.Geometry);
-    return brepObject.ToList();
+    return file.Objects.Where(o => o.Geometry is not null).Select(o => o.Geometry).ToList();
   }
 }

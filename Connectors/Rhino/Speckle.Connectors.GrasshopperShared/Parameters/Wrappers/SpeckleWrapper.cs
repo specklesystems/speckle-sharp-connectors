@@ -22,6 +22,13 @@ public abstract class SpeckleWrapper
   }
 
   /// <summary>
+  /// Dense index in the source bundle's <c>eav.objects</c>, or null when it didn't come from one (canvas-authored, or
+  /// legacy receive). With <see cref="ModelContext"/>, enough to resolve this object in the graph. Null on a
+  /// collection - those are container nodes, not objects.
+  /// </summary>
+  public int? ObjectIndex { get; set; }
+
+  /// <summary>
   /// The wrapped <see cref="Base"/>
   /// </summary>
   public abstract Base Base { get; set; }
@@ -34,6 +41,13 @@ public abstract class SpeckleWrapper
     get => Base.applicationId;
     set => Base.applicationId = value;
   }
+
+  /// <summary>Where this wrapper was loaded from, or null when authored on canvas.</summary>
+  /// <remarks>
+  /// On the shared base because geometry wrappers derive from here directly. Every DeepCopy must carry it - they
+  /// enumerate fields explicitly, so anything omitted vanishes on the first duplicate.
+  /// </remarks>
+  public SpeckleModelContext? ModelContext { get; set; }
 
   /// <summary>
   /// Creates an <see cref="IGH_Goo"/> from this wrapper

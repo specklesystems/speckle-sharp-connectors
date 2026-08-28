@@ -63,6 +63,18 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
     serviceCollection.AddScoped<IHostObjectBuilder, RhinoHostObjectBuilder>();
 
+    // Speckle 4.0 artefact receive: download + parse the parquet bundle (IArtifactReceiver), then bake it DIRECTLY
+    // into the doc via the dedicated IArtifactHostObjectBuilder — no v1 Base reconstruction. Registering both
+    // activates the direct-bake artifact branch in ReceiveOperation for 4.0 versions; legacy versions stay on v1.
+    // PreferSolids only matters for the reconstruction fallback (unused by the direct builder, which always prefers 3dm).
+    serviceCollection.AddScoped<
+      Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
+      Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
+    >();
+    serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: true));
+    serviceCollection.AddScoped<IArtifactReceiver, ArtifactReceiver>();
+    serviceCollection.AddScoped<IArtifactHostObjectBuilder, RhinoHostObjectArtefactBuilder>();
+
     // register send settings
     serviceCollection.AddScoped<ToSpeckleSettingsManager>();
 
@@ -76,6 +88,14 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<IRootObjectBuilder<RhinoObject>, RhinoRootObjectBuilder>();
     serviceCollection.AddScoped<IRootContinuousTraversalBuilder<RhinoObject>, RhinoContinuousTraversalBuilder>();
+    // Speckle 4.0 client-side artefact send. The SDK producer types build on every connector TFM (netstandard2.0
+    // for the net48 plugin + net8/net10), so this is registered everywhere. Registering it auto-activates
+    // SendOperation's SendViaArtifacts path (the ctor param is optional).
+    serviceCollection.AddScoped<IBundleBuilder<RhinoObject>, RhinoBundleBuilder>();
+    serviceCollection.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
     serviceCollection.AddScoped<
       IInstanceObjectsManager<RhinoObject, List<string>>,
       InstanceObjectsManager<RhinoObject, List<string>>

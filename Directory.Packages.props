@@ -8,6 +8,9 @@
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="GrasshopperAsyncComponent" Version="2.0.3" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
+    <!-- Native Zstd backend for Parquet.Net (transitive via Speckle.Sdk). Pinned here so the net48 Rhino plugin can
+         copy the native nironcompress.dll next to the .rhp (4.0 artefact send). Must match Parquet.Net's IronCompress. -->
+    <PackageVersion Include="IronCompress" Version="1.6.3" />
     <PackageVersion Include="JetBrains.Profiler.SelfApi" Version="2.5.12" />
     <PackageVersion Include="LibTessDotNet" Version="1.1.15" />
     <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
@@ -50,7 +53,7 @@
     <PackageVersion Include="Speckle.Civil3D.API" Version="2022.0.2" />
     <PackageVersion Include="Speckle.Revit.API" Version="2023.0.0" />
     <PackageVersion Include="Speckle.Navisworks.API" Version="2024.0.0" />
-    <PackageVersion Include="Speckle.Objects" Version="2026.6.0" />
+    <PackageVersion Include="Speckle.Sdk" Version="2026.9.0-beta.3" />
     <PackageVersion Include="SimpleExec" Version="12.0.0" />
     <GlobalPackageReference Include="PolySharp" Version="1.15.0" />
     <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.6" />

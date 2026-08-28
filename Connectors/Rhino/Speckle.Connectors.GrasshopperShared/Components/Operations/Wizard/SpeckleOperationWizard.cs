@@ -274,7 +274,12 @@ public class SpeckleOperationWizard
   {
     if (SelectedAccount == null)
     {
-      return new ResourceCollection<Workspace>();
+      return new ResourceCollection<Workspace>()
+      {
+        items = new(),
+        cursor = null,
+        totalCount = 0,
+      };
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
@@ -303,7 +308,12 @@ public class SpeckleOperationWizard
   {
     if (SelectedAccount == null)
     {
-      return new ResourceCollection<ProjectWithPermissions>();
+      return new ResourceCollection<ProjectWithPermissions>()
+      {
+        items = new(),
+        cursor = null,
+        totalCount = 0,
+      };
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
@@ -337,7 +347,12 @@ public class SpeckleOperationWizard
   {
     if (SelectedAccount == null || SelectedProject == null)
     {
-      return new ResourceCollection<Model>();
+      return new ResourceCollection<Model>()
+      {
+        items = new(),
+        cursor = null,
+        totalCount = 0,
+      };
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
@@ -363,7 +378,12 @@ public class SpeckleOperationWizard
   {
     if (SelectedAccount == null || SelectedProject == null || SelectedModel == null)
     {
-      return new ResourceCollection<Version>();
+      return new ResourceCollection<Version>()
+      {
+        items = new(),
+        cursor = null,
+        totalCount = 0,
+      };
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);

@@ -149,6 +149,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     [
       new DetailLevelSetting(),
       new SendReferencePointSetting(),
+      new SendApplyTransformSetting(),
       new SendParameterNullOrEmptyStringsSetting(),
       new LinkedModelsSetting(),
       new SendRebarsAsVolumetricSetting(),
@@ -179,11 +180,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             _revitConversionSettingsFactory.Create(
               _toSpeckleSettingsManager.GetDetailLevelSetting(document, card),
               _toSpeckleSettingsManager.GetReferencePointSetting(document, card),
+              _toSpeckleSettingsManager.GetApplyTransformSetting(document, card),
               _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(document, card),
               _toSpeckleSettingsManager.GetLinkedModelsSetting(document, card),
               _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card),
               _toSpeckleSettingsManager.GetSendAreasAsMesh(document, card),
-              false
+              false,
+              referencePointKind: _toSpeckleSettingsManager.GetReferencePointKind(card)
             )
           );
       },
@@ -264,7 +267,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     // should ideally reuse the initialized value from the scoped IConverterSettingsStore<RevitConversionSettings>.
     // but, it's scoped and to avoid bigger scarier changes I'm re-fetching the setting here (inexpensive operation?)
-    Transform? mainModelTransform = _toSpeckleSettingsManager.GetReferencePointSetting(document, modelCard);
+    Transform? referencePointTransform = _toSpeckleSettingsManager.GetReferencePointSetting(document, modelCard);
+    bool applyTransform = _toSpeckleSettingsManager.GetApplyTransformSetting(document, modelCard);
+    Transform? mainModelTransform = applyTransform ? referencePointTransform : null;
     List<DocumentToConvert> documentElementContexts = [new(mainModelTransform, document, elementsOnMainModel)];
 
     // get the linked models setting - this decision belongs at this level
@@ -286,6 +291,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
         // transform maps linked model elements into the main model's reference point coordinate system
         // first apply the user's reference point transform (setting) then adjust for the linked model's placement relative to host.
+        // A link's placement is an occurrence transform, not a model reference-point transform. It must still be
+        // applied when Apply Transform is off, otherwise every linked document would collapse onto its own origin.
         Transform transform = (mainModelTransform ?? Transform.Identity).Multiply(
           linkedModel.GetTotalTransform().Inverse
         );
@@ -299,16 +306,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             document,
             modelCard.SendFilter,
             linkedDoc,
-            transform
+            linkedModel
           );
-          linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
+          linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements, linkedModel));
         }
         // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
         // this approach (to signal that warnings are needed) relies on empty element lists which smells and is a bit of an implicit mechanism
         // buuuuut, it works (for now 👀).
         else
         {
-          linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>()));
+          linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>(), linkedModel));
         }
       }
       documentElementContexts.AddRange(linkedDocumentContexts);

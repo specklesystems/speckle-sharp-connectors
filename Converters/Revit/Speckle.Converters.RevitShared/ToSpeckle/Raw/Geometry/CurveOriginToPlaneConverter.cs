@@ -49,12 +49,23 @@ public class CurveOriginToPlaneConverter
     }
 
     // beyond limits? then build Speckle plane directly
+    var xdir = _xyzToVectorConverter.Convert(target.xDir);
+    var ydir = _xyzToVectorConverter.Convert(target.yDir);
+    var normal = _xyzToVectorConverter.Convert(target.normal);
+
+    // Basis vectors are directions and MUST be unit length — VectorToSpeckleConverter scales by units (feet ->
+    // document units), leaving them non-unitized and mis-scaling any consumer that reads the plane's basis magnitude
+    // (e.g. arc.plane in the SGEO/viewer path). Same normalization as the in-limits PlaneToSpeckleConverter path.
+    xdir.Normalize();
+    ydir.Normalize();
+    normal.Normalize();
+
     return new SOG.Plane
     {
       origin = _xyzToPointConverter.Convert(target.origin),
-      xdir = _xyzToVectorConverter.Convert(target.xDir),
-      ydir = _xyzToVectorConverter.Convert(target.yDir),
-      normal = _xyzToVectorConverter.Convert(target.normal),
+      xdir = xdir,
+      ydir = ydir,
+      normal = normal,
       units = _converterSettings.Current.SpeckleUnits,
     };
   }

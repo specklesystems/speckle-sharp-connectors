@@ -4,7 +4,7 @@ using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Encoding;
 
-internal static class RawEncodingCreator
+public static class RawEncodingCreator
 {
   public static SO.RawEncoding Encode(RG.GeometryBase target, RhinoDoc doc)
   {
@@ -33,6 +33,11 @@ internal static class RawEncodingCreator
         break;
       case RG.SubD d:
         file.Objects.AddSubD(d);
+        break;
+      case RG.Hatch h:
+        // Rhino-native lossless hatch (boundary/loops/rotation/scale). The pattern is resolved on receive from eav
+        // (built-ins) — the pattern definition is not embedded here, so custom patterns still fall back.
+        file.Objects.AddHatch(h);
         break;
       default:
         throw new ConversionException($"Unsupported type for encoding: {target.GetType().FullName}");

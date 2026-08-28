@@ -24,10 +24,26 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
   public ADB.Polyline Convert(SOG.Polycurve target)
   {
     ADB.Polyline polyline = new() { Closed = target.closed };
-    AG.Plane plane = new(
-      AG.Point3d.Origin,
-      AG.Vector3d.ZAxis.TransformBy(_settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem)
-    );
+    AG.Vector3d normal = AG
+      .Vector3d.ZAxis.TransformBy(_settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem)
+      .GetNormal();
+    AG.Plane plane = new(AG.Point3d.Origin, normal);
+
+    // An ADB.Polyline is planar: its vertices are 2D in the plane defined by Normal + Elevation. Convert2d projects the
+    // scaled vertices onto the plane THROUGH THE ORIGIN, so without an explicit Elevation every planar polycurve bakes
+    // at Z=0 — a lwpolyline sent from a drawing at elevation came back flattened [ENG-8819]. The 4.0 artefact path
+    // always lands here (SGEO carries no AutocadPolycurve subtype, so the elevation-aware
+    // AutocadPolycurveToHostPolylineRawConverter is unreachable), so recover it from the first vertex: the caller only
+    // routes PLANAR polycurves here, so every vertex shares this offset along the normal.
+    double? elevation = null;
+
+    // Scales the point, records the plane offset from the first vertex, and projects it into the polyline's plane.
+    AG.Point2d ToPlane(SOG.Point point)
+    {
+      AG.Point3d scaled = _pointConverter.Convert(point);
+      elevation ??= scaled.GetAsVector().DotProduct(normal); // plane passes through the origin → offset is the dot
+      return scaled.Convert2d(plane);
+    }
 
     int count = 0;
     foreach (Objects.ICurve segment in target.segments)
@@ -35,10 +51,10 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
       switch (segment)
       {
         case SOG.Line o:
-          polyline.AddVertexAt(count, _pointConverter.Convert(o.start).Convert2d(plane), 0, 0, 0);
+          polyline.AddVertexAt(count, ToPlane(o.start), 0, 0, 0);
           if (!target.closed && count == target.segments.Count - 1)
           {
-            polyline.AddVertexAt(count + 1, _pointConverter.Convert(o.end).Convert2d(plane), 0, 0, 0);
+            polyline.AddVertexAt(count + 1, ToPlane(o.end), 0, 0, 0);
           }
 
           count++;
@@ -52,19 +68,18 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
           }
 
           var bulge = Math.Tan(measure / 4) * BulgeDirection(arc.startPoint, arc.midPoint, arc.endPoint);
-          polyline.AddVertexAt(count, _pointConverter.Convert(arc.startPoint).Convert2d(plane), bulge, 0, 0);
+          polyline.AddVertexAt(count, ToPlane(arc.startPoint), bulge, 0, 0);
           if (!target.closed && count == target.segments.Count - 1)
           {
-            polyline.AddVertexAt(count + 1, _pointConverter.Convert(arc.endPoint).Convert2d(plane), 0, 0, 0);
+            polyline.AddVertexAt(count + 1, ToPlane(arc.endPoint), 0, 0, 0);
           }
 
           count++;
           break;
         case SOG.Spiral o:
-          List<AG.Point3d> vertices = o.displayValue.GetPoints().Select(_pointConverter.Convert).ToList();
-          foreach (AG.Point3d vertex in vertices)
+          foreach (SOG.Point vertex in o.displayValue.GetPoints())
           {
-            polyline.AddVertexAt(count, vertex.Convert2d(plane), 0, 0, 0);
+            polyline.AddVertexAt(count, ToPlane(vertex), 0, 0, 0);
             count++;
           }
 
@@ -72,6 +87,13 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
         default:
           break;
       }
+    }
+
+    // Normal before Elevation: the elevation is measured along the normal.
+    if (elevation is double e)
+    {
+      polyline.Normal = normal;
+      polyline.Elevation = e;
     }
 
     return polyline;

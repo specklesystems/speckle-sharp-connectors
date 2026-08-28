@@ -49,6 +49,7 @@ internal static class Solutions
     CheckAndRemoveKnown("Speckle.Objects");
     CheckAndRemoveKnown("Speckle.Sdk");
     CheckAndRemoveKnown("Speckle.Sdk.Dependencies");
+    CheckAndRemoveKnown("Speckle.Sdk.Parquet");
     if (localProjects.Count != 0)
     {
       throw new InvalidOperationException(

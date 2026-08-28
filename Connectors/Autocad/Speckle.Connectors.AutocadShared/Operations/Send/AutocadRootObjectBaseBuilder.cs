@@ -96,10 +96,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
 
     // 3 - Add the Reference Point
     Matrix3d? referenceTransform = null;
-    if (
-      Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix
-      && matrix != Matrix3d.Identity
-    )
+    if (_converterSettings.Current.ReferencePointTransform is Matrix3d matrix)
     {
       referenceTransform = matrix.Inverse();
 

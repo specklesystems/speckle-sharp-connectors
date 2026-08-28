@@ -59,6 +59,7 @@
     </Content>
   </ItemGroup>
 
+  <Import Project="..\Speckle.Connectors.GrasshopperShared\Net48.IronCompress.props" />
   <Import
     Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems"
     Label="Shared"

@@ -208,6 +208,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleGeometryWrapper
       Path = Path,
       Transform = Transform,
       Definition = Definition?.DeepCopy(),
+      ModelContext = ModelContext,
+      ObjectIndex = ObjectIndex,
     };
 
   private void UpdateTransformFromProxy() =>

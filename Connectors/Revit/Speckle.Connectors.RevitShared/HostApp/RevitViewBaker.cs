@@ -5,11 +5,13 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
-/// Utility class that creates View3D elements from Camera objects during receive.
+/// Creates View3D elements during receive: <see cref="BakeViews"/> for the legacy v1 <c>Camera</c> path, and
+/// <see cref="BakeArtefactView"/>/<see cref="PurgeArtefactViews"/> for the artefact bundle's <c>camera_views</c> rows.
 /// </summary>
 public class RevitViewBaker
 {
@@ -152,5 +154,83 @@ public class RevitViewBaker
     {
       farClipParam.Set(0);
     }
+  }
+
+  // ── artefact bundle camera_views (Speckle 4.0 direct-bake path) ─────────────────────────────────────────
+  // Delete-then-recreate on every receive (unlike BakeViews' name-matched update-in-place) since perspective and
+  // orthographic are different ViewTypes and can't be swapped in place.
+
+  /// <summary>Deletes every non-template View3D stamped with <paramref name="marker"/> (mirrors the DirectShape
+  /// pre-clean), so a re-receive doesn't accumulate duplicate views.</summary>
+  public void PurgeArtefactViews(string marker)
+  {
+    var document = _converterSettings.Current.Document;
+    var toDelete = new List<ElementId>();
+    using var collector = new FilteredElementCollector(document);
+    foreach (var element in collector.OfClass(typeof(View3D)))
+    {
+      if (
+        element is View3D { IsTemplate: false }
+        && element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() is string c
+        && string.Equals(c, marker, StringComparison.Ordinal)
+      )
+      {
+        toDelete.Add(element.Id);
+      }
+    }
+    if (toDelete.Count > 0)
+    {
+      document.Delete(toDelete);
+    }
+  }
+
+  /// <summary>Bakes one <c>camera_views</c> row as a fresh perspective or orthographic View3D, stamped with
+  /// <paramref name="marker"/>. <paramref name="eye"/>/<paramref name="forward"/>/<paramref name="up"/> must already
+  /// be in Revit internal units and coordinates. FOV/lens/crop are not restored — Revit's 3D-view API has no direct
+  /// setter for them.</summary>
+  /// <returns>The created view's UniqueId.</returns>
+  public string BakeArtefactView(string name, bool isOrtho, XYZ eye, XYZ forward, XYZ up, string marker)
+  {
+    var document = _converterSettings.Current.Document;
+    var viewName = RestoreViewName(name);
+    if (string.IsNullOrWhiteSpace(viewName))
+    {
+      throw new ConversionException($"Camera view name '{name}' has no valid characters for a Revit view name.");
+    }
+
+    using var collector = new FilteredElementCollector(document);
+    var viewFamilyType = collector
+      .OfClass(typeof(ViewFamilyType))
+      .Cast<ViewFamilyType>()
+      .FirstOrDefault(vft => vft.ViewFamily == ViewFamily.ThreeDimensional);
+
+    if (viewFamilyType == null)
+    {
+      throw new ConversionException("Could not find a 3D ViewFamilyType to create a camera view.");
+    }
+
+    // View3D is a document element, not disposable — low happiness level.
+#pragma warning disable CA2000
+    var view3D = isOrtho
+      ? View3D.CreateIsometric(document, viewFamilyType.Id)
+      : View3D.CreatePerspective(document, viewFamilyType.Id);
+#pragma warning restore CA2000
+
+    view3D.SetOrientation(new ViewOrientation3D(eye, up, forward));
+    view3D.Name = viewName;
+    view3D.DisplayStyle = DisplayStyle.Shading;
+    view3D.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.Set(marker);
+
+    if (!isOrtho)
+    {
+      // Disable far clipping so depth is infinite (matches the legacy Camera-object bake above).
+      var farClipParam = view3D.get_Parameter(BuiltInParameter.VIEWER_BOUND_ACTIVE_FAR);
+      if (farClipParam != null && !farClipParam.IsReadOnly)
+      {
+        farClipParam.Set(0);
+      }
+    }
+
+    return view3D.UniqueId;
   }
 }

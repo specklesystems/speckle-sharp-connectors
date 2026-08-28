@@ -38,6 +38,9 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
     return GetOrCreateCollectionHierarchy(level, category, rootObject);
   }
 
+  public override IReadOnlyList<string> GetCollectionSegments(Base convertedObject) =>
+    new[] { GetObjectLevelFromObject(convertedObject), _categoryNames[GetElementCategoryFromObject(convertedObject)] };
+
   private string GetObjectLevelFromObject(Base obj)
   {
     // Properties from converter are stored in "Object ID" dictionary

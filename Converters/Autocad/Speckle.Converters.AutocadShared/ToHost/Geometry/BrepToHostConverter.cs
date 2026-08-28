@@ -5,17 +5,18 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Autocad.Geometry;
 
 /// <summary>
-/// Converts a Brep to a List(PolyFaceMesh,Mesh)> as fallback conversion
+/// Converts a Brep to a List(Entity,Mesh)> as fallback conversion
 /// </summary>
 /// <remarks>
 /// The return type is (Entity,Base) instead of the specific type (PolyfaceMesh, Mesh) so this result can be picked up by a generic list case in the SpeckleToHost connector object baking. This is essentially one-to-many fallback conversion.
 /// </remarks>
 [NameAndRankValue(typeof(SOG.Brep), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[Obsolete("Brep is obsolete")]
 public class BrepToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Brep, List<(ADB.Entity a, Base b)>>
 {
-  private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
+  private readonly ITypedConverter<SOG.Mesh, ADB.Entity> _meshConverter;
 
-  public BrepToHostConverter(ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter)
+  public BrepToHostConverter(ITypedConverter<SOG.Mesh, ADB.Entity> meshConverter)
   {
     _meshConverter = meshConverter;
   }
@@ -27,13 +28,13 @@ public class BrepToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
   /// </remarks>
   public List<(ADB.Entity a, Base b)> Convert(SOG.Brep target)
   {
-    var result = new List<ADB.PolyFaceMesh>();
+    var result = new List<ADB.Entity>();
     foreach (SOG.Mesh mesh in target.displayValue)
     {
-      ADB.PolyFaceMesh convertedMesh = _meshConverter.Convert(mesh);
+      ADB.Entity convertedMesh = _meshConverter.Convert(mesh);
       result.Add(convertedMesh);
     }
 
-    return result.Zip(target.displayValue, (a, b) => ((ADB.Entity)a, (Base)b)).ToList();
+    return result.Zip(target.displayValue, (a, b) => (a, (Base)b)).ToList();
   }
 }

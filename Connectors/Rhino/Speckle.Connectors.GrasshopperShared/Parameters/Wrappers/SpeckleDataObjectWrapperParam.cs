@@ -20,9 +20,10 @@ public class SpeckleDataObjectParam : GH_Param<SpeckleDataObjectWrapperGoo>, IGH
 
   public SpeckleDataObjectParam(GH_ParamAccess access)
     : base(
-      "Speckle Data Object",
-      "SDO",
-      "A Speckle data object with structured properties and display geometries",
+      // display name only - Grasshopper binds by ComponentGuid, so this is cosmetic and safe to change
+      "Speckle Object",
+      "SO",
+      "A Speckle object with structured properties and one or more geometries",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
       access

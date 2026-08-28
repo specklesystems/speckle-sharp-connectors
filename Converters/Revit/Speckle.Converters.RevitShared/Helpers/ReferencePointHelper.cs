@@ -1,3 +1,4 @@
+using System.Globalization;
 using Autodesk.Revit.DB;
 using Speckle.DoubleNumerics;
 
@@ -9,6 +10,91 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public static class ReferencePointHelper
 {
+  public static RevitModelPlacementData GetModelPlacementData(Document document)
+  {
+    using var collector = new FilteredElementCollector(document);
+    var basePoints = collector.OfClass(typeof(BasePoint)).Cast<BasePoint>().ToList();
+    BasePoint? projectBasePoint = basePoints.FirstOrDefault(point => !point.IsShared);
+    BasePoint? surveyPoint = basePoints.FirstOrDefault(point => point.IsShared);
+
+    var sourceTransforms = new Dictionary<string, Transform> { ["internalOrigin"] = Transform.Identity };
+    if (projectBasePoint is not null)
+    {
+      sourceTransforms["projectBasePoint"] = Transform.CreateTranslation(projectBasePoint.Position);
+    }
+    if (surveyPoint is not null)
+    {
+      sourceTransforms["surveyPoint"] = Transform.CreateTranslation(surveyPoint.Position);
+    }
+    if (document.ActiveProjectLocation?.GetTotalTransform() is { } sharedCoordinatesTransform)
+    {
+      sourceTransforms["sharedCoordinates"] = sharedCoordinatesTransform;
+    }
+
+    SiteLocation siteLocation = document.SiteLocation;
+    string nativeCrsCode = siteLocation.GeoCoordinateSystemId?.Trim() ?? string.Empty;
+    (string crsAuthority, string crsCode) = NormalizeRevitCrsCode(nativeCrsCode);
+
+    return new RevitModelPlacementData(
+      sourceTransforms,
+      projectBasePoint?.Position,
+      surveyPoint?.Position,
+      surveyPoint?.SharedPosition,
+      siteLocation.Latitude * (180d / Math.PI),
+      siteLocation.Longitude * (180d / Math.PI),
+      siteLocation.Elevation,
+      crsAuthority,
+      crsCode,
+      nativeCrsCode,
+      siteLocation.GeoCoordinateSystemDefinition?.Trim() ?? string.Empty
+    );
+  }
+
+  private static (string Authority, string Code) NormalizeRevitCrsCode(string nativeCode)
+  {
+    const string EPSG_PREFIX = "EPSG:";
+    const string ADSK_PREFIX = "ADSK:";
+    if (nativeCode.StartsWith(EPSG_PREFIX, StringComparison.OrdinalIgnoreCase))
+    {
+      return ("EPSG", $"EPSG:{nativeCode[EPSG_PREFIX.Length..]}");
+    }
+    if (int.TryParse(nativeCode, out int epsg))
+    {
+      return ("EPSG", $"EPSG:{epsg}");
+    }
+    if (nativeCode.StartsWith(ADSK_PREFIX, StringComparison.OrdinalIgnoreCase))
+    {
+      return ("Autodesk", nativeCode[ADSK_PREFIX.Length..]);
+    }
+    return nativeCode.Length == 0 ? (string.Empty, string.Empty) : ("Autodesk", nativeCode);
+  }
+
+  /// <summary>
+  /// Flattens a Revit <see cref="Transform"/> to the 16-element matrix Speckle stores (basis vectors in the first
+  /// three "columns", translation in the last), used by <see cref="CreateTransformDataForRootObject"/> — the same
+  /// element order <see cref="GetTransformFromRootObject"/> reads back.
+  /// </summary>
+  private static double[] TransformToArray(Transform transform) =>
+    new[]
+    {
+      transform.BasisX.X,
+      transform.BasisX.Y,
+      transform.BasisX.Z,
+      0,
+      transform.BasisY.X,
+      transform.BasisY.Y,
+      transform.BasisY.Z,
+      0,
+      transform.BasisZ.X,
+      transform.BasisZ.Y,
+      transform.BasisZ.Z,
+      0,
+      transform.Origin.X,
+      transform.Origin.Y,
+      transform.Origin.Z,
+      1,
+    };
+
   /// <summary>
   /// Changes Revit Transform to a double array.
   /// Uses a 16-element column-major matrix representation. See https://speckle.guide/dev/objects.html
@@ -16,29 +102,30 @@ public static class ReferencePointHelper
   public static Dictionary<string, object> CreateTransformDataForRootObject(Transform transform) =>
     new()
     {
-      {
-        "transform", // TODO: it would also be nice to include the key-value pair for reference point type as a string
-        new[]
-        {
-          transform.BasisX.X,
-          transform.BasisX.Y,
-          transform.BasisX.Z,
-          0,
-          transform.BasisY.X,
-          transform.BasisY.Y,
-          transform.BasisY.Z,
-          0,
-          transform.BasisZ.X,
-          transform.BasisZ.Y,
-          transform.BasisZ.Z,
-          0,
-          transform.Origin.X,
-          transform.Origin.Y,
-          transform.Origin.Z,
-          1,
-        }
-      },
+      // TODO: it would also be nice to include the key-value pair for reference point type as a string
+      { "transform", TransformToArray(transform) },
     };
+
+  /// <summary>
+  /// Combines the receiver's local reference-point setting with the transform the sender baked into the geometry,
+  /// so the received model lands where the receive setting asks. Mirrors the v1 receive-side composition: with no
+  /// local setting (receive = Source) the sender's transform is applied as-is (restoring the source's internal
+  /// coordinates); with no sender transform the local setting stands alone; otherwise they compose.
+  /// </summary>
+  public static Transform? CalculateNewTransform(Transform? receiveTransform, Transform? rootTransform)
+  {
+    if (receiveTransform == null)
+    {
+      return rootTransform;
+    }
+
+    if (rootTransform == null)
+    {
+      return receiveTransform;
+    }
+
+    return rootTransform.Multiply(receiveTransform);
+  }
 
   public static Matrix4x4 TransformToMatrix(Transform transform) =>
     new()
@@ -63,6 +150,35 @@ public static class ReferencePointHelper
       M34 = transform.Origin.Z,
       M44 = 1,
     };
+
+  public static string TransformToCsv(Transform transform)
+  {
+    Matrix4x4 m = TransformToMatrix(transform);
+    return string.Join(
+      ",",
+      new[]
+      {
+        m.M11,
+        m.M12,
+        m.M13,
+        m.M14,
+        m.M21,
+        m.M22,
+        m.M23,
+        m.M24,
+        m.M31,
+        m.M32,
+        m.M33,
+        m.M34,
+        m.M41,
+        m.M42,
+        m.M43,
+        m.M44,
+        // "R" (round-trip) so parsing recovers the exact double on net48 too (plain ToString caps at 15 significant
+        // digits there); matches the AutoCAD writer of the same modelPlacement.*.transform field family.
+      }.Select(value => value.ToString("R", CultureInfo.InvariantCulture))
+    );
+  }
 
   /// <summary>
   /// Extracts and reconstructs a transform from the matrix data stored on root object
@@ -100,4 +216,38 @@ public static class ReferencePointHelper
 
     return transform;
   }
+}
+
+public sealed class RevitModelPlacementData(
+  Dictionary<string, Transform> sourceTransforms,
+  XYZ? projectBasePointPosition,
+  XYZ? surveyPointPosition,
+  XYZ? surveyPointSharedPosition,
+  double siteLatitudeDegrees,
+  double siteLongitudeDegrees,
+  double siteElevation,
+  string crsAuthority,
+  string crsCode,
+  string crsNativeCode,
+  string crsDefinition
+)
+{
+  public XYZ? ProjectBasePointPosition { get; } = projectBasePointPosition;
+  public XYZ? SurveyPointPosition { get; } = surveyPointPosition;
+  public XYZ? SurveyPointSharedPosition { get; } = surveyPointSharedPosition;
+  public double SiteLatitudeDegrees { get; } = siteLatitudeDegrees;
+  public double SiteLongitudeDegrees { get; } = siteLongitudeDegrees;
+  public double SiteElevation { get; } = siteElevation;
+  public string CrsAuthority { get; } = crsAuthority;
+  public string CrsCode { get; } = crsCode;
+  public string CrsNativeCode { get; } = crsNativeCode;
+  public string CrsDefinition { get; } = crsDefinition;
+
+  public void SetSourceTransform(string kind, Transform transform) => sourceTransforms[kind] = transform;
+
+  /// <summary>Revit INTERNAL coordinates → the datum's coordinate space (the inverse of the datum's source
+  /// transform). Independent of whether the sender baked anything into stored geometry — that is what
+  /// <c>modelPlacement.appliedToGeometry</c> records.</summary>
+  public Transform? GetInternalToOptionTransform(string kind) =>
+    sourceTransforms.TryGetValue(kind, out Transform? sourceTransform) ? sourceTransform.Inverse : null;
 }

@@ -1,3 +1,4 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -8,7 +9,8 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 /// <summary>
 /// Converts AutoCAD Solid3d to SAT (ACIS) raw encoding for lossless round-trip.
 /// </summary>
-public class Solid3dToRawEncodingConverter : ITypedConverter<ADB.Solid3d, RawEncoding>
+public class Solid3dToRawEncodingConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
+  : ITypedConverter<ADB.Solid3d, RawEncoding>
 {
   public RawEncoding Convert(ADB.Solid3d target)
   {
@@ -22,9 +24,19 @@ public class Solid3dToRawEncodingConverter : ITypedConverter<ADB.Solid3d, RawEnc
 
     try
     {
-      // Create collection with the solid
+      // SAT stores the solid's own coordinates and bypasses the point/vector converters. Apply the selected
+      // placement to a disposable clone so baked sends keep the authoritative SAT solid aligned with its display
+      // mesh. Definition-member conversions suppress ReferencePointTransform in the settings store, so their SAT
+      // remains definition-local.
       using var collection = new ADB.DBObjectCollection();
-      collection.Add(target);
+      using ADB.Solid3d? transformed = settingsStore.Current.ReferencePointTransform is not null
+        ? (ADB.Solid3d)target.Clone()
+        : null;
+      if (settingsStore.Current.ReferencePointTransform is AG.Matrix3d sourceToWcs)
+      {
+        transformed!.TransformBy(sourceToWcs.Inverse());
+      }
+      collection.Add(transformed ?? target);
 
       // Export to SAT using Body.AcisOut
       ADB.Body.AcisOut(tempSatFile, collection);

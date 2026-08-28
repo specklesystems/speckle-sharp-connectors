@@ -29,6 +29,10 @@ public static class ServiceRegistration
 {
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
+    // Pre-load IronCompress's native Zstd lib (net48 only) at startup so BOTH the artefact send and receive paths can
+    // (de)compress parquet — receive reads the bundle before the host builder runs. No-op on net8+ (Revit 2025+).
+    ZstdNativeLoader.Ensure();
+
     serviceCollection.AddConnectors();
     serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
@@ -64,6 +68,13 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddScoped<IRootContinuousTraversalBuilder<DocumentToConvert>, RevitContinuousTraversalBuilder>();
+    // Speckle 4.0 client-side artefact send (SGEO + eav + envelope parquet). Registering the builder makes
+    // SendOperation route Revit sends through the artefact path.
+    serviceCollection.AddScoped<IArtifactRootObjectBuilder<DocumentToConvert>, RevitArtifactRootObjectBuilder>();
+    serviceCollection.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();
@@ -76,9 +87,26 @@ public static class ServiceRegistration
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
+
+    // Speckle 4.0 artefact receive: download the parquet bundle + reconstruct the Base graph (DataObjects with
+    // displayValue meshes → DirectShapes). PreferSolids = true: reconstruction only runs when receive-as-families is on
+    // (RevitHostObjectArtefactBuilder.Build delegates to the v1 builder), and Revit DOES import 3dm — the rebuilt
+    // RhinoObject.rawEncoding goes through IRawEncodedObjectConverter → DB.ShapeImporter → real solids [ENG-8800].
+    serviceCollection.AddScoped<
+      Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
+      Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
+    >();
+    serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: true));
+    serviceCollection.AddScoped<IArtifactReceiver, ArtifactReceiver>();
+    // Native artefact receive (DirectShape from raw 3dm solids / SGEO meshes, Base-free). Registering this activates the direct-bake
+    // branch in ReceiveOperation;
+    serviceCollection.AddScoped<IArtifactHostObjectBuilder, RevitHostObjectArtefactBuilder>();
+    serviceCollection.AddScoped<RevitArtefactSolidImporter>();
     serviceCollection.AddScoped<RevitFamilyBaker>();
     serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
+    serviceCollection.AddScoped<RevitReceiveManifest>();
+    serviceCollection.AddScoped<RevitReceiveTracker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
     serviceCollection.AddScoped<RevitViewBaker>();
     serviceCollection.AddScoped<RevitViewManager>();

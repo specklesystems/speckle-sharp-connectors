@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 
+  <Import Project="..\..\Autocad\Speckle.Connectors.AutocadShared\Net48.IronCompress.props" />
   <Import
     Project="..\..\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems"
     Label="Shared"

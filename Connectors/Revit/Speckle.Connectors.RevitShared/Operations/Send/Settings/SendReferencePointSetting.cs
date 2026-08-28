@@ -17,7 +17,8 @@ public class SendReferencePointSetting(ReferencePointType value = SendReferenceP
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Reference Point";
-  public string? Description { get; set; } = "Sets the datum used as the origin of the sent geometry.";
+  public string? Description { get; set; } =
+    "Selects the model placement datum. Survey Point uses its origin only; use Shared Coordinates for shared-coordinate orientation and True North.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(ReferencePointType)).ToList();
   public object? Value { get; set; } = value.ToString();

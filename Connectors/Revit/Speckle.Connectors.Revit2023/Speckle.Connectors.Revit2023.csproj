@@ -12,6 +12,8 @@
 
   <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
 
+  <Import Project="..\Speckle.Connectors.RevitShared\Net48.IronCompress.props" />
+
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />

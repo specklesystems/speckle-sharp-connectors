@@ -1,8 +1,10 @@
+using Speckle.Connectors.Autocad.Operations;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -17,6 +19,10 @@ public abstract class AutocadReceiveBaseBinding(
   public IBrowserBridge Parent { get; } = parent;
 
   private ReceiveBindingUICommands Commands { get; } = new(parent);
+
+#pragma warning disable CA1024
+  public List<ICardSetting> GetReceiveSettings() => [new ReceiveApplyTransformSetting()];
+#pragma warning restore CA1024
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc);
 

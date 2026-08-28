@@ -57,6 +57,14 @@ public class PriorityLoader : GH_AssemblyPriority
 
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
+      // Speckle 4.0 artefact receive: download+parse the parquet bundle. GH has no doc bake / IHostObjectBuilder —
+      // GrasshopperArtefactObjectBuilder maps the bundle to the canvas wrapper tree (see ReceiveComponent branch).
+      services.AddScoped<
+        Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
+        Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
+      >();
+      services.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: true));
+      services.AddScoped<IArtifactReceiver, ArtifactReceiver>();
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddTransient<TraversalContextUnpacker>();
       services.AddScoped<IDataObjectInstanceRegistry, DataObjectInstanceRegistry>();
@@ -68,6 +76,17 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddTransient<
         IRootContinuousTraversalBuilder<SpeckleCollectionWrapperGoo>,
         GrasshopperContinuousTraversalBuilder
+      >();
+      // Speckle 4.0 client-side artefact send. Registering this makes SendOperation route GH publishes through the
+      // artefact path (SGEO + eav + envelope parquet) with zero component changes; the ctor param is optional so its
+      // presence is the only switch.
+      services.AddTransient<
+        IArtifactRootObjectBuilder<SpeckleCollectionWrapperGoo>,
+        GrasshopperArtifactRootObjectBuilder
+      >();
+      services.AddSingleton<
+        Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+        Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
       >();
       services.AddTransient<SendOperation<SpeckleCollectionWrapperGoo>>();
       services.AddSingleton<IThreadContext>(new DefaultThreadContext());

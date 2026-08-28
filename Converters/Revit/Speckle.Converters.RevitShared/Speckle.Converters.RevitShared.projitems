@@ -54,6 +54,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ClassPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CompoundStructureExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ParameterDefinitionHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ParameterExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\StructuralMaterialAssetExtractor.cs" />
