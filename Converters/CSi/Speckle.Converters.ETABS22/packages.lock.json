@@ -201,7 +201,7 @@
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[2026.9.0-beta.2, )",
+        "requested": "[2026.9.0-beta.3, )",
         "resolved": "2026.9.0-beta.3",
         "contentHash": "sjlSYDskN9cQ50By13Qt4TtFBetO5EpuvAuj/e/3/PFkTHQzP8Kj+L42VucBHYS2zbf77pfr6J0ytu7n5fGXVw==",
         "dependencies": {

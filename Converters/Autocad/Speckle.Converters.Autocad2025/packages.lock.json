@@ -192,7 +192,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[2026.9.0-beta.2, )"
+          "Speckle.Sdk": "[2026.9.0-beta.3, )"
         }
       },
       "speckle.connectors.dui": {
