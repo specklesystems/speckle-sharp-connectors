@@ -285,16 +285,13 @@ public abstract class ReceiveComponentBase(
       { "isAsync", false },
       { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
     };
-    if (receiveInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
-    }
+
     if (receiveInfo.SelectedVersionUserId != null)
     {
       customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.userInfo.id);
     }
-    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-    await mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
+    var analyticsManager = PriorityLoader.Container.GetRequiredService<IPostHogManager>();
+    await analyticsManager.TrackEvent(AnalyticsEvent.Receive, account, receiveInfo.WorkspaceId, customProperties);
   }
 
   /// <summary>

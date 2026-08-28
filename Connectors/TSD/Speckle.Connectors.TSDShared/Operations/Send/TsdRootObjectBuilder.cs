@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Converters.TSDShared;
 using Speckle.Converters.TSDShared.Results;
+using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -24,10 +25,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     ITSDApplicationService applicationService,
     TsdEntitySnapshotBuilder snapshotBuilder,
     TsdAnalysisResultsExtractor analysisResultsExtractor,
-    TsdConversionSettings conversionSettings
-    TsdSendCollectionManager sendCollectionManager,
     TsdConversionSettings conversionSettings,
-    ILogger<TsdRootObjectBuilder> logger
+    TsdSendCollectionManager sendCollectionManager
   )
   {
     _applicationService = applicationService;
