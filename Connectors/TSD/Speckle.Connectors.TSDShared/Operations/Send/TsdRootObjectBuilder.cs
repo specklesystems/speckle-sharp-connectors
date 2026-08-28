@@ -74,9 +74,16 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     Dictionary<string, object?>? analysisResultsTree;
     try
     {
-      analysisResultsTree = await _analysisResultsExtractor
-        .ExtractAsync(_conversionSettings.SelectedLoadings, _conversionSettings.SelectedResultTypes, cancellationToken)
-        .ConfigureAwait(false);
+      // v3 path publishes the tree as-is; the payload's element map is only meaningful to the artefact path
+      analysisResultsTree = (
+        await _analysisResultsExtractor
+          .ExtractAsync(
+            _conversionSettings.SelectedLoadings,
+            _conversionSettings.SelectedResultTypes,
+            cancellationToken
+          )
+          .ConfigureAwait(false)
+      )?.Tree;
     }
     catch (SpeckleException)
     {

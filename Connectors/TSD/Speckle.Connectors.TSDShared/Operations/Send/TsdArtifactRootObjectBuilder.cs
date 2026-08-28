@@ -179,10 +179,10 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     var loadings = _conversionSettings.SelectedLoadings;
     var resultTypes = _conversionSettings.SelectedResultTypes;
 
-    Dictionary<string, object?>? tree;
+    TsdResultsPayload? payload;
     try
     {
-      tree = await _analysisResultsExtractor
+      payload = await _analysisResultsExtractor
         .ExtractAsync(loadings, resultTypes, cancellationToken)
         .ConfigureAwait(false);
     }
@@ -193,7 +193,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       return new List<StructuralResultRow>();
     }
 
-    if (tree is null)
+    if (payload is null)
     {
       _logger.LogWarning(
         "TSD structural results NOT extracted: SelectedLoadings={LoadingCount}, SelectedResultTypes={ResultTypeCount} — both must be non-empty. Check the model card's Loadings & Result Types settings.",
@@ -211,21 +211,39 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     }
 
     var pending = new List<PendingResultRow>();
-    foreach (var (resultType, loadingsObj) in tree)
+    foreach (var (resultType, loadingsObj) in payload.Tree)
     {
       if (loadingsObj is not IDictionary<string, object?> loadingBranch)
       {
         continue;
       }
+      // Only element-keyed result types carry solver element indices. Nodal results are keyed by construction point
+      // index — a different space that overlaps numerically — so resolving those here would link the wrong member.
+      bool elementKeyed = Array.IndexOf(TsdElementIndexMap.ElementKeyedResultTypes, resultType) >= 0;
       foreach (var (loadCase, entitiesObj) in loadingBranch)
       {
         if (entitiesObj is not IDictionary<string, object?> entityBranch)
         {
           continue;
         }
-        foreach (var (location, sub) in entityBranch)
+        foreach (var (key, sub) in entityBranch)
         {
-          WalkResult(resultType, loadCase, location, sub, s_noParts, null, pending);
+          // Resolved → object-level row (object_index set, location null). Unresolved → left model-level under its
+          // raw key rather than guessing at an object.
+          string? objectAppId =
+            elementKeyed && int.TryParse(key, NumberStyles.Integer, CultureInfo.InvariantCulture, out var elementIndex)
+              ? payload.Elements.GetEntityId(elementIndex)
+              : null;
+          WalkResult(
+            resultType,
+            loadCase,
+            objectAppId is null ? key : null,
+            objectAppId,
+            sub,
+            s_noParts,
+            null,
+            pending
+          );
         }
       }
     }
@@ -247,7 +265,16 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
         var p = items[i];
         double value = i < values.Count ? values[i] : p.Value.BaseValue;
         rows.Add(
-          new StructuralResultRow(null, p.Location, p.ResultType, p.LoadCase, p.Component, p.Station, null, value)
+          new StructuralResultRow(
+            p.ObjectAppId,
+            p.Location,
+            p.ResultType,
+            p.LoadCase,
+            p.Component,
+            p.Station,
+            null,
+            value
+          )
         );
       }
     }
@@ -267,7 +294,8 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   private static void WalkResult(
     string resultType,
     string loadCase,
-    string location,
+    string? location,
+    string? objectAppId,
     object? node,
     IReadOnlyList<string> pathParts,
     double? station,
@@ -286,7 +314,9 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
         if (value is TsdQuantityValue quantityValue)
         {
           string component = pathParts.Count == 0 ? componentKey : string.Join(".", pathParts) + "." + componentKey;
-          sink.Add(new PendingResultRow(resultType, loadCase, location, component, station, quantityValue));
+          sink.Add(
+            new PendingResultRow(resultType, loadCase, location, objectAppId, component, station, quantityValue)
+          );
         }
       }
       return;
@@ -296,12 +326,12 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     {
       if (double.TryParse(key, NumberStyles.Float, CultureInfo.InvariantCulture, out var stationValue))
       {
-        WalkResult(resultType, loadCase, location, child, pathParts, stationValue, sink);
+        WalkResult(resultType, loadCase, location, objectAppId, child, pathParts, stationValue, sink);
       }
       else
       {
         var next = new List<string>(pathParts) { key };
-        WalkResult(resultType, loadCase, location, child, next, station, sink);
+        WalkResult(resultType, loadCase, location, objectAppId, child, next, station, sink);
       }
     }
   }
@@ -434,7 +464,8 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   private sealed record PendingResultRow(
     string ResultType,
     string LoadCase,
-    string Location,
+    string? Location,
+    string? ObjectAppId,
     string Component,
     double? Station,
     TsdQuantityValue Value
