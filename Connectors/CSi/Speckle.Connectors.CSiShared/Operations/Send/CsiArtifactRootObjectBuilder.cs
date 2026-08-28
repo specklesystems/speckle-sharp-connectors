@@ -126,7 +126,10 @@ public class CsiArtifactRootObjectBuilder(
     var collected = new List<CollectedObject>(objects.Count);
     var results = new List<SendConversionResult>(objects.Count);
     // CSi analysis results key back to objects by the element NAME; interned objects key by applicationId — so map.
-    var nameToAppId = new Dictionary<string, string>(StringComparer.Ordinal);
+    // Keyed by (ObjectType, Name), NOT name alone: CSi names are only unique WITHIN a type (see ObjectIdentifier —
+    // identity is objectType+objectName), so ETABS' per-type auto-numbering gives you a frame "12" AND an area "12".
+    // A name-only map let whichever object was converted last win, stamping frame forces onto floors.
+    var nameToAppId = new Dictionary<(ModelObjectType Type, string Name), string>();
 
     int count = 0;
     foreach (ICsiWrapper wrapper in objects)
@@ -139,7 +142,7 @@ public class CsiArtifactRootObjectBuilder(
         Base converted = converter.Convert(wrapper);
         var segments = collectionManager.GetCollectionSegments(converted);
         string appId = converted.applicationId ?? Guid.NewGuid().ToString();
-        nameToAppId[wrapper.Name] = appId;
+        nameToAppId[(wrapper.ObjectType, wrapper.Name)] = appId;
         collected.Add(new CollectedObject(appId, sourceType, converted, segments));
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
         session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -176,7 +179,7 @@ public class CsiArtifactRootObjectBuilder(
   // not run) is logged and skipped so the geometry+properties send still succeeds.
   private List<StructuralResultRow> ExtractResultRows(
     IReadOnlyList<ICsiWrapper> objects,
-    Dictionary<string, string> nameToAppId,
+    Dictionary<(ModelObjectType Type, string Name), string> nameToAppId,
     ArtefactSessionLog session
   )
   {
@@ -269,7 +272,7 @@ public class CsiArtifactRootObjectBuilder(
   private static void FlattenResultType(
     IDictionary<string, object> node,
     ResultDescriptor descriptor,
-    Dictionary<string, string> nameToAppId,
+    Dictionary<(ModelObjectType Type, string Name), string> nameToAppId,
     List<StructuralResultRow> rows
   )
   {
@@ -286,7 +289,9 @@ public class CsiArtifactRootObjectBuilder(
         string? location = Axis(descriptor.LocationKey);
         if (descriptor.ElementKey != null && axes.TryGetValue(descriptor.ElementKey, out var elementName))
         {
-          if (nameToAppId.TryGetValue(elementName, out var appId))
+          // Resolve within the result type's OWN object type — a frame force names a frame, a joint reaction names a
+          // joint. Without the type, a same-named object of any other type would match first and silently win.
+          if (nameToAppId.TryGetValue((descriptor.ElementObjectType, elementName), out var appId))
           {
             objectAppId = appId;
           }
@@ -428,9 +433,19 @@ public class CsiArtifactRootObjectBuilder(
       null,
       null,
       null,
-      new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" }
+      new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" },
+      ElementObjectType: ModelObjectType.FRAME
     ),
-    new("jointReact", "jointReaction", "Elm", null, null, null, new[] { "Elm", "LoadCase", "Wrap:StepNum" }),
+    new(
+      "jointReact",
+      "jointReaction",
+      "Elm",
+      null,
+      null,
+      null,
+      new[] { "Elm", "LoadCase", "Wrap:StepNum" },
+      ElementObjectType: ModelObjectType.JOINT
+    ),
     new("baseReact", "baseReaction", null, null, null, null, new[] { "LoadCase", "Wrap:StepNum" }),
     new("modalPeriodsAndFrequencies", "modalPeriod", null, null, null, null, new[] { "LoadCase", "Wrap:Mode" }),
     new(
@@ -485,7 +500,10 @@ public class CsiArtifactRootObjectBuilder(
     string? PositionKey, // axis → position_label (Top/Bottom)
     IReadOnlyList<string> GroupingKeys,
     IReadOnlyDictionary<string, string>? ComponentRenames = null,
-    bool DriftPivot = false
+    bool DriftPivot = false,
+    // The CSi object type ElementKey's names belong to. Required whenever ElementKey is set: names are unique only
+    // within a type, so this is half the lookup key. Unused (NONE) for the group/model-level descriptors.
+    ModelObjectType ElementObjectType = ModelObjectType.NONE
   );
 
   private sealed record StructuralResultRow(
@@ -664,10 +682,10 @@ public class CsiArtifactRootObjectBuilder(
     };
 
   // Member↔joint connectivity (CONNECTS_TO): a frame → its I-/J-end joint objects. The joint NAMES live in the
-  // frame's "Geometry" properties (CsiFramePropertiesExtractor); NameToAppId maps a CSi element name → its
-  // applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. This is the
-  // slab↔beam↔column graph via shared joints — reverse-lookup a joint's object_index to find every member meeting
-  // there.
+  // frame's "Geometry" properties (CsiFramePropertiesExtractor); NameToAppId maps a CSi (type, name) pair → its
+  // applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. The JOINT type is
+  // part of the lookup because an end-joint name can equally name a frame or an area. This is the slab↔beam↔column
+  // graph via shared joints — reverse-lookup a joint's object_index to find every member meeting there.
   private static void EmitFrameJointConnectivity(ObjectsArtifactPipeline pipeline, CollectedModel model)
   {
     foreach (var co in model.Objects)
@@ -687,7 +705,7 @@ public class CsiArtifactRootObjectBuilder(
           geometry.TryGetValue(endKey, out var jn)
           && jn is string jointName
           && jointName.Length > 0
-          && model.NameToAppId.TryGetValue(jointName, out var jointAppId)
+          && model.NameToAppId.TryGetValue((ModelObjectType.JOINT, jointName), out var jointAppId)
         )
         {
           pipeline.ConnectsTo(frameK, pipeline.InternObject(jointAppId));
@@ -712,7 +730,7 @@ public class CsiArtifactRootObjectBuilder(
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results,
-    IReadOnlyDictionary<string, string> NameToAppId
+    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId
   );
 
   private sealed record BundleResult(
