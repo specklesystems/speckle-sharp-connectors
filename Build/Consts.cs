@@ -76,6 +76,7 @@ internal static class Consts
       [
         new("Connectors/CSi/Speckle.Connectors.ETABS21", "net48"),
         new("Connectors/CSi/Speckle.Connectors.ETABS22", "net8.0-windows"),
+        new("Connectors/CSi/Speckle.Connectors.ETABS23", "net8.0-windows"),
       ]
     ),
     new("tsd", [new("Connectors/TSD/Speckle.Connectors.TSD2027", "net10.0-windows")]),

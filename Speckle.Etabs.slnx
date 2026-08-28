@@ -31,6 +31,10 @@
     <Project Path="Connectors\CSi\Speckle.Connectors.ETABS22\Speckle.Connectors.ETABS22.csproj" />
     <Project Path="Converters\CSi\Speckle.Converters.ETABS22\Speckle.Converters.ETABS22.csproj" />
   </Folder>
+  <Folder Name="/Connectors/CSi/ETABS23/">
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABS23\Speckle.Connectors.ETABS23.csproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABS23\Speckle.Converters.ETABS23.csproj" />
+  </Folder>
   <Folder Name="/Connectors/CSi/Shared/">
     <Project Path="Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.shproj" />
     <Project Path="Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.shproj" />

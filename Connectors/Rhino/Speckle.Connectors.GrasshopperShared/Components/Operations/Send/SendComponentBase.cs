@@ -345,13 +345,9 @@ public abstract class SendComponentBase(
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object> { { "isAsync", false } };
-    if (sendInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
-    }
 
-    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
+    var analyticsManager = PriorityLoader.Container.GetRequiredService<IPostHogManager>();
+    await analyticsManager.TrackEvent(AnalyticsEvent.Send, account, sendInfo.WorkspaceId, customProperties);
 
     SpeckleUrlModelVersionResource createdVersionResource = new(
       new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),

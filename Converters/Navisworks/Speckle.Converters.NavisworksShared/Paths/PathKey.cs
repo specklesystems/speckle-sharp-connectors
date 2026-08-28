@@ -25,13 +25,21 @@ public readonly record struct PathKey
       throw new ArgumentException("Expected 1D array.", nameof(arr));
     }
 
-    int lb = arr.GetLowerBound(0);
-    int len = arr.GetLength(0);
-
-    var data = new int[len];
-    for (int i = 0; i < len; i++)
+    int[] data;
+    if (arr is int[] typed)
     {
-      data[i] = (int)arr.GetValue(lb + i);
+      data = new int[typed.Length];
+      Array.Copy(typed, data, typed.Length);
+    }
+    else
+    {
+      int lb = arr.GetLowerBound(0);
+      int len = arr.GetLength(0);
+      data = new int[len];
+      for (int i = 0; i < len; i++)
+      {
+        data[i] = (int)arr.GetValue(lb + i);
+      }
     }
 
     return new PathKey(data);
@@ -64,6 +72,24 @@ public readonly record struct PathKey
     if (arr.Rank != 1)
     {
       return false;
+    }
+
+    if (arr is int[] typed)
+    {
+      if (typed.Length != Data.Length)
+      {
+        return false;
+      }
+
+      for (int i = 0; i < typed.Length; i++)
+      {
+        if (typed[i] != Data[i])
+        {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     int lb = arr.GetLowerBound(0);

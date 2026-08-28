@@ -15,12 +15,10 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
     _settingsStore = settingsStore;
   }
 
-  // this function gets the scale factor from the coordinate system
-  // helps us to avoid conflicts between "," and "."
-  private double GetScaleFactor(TG.CoordinateSystem coordinateSystem)
-  {
-    return coordinateSystem.AxisX.X / 1000.0;
-  }
+  // NOTE: from the axis length, not its X component. The component shrinks as the grid rotates, which silently
+  // scaled grids and divided by zero at 90 degrees.
+  private static double GetScaleFactor(TG.CoordinateSystem coordinateSystem) =>
+    coordinateSystem.AxisX.GetLength() / 1000.0;
 
   private IEnumerable<double> ParseCoordinateString(string coordinateString)
   {
@@ -77,52 +75,62 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
     double conversionFactor = Units.GetConversionFactor(Units.Millimeters, _settingsStore.Current.SpeckleUnits);
     var scale = GetScaleFactor(coordinateSystem);
 
-    var xCoordinates = ParseCoordinateString(target.CoordinateX).Select(x => (x / scale) * conversionFactor).ToList();
-    var yCoordinates = ParseCoordinateString(target.CoordinateY).Select(y => (y / scale) * conversionFactor).ToList();
+    var xCoordinates = ParseCoordinateString(target.CoordinateX).Select(x => x / scale).ToList();
+    var yCoordinates = ParseCoordinateString(target.CoordinateY).Select(y => y / scale).ToList();
 
     double minX = xCoordinates.Min();
     double maxX = xCoordinates.Max();
     double minY = yCoordinates.Min();
     double maxY = yCoordinates.Max();
 
-    double extendedMinX = minX - ((target.ExtensionLeftX / scale) * conversionFactor);
-    double extendedMaxX = maxX + ((target.ExtensionRightX / scale) * conversionFactor);
-    double extendedMinY = minY - ((target.ExtensionLeftY / scale) * conversionFactor);
-    double extendedMaxY = maxY + ((target.ExtensionRightY / scale) * conversionFactor);
+    double extendedMinX = minX - (target.ExtensionLeftX / scale);
+    double extendedMaxX = maxX + (target.ExtensionRightX / scale);
+    double extendedMinY = minY - (target.ExtensionLeftY / scale);
+    double extendedMaxY = maxY + (target.ExtensionRightY / scale);
 
-    double scaledZ = (coordinateSystem.Origin.Z / scale) * conversionFactor;
+    // the coordinates are local to the grid, so we place them through its coordinate system to land in the same
+    // frame as every other object we send
+    var xAxis = coordinateSystem.AxisX.GetNormal();
+    var yAxis = coordinateSystem.AxisY.GetNormal();
 
     foreach (var x in xCoordinates)
     {
-      var startPoint = new TG.Point(x, extendedMinY, scaledZ);
-      var endPoint = new TG.Point(x, extendedMaxY, scaledZ);
-
-      // we're using the Point converter indirectly through the Line converter
-      // since we've already applied the conversion factor to the coordinates,
-      // we need to tell the Point converter not to apply it again
-      var line = new SOG.Line
+      yield return new SOG.Line
       {
-        start = new SOG.Point(startPoint.X, startPoint.Y, startPoint.Z, _settingsStore.Current.SpeckleUnits),
-        end = new SOG.Point(endPoint.X, endPoint.Y, endPoint.Z, _settingsStore.Current.SpeckleUnits),
+        start = ToSpecklePoint(coordinateSystem, xAxis, yAxis, x, extendedMinY, conversionFactor),
+        end = ToSpecklePoint(coordinateSystem, xAxis, yAxis, x, extendedMaxY, conversionFactor),
         units = _settingsStore.Current.SpeckleUnits,
       };
-
-      yield return line;
     }
 
     foreach (var y in yCoordinates)
     {
-      var startPoint = new TG.Point(extendedMinX, y, scaledZ);
-      var endPoint = new TG.Point(extendedMaxX, y, scaledZ);
-
-      var line = new SOG.Line
+      yield return new SOG.Line
       {
-        start = new SOG.Point(startPoint.X, startPoint.Y, startPoint.Z, _settingsStore.Current.SpeckleUnits),
-        end = new SOG.Point(endPoint.X, endPoint.Y, endPoint.Z, _settingsStore.Current.SpeckleUnits),
+        start = ToSpecklePoint(coordinateSystem, xAxis, yAxis, extendedMinX, y, conversionFactor),
+        end = ToSpecklePoint(coordinateSystem, xAxis, yAxis, extendedMaxX, y, conversionFactor),
         units = _settingsStore.Current.SpeckleUnits,
       };
-
-      yield return line;
     }
+  }
+
+  // we build the points directly rather than through the point converter, as the conversion factor is applied here
+  private SOG.Point ToSpecklePoint(
+    TG.CoordinateSystem coordinateSystem,
+    TG.Vector xAxis,
+    TG.Vector yAxis,
+    double localX,
+    double localY,
+    double conversionFactor
+  )
+  {
+    var origin = coordinateSystem.Origin;
+
+    return new SOG.Point(
+      (origin.X + (localX * xAxis.X) + (localY * yAxis.X)) * conversionFactor,
+      (origin.Y + (localX * xAxis.Y) + (localY * yAxis.Y)) * conversionFactor,
+      (origin.Z + (localX * xAxis.Z) + (localY * yAxis.Z)) * conversionFactor,
+      _settingsStore.Current.SpeckleUnits
+    );
   }
 }

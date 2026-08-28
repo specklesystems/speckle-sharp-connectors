@@ -65,6 +65,7 @@ public static class ServiceRegistration
     >();
 
     services.AddSingleton<ToSpeckleSettingsManager>();
+    services.AddSingleton<TeklaCoordinateSystemTracker>();
 
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 

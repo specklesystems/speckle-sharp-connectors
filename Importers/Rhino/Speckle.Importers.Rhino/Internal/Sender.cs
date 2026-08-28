@@ -20,7 +20,7 @@ internal sealed class Sender(
   ISdkActivityFactory activityFactory,
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-  IMixPanelManager mixpanel,
+  IPostHogManager analytics,
   IIngestionProgressManagerFactory progressManagerFactory,
   ISendPipelineFactory sendPipelineFactory,
   ILogger<Sender> logger
@@ -86,11 +86,7 @@ internal sealed class Sender(
   {
     Dictionary<string, object> customProperties = [];
     customProperties.Add("actionSource", "import");
-    if (project.workspaceId != null)
-    {
-      customProperties.Add("workspace_id", project.workspaceId);
-    }
 
-    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
+    await analytics.TrackEvent(AnalyticsEvent.Send, account, project.workspaceId, customProperties);
   }
 }

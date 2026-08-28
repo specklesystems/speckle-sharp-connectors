@@ -6,6 +6,7 @@ using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle;
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+using Speckle.Converter.Navisworks.ToSpeckle.Raw;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -20,12 +21,14 @@ public static class NavisworksConverterServiceRegistration
 
     // Register base converters
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
+    serviceCollection.AddScoped<IModelItemPropertySetsCache, ModelItemPropertySetsCache>();
     serviceCollection.AddRootCommon<NavisworksRootToSpeckleConverter>(converterAssembly);
 
     // Register property handlers
     serviceCollection.AddScoped<StandardPropertyHandler>();
     serviceCollection.AddScoped<HierarchicalPropertyHandler>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
+    serviceCollection.AddScoped<InternalPropertiesExtractor>();
 
     // Register settings management
     serviceCollection.AddScoped<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();
@@ -40,6 +43,7 @@ public static class NavisworksConverterServiceRegistration
     // Register converters and handlers
     serviceCollection.AddApplicationConverters<NavisworksToSpeckleUnitConverter, NAV.Units>(converterAssembly);
     serviceCollection.AddScoped<ModelPropertiesExtractor>();
+    serviceCollection.AddScoped<BoundingBoxToSpeckleRawConverter>();
     serviceCollection.AddScoped<PrimitiveProcessor>();
     serviceCollection.AddScoped<PropertySetsExtractor>();
 
@@ -47,6 +51,7 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<ElementSelectionService>();
 
     // Register geometry conversion
+    serviceCollection.AddScoped<GeometryConversionContext>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<GeometryToSpeckleConverter>(sp =>
     {

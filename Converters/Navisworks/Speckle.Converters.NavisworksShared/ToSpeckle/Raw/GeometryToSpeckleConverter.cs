@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Constants;
@@ -5,6 +6,7 @@ using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Paths;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
@@ -35,6 +37,8 @@ public sealed class GeometryToSpeckleConverter(
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0;
+  private const double MESH_VERTEX_PRECISION_METERS = 1e-4; // 0.1 mm
+  private const int MAX_MESH_VERTEX_DECIMALS = 8;
   private const bool ENABLE_INSTANCING = true;
   private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
 
@@ -50,6 +54,9 @@ public sealed class GeometryToSpeckleConverter(
       return [];
     }
 
+    var stopwatch = Stopwatch.StartNew();
+    int pathCount = 0;
+    int fragmentCount = 0;
     NAV.ModelItemCollection collection = new() { modelItem };
     var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
     try
@@ -65,80 +72,8 @@ public sealed class GeometryToSpeckleConverter(
 
         foreach (InwOaPath path in paths)
         {
-          if (path.ArrayData is not Array pathArr)
-          {
-            continue;
-          }
-
-          var itemPathKey = PathKey.FromComArray(pathArr);
-
-          if (!_registry.TryGetGroup(itemPathKey, out var groupKey))
-          {
-            var members = DiscoverInstancePathsFromFragments(path);
-            members.Add(itemPathKey);
-            groupKey = itemPathKey;
-            _registry.RegisterGroup(groupKey, members);
-            _groupMemberCounts[groupKey] = members.Count;
-          }
-
-          var processor = new PrimitiveProcessor(_isUpright);
-          ProcessPathFragments(path, itemPathKey, groupKey, processor);
-
-          if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
-          {
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-            continue;
-          }
-
-          if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
-          {
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-            continue;
-          }
-
-          if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
-          {
-            var geometries = ProcessGeometries([processor]);
-
-            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
-            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
-            var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
-            var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
-            var groupKeyPath = groupKey.ToPathString();
-            for (int i = 0; i < definitionGeometry.Count; i++)
-            {
-              definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyPath}_{i}";
-            }
-
-            _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
-          }
-
-          if (ENABLE_INSTANCING)
-          {
-            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
-            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
-            var instanceProxy = new InstanceProxy
-            {
-              definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToPathString()}",
-              transform = ConvertToMatrix4X4(transformedWorld),
-              units = _settings.Derived.SpeckleUnits,
-              applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToPathString()}",
-              maxDepth = 0,
-            };
-
-            _registry.MarkConverted(itemPathKey);
-            allResults.Add(instanceProxy);
-          }
-          else
-          {
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-          }
+          pathCount++;
+          allResults.AddRange(ProcessPath(path, ref fragmentCount));
         }
 
         return allResults;
@@ -154,8 +89,184 @@ public sealed class GeometryToSpeckleConverter(
       {
         Marshal.ReleaseComObject(comSelection);
       }
+
+      collection.Dispose();
+      stopwatch.Stop();
+      GeometryConversionMetricsTracker.Record(
+        convertedObjectCount: 1,
+        pathCount: pathCount,
+        fragmentCount: fragmentCount,
+        elapsedMs: stopwatch.Elapsed.TotalMilliseconds
+      );
     }
-    collection.Dispose();
+  }
+
+  internal List<List<Base>> ConvertBatch(
+    IReadOnlyList<NAV.ModelItem> modelItems,
+    Action<double, int>? onProgress = null
+  )
+  {
+    if (modelItems == null)
+    {
+      throw new ArgumentNullException(nameof(modelItems));
+    }
+
+    var collection = new NAV.ModelItemCollection();
+    foreach (var modelItem in modelItems)
+    {
+      if (modelItem != null && modelItem.HasGeometry)
+      {
+        collection.Add(modelItem);
+      }
+    }
+
+    if (collection.Count == 0)
+    {
+      return [];
+    }
+
+    var stopwatch = Stopwatch.StartNew();
+    int pathCount = 0;
+    int fragmentCount = 0;
+    int convertedObjectCount = collection.Count;
+    var results = new List<List<Base>>(collection.Count);
+    var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
+
+    try
+    {
+      var paths = comSelection.Paths();
+      if (paths == null)
+      {
+        return [];
+      }
+
+      try
+      {
+        const int PROGRESS_REPORT_INTERVAL_MS = 500;
+        const double MAX_INTERIM_PROGRESS = 0.98;
+        int pathScale = Math.Max(collection.Count * 3, 10000);
+        double lastProgress = 0;
+        var progressStopwatch = Stopwatch.StartNew();
+
+        foreach (InwOaPath path in paths)
+        {
+          pathCount++;
+          results.Add(ProcessPath(path, ref fragmentCount));
+
+          if (onProgress == null || progressStopwatch.ElapsedMilliseconds < PROGRESS_REPORT_INTERVAL_MS)
+          {
+            continue;
+          }
+
+          double progress = MAX_INTERIM_PROGRESS * (1d - Math.Exp(-(double)pathCount / pathScale));
+          if (progress > lastProgress)
+          {
+            onProgress(progress, pathCount);
+            lastProgress = progress;
+          }
+
+          progressStopwatch.Restart();
+        }
+
+        onProgress?.Invoke(1d, pathCount);
+      }
+      finally
+      {
+        Marshal.ReleaseComObject(paths);
+      }
+    }
+    finally
+    {
+      if (comSelection != null)
+      {
+        Marshal.ReleaseComObject(comSelection);
+      }
+
+      collection.Dispose();
+      stopwatch.Stop();
+      GeometryConversionMetricsTracker.Record(
+        convertedObjectCount: convertedObjectCount,
+        pathCount: pathCount,
+        fragmentCount: fragmentCount,
+        elapsedMs: stopwatch.Elapsed.TotalMilliseconds
+      );
+    }
+
+    return results;
+  }
+
+  private List<Base> ProcessPath(InwOaPath path, ref int fragmentCount)
+  {
+    if (path.ArrayData is not Array pathArr)
+    {
+      return [];
+    }
+
+    var allResults = new List<Base>(5);
+    var itemPathKey = PathKey.FromComArray(pathArr);
+
+    if (!_registry.TryGetGroup(itemPathKey, out var groupKey))
+    {
+      var members = DiscoverInstancePathsFromFragments(path);
+      members.Add(itemPathKey);
+      groupKey = itemPathKey;
+      _registry.RegisterGroup(groupKey, members);
+      _groupMemberCounts[groupKey] = members.Count;
+    }
+
+    var processor = new PrimitiveProcessor(_isUpright);
+    ProcessPathFragments(path, itemPathKey, groupKey, processor, ref fragmentCount);
+
+    if (
+      !_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld)
+      || _groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1
+    )
+    {
+      var geometries = ProcessGeometries([processor]);
+      _registry.MarkConverted(itemPathKey);
+      allResults.AddRange(geometries);
+      return allResults;
+    }
+
+    if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
+    {
+      var geometries = ProcessGeometries([processor]);
+
+      // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+      var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+      var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
+      var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
+      var groupKeyPath = groupKey.ToPathString();
+      for (int i = 0; i < definitionGeometry.Count; i++)
+      {
+        definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyPath}_{i}";
+      }
+
+      _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
+    }
+
+    if (ENABLE_INSTANCING)
+    {
+      // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+      var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+      var instanceProxy = new InstanceProxy
+      {
+        definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToPathString()}",
+        transform = ConvertToMatrix4X4(transformedWorld),
+        units = _settings.Derived.SpeckleUnits,
+        applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToPathString()}",
+        maxDepth = 0,
+      };
+
+      _registry.MarkConverted(itemPathKey);
+      allResults.Add(instanceProxy);
+      return allResults;
+    }
+
+    var geometriesWithoutInstancing = ProcessGeometries([processor]);
+    _registry.MarkConverted(itemPathKey);
+    allResults.AddRange(geometriesWithoutInstancing);
+    return allResults;
   }
 
   private static HashSet<PathKey> DiscoverInstancePathsFromFragments(InwOaPath path)
@@ -165,8 +276,13 @@ public sealed class GeometryToSpeckleConverter(
 
     try
     {
-      foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
+      foreach (object fragmentObj in fragments)
       {
+        if (fragmentObj is not InwOaFragment3 fragment)
+        {
+          continue;
+        }
+
         GC.KeepAlive(fragment);
 
         InwOaPath? fragPath = fragment.path;
@@ -192,15 +308,27 @@ public sealed class GeometryToSpeckleConverter(
     return set;
   }
 
-  private void ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PathKey groupKey, PrimitiveProcessor processor)
+  private void ProcessPathFragments(
+    InwOaPath path,
+    PathKey itemPathKey,
+    PathKey groupKey,
+    PrimitiveProcessor processor,
+    ref int fragmentCount
+  )
   {
     var observed = false;
     var fragments = path.Fragments();
 
     try
     {
-      foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
+      foreach (object fragmentObj in fragments)
       {
+        if (fragmentObj is not InwOaFragment3 fragment)
+        {
+          continue;
+        }
+
+        fragmentCount++;
         GC.KeepAlive(fragment);
 
         InwOaPath? fragPath = null;
@@ -237,6 +365,7 @@ public sealed class GeometryToSpeckleConverter(
           }
 
           processor.LocalToWorldTransformation = instanceWorld;
+          processor.CurrentWeldMaterialKey = PathKey.FromComArray(fragPathArr).ToPathString();
           fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
 
           if (observed)
@@ -300,6 +429,29 @@ public sealed class GeometryToSpeckleConverter(
 
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
+    var level = _settings.User.GeometryDetailLevel;
+    bool optimisedMode = level == GeometryDetailLevel.Optimised;
+    bool seamRetentionEnabled = optimisedMode;
+    double creaseForMetrics = MeshCreaseAngleDegrees(level);
+    MeshOptimizationMetricsTracker.RecordSettings(
+      seamRetentionEnabled: seamRetentionEnabled,
+      geometryDetailLevel: level,
+      creaseAngleDegrees: creaseForMetrics
+    );
+
+    if (optimisedMode)
+    {
+      return CreateHardEdgeRetainedWeldedMesh(triangles);
+    }
+
+    MeshOptimizationMetricsTracker.RecordMesh(
+      faceCount: triangles.Count,
+      vertexCountBeforeWeld: triangles.Count * 3,
+      vertexCountAfterWeld: triangles.Count * 3,
+      weldMs: 0,
+      isEmpty: triangles.Count == 0
+    );
+
     var vertices = new List<double>(triangles.Count * 9);
     var faces = new List<int>(triangles.Count * 4);
 
@@ -320,39 +472,235 @@ public sealed class GeometryToSpeckleConverter(
       faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
     }
 
-    return new Mesh
+    return CreateMeshWithOptionalRoundedVertices(
+      new Mesh
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _settings.Derived.SpeckleUnits,
+      },
+      _settings.Derived.SpeckleUnits
+    );
+  }
+
+  private Mesh CreateHardEdgeRetainedWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
+  {
+    var stopwatch = Stopwatch.StartNew();
+    var vertices = new List<double>(triangles.Count * 9);
+    var faces = new List<int>(triangles.Count * 4);
+    var vertexIndexByKey = new Dictionary<HardEdgeVertexKey, int>();
+    double creaseAngle = MeshCreaseAngleDegrees(_settings.User.GeometryDetailLevel);
+
+    foreach (var triangle in triangles)
     {
-      vertices = vertices,
-      faces = faces,
-      units = _settings.Derived.SpeckleUnits,
+      int normalClusterKey = GetNormalClusterKey(triangle.FaceNormal, creaseAngle);
+      int index1 = GetOrAddHardEdgeVertexIndex(
+        triangle.Vertex1,
+        triangle.Uv1,
+        triangle.MaterialKey,
+        normalClusterKey,
+        vertices,
+        vertexIndexByKey
+      );
+      int index2 = GetOrAddHardEdgeVertexIndex(
+        triangle.Vertex2,
+        triangle.Uv2,
+        triangle.MaterialKey,
+        normalClusterKey,
+        vertices,
+        vertexIndexByKey
+      );
+      int index3 = GetOrAddHardEdgeVertexIndex(
+        triangle.Vertex3,
+        triangle.Uv3,
+        triangle.MaterialKey,
+        normalClusterKey,
+        vertices,
+        vertexIndexByKey
+      );
+
+      faces.AddRange([3, index1, index2, index3]);
+    }
+
+    stopwatch.Stop();
+    MeshOptimizationMetricsTracker.RecordMesh(
+      faceCount: triangles.Count,
+      vertexCountBeforeWeld: triangles.Count * 3,
+      vertexCountAfterWeld: vertices.Count / 3,
+      weldMs: stopwatch.Elapsed.TotalMilliseconds,
+      isEmpty: triangles.Count == 0
+    );
+
+    return CreateMeshWithOptionalRoundedVertices(
+      new Mesh
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _settings.Derived.SpeckleUnits,
+      },
+      _settings.Derived.SpeckleUnits
+    );
+  }
+
+  private Mesh CreateMeshWithOptionalRoundedVertices(Mesh mesh, string units)
+  {
+    bool shouldRound = _settings.User.GeometryDetailLevel is GeometryDetailLevel.Optimised or GeometryDetailLevel.Lite;
+    if (!shouldRound)
+    {
+      return mesh;
+    }
+
+    var unitStep = GetMeshVertexUnitStep(units);
+    int decimals = GetMeshVertexDecimals(unitStep);
+
+    for (var i = 0; i < mesh.vertices.Count; i++)
+    {
+      var quantized = Math.Round(mesh.vertices[i] / unitStep, MidpointRounding.AwayFromZero) * unitStep;
+      mesh.vertices[i] = Math.Round(quantized, decimals, MidpointRounding.AwayFromZero);
+    }
+
+    return mesh;
+  }
+
+  private static double GetMeshVertexUnitStep(string units)
+  {
+    if (string.IsNullOrWhiteSpace(units))
+    {
+      return MESH_VERTEX_PRECISION_METERS;
+    }
+
+    try
+    {
+      // Convert fixed physical precision (meters) into active mesh units.
+      var metersToTarget = SSC.Units.GetConversionFactor(SSC.Units.Meters, units);
+      var step = MESH_VERTEX_PRECISION_METERS * metersToTarget;
+      return step > 0 ? step : MESH_VERTEX_PRECISION_METERS;
+    }
+    catch (ArgumentException)
+    {
+      return MESH_VERTEX_PRECISION_METERS;
+    }
+    catch (InvalidOperationException)
+    {
+      return MESH_VERTEX_PRECISION_METERS;
+    }
+  }
+
+  private static int GetMeshVertexDecimals(double unitStep)
+  {
+    if (unitStep <= 0)
+    {
+      return 4;
+    }
+
+    var decimals = (int)Math.Round(-Math.Log10(unitStep), MidpointRounding.AwayFromZero);
+    return decimals < 0 ? 0
+      : decimals > MAX_MESH_VERTEX_DECIMALS ? MAX_MESH_VERTEX_DECIMALS
+      : decimals;
+  }
+
+  private readonly record struct HardEdgeVertexKey(
+    double X,
+    double Y,
+    double Z,
+    string MaterialKey,
+    int NormalClusterKey,
+    UvKey UvKey
+  );
+
+  private readonly record struct UvKey(bool HasUv, int U, int V);
+
+  private static double MeshCreaseAngleDegrees(GeometryDetailLevel level) =>
+    level switch
+    {
+      GeometryDetailLevel.Optimised => 65,
+      _ => 0,
     };
+
+  private static int GetNormalClusterKey(SafeVector? faceNormal, double creaseAngleDegrees)
+  {
+    if (faceNormal is not { } normal)
+    {
+      return 0;
+    }
+
+    double quantizationStep = Math.Max(1e-3, Math.Sin(creaseAngleDegrees * Math.PI / 180.0 * 0.5));
+    int qx = (int)Math.Round(normal.X / quantizationStep);
+    int qy = (int)Math.Round(normal.Y / quantizationStep);
+    int qz = (int)Math.Round(normal.Z / quantizationStep);
+    unchecked
+    {
+      var hash = 17;
+      hash = hash * 31 + qx;
+      hash = hash * 31 + qy;
+      hash = hash * 31 + qz;
+      return hash;
+    }
+  }
+
+  private static UvKey GetUvKey(SafeUv? uv)
+  {
+    if (uv is not { } value)
+    {
+      return new UvKey(false, 0, 0);
+    }
+
+    const int UV_PRECISION = 1_000_000;
+    int quantizedU = (int)Math.Round(value.U * UV_PRECISION);
+    int quantizedV = (int)Math.Round(value.V * UV_PRECISION);
+    return new UvKey(true, quantizedU, quantizedV);
+  }
+
+  private int GetOrAddHardEdgeVertexIndex(
+    SafeVertex vertex,
+    SafeUv? uv,
+    string materialKey,
+    int normalClusterKey,
+    List<double> vertices,
+    Dictionary<HardEdgeVertexKey, int> vertexIndexByKey
+  )
+  {
+    double x = (vertex.X + _transformVector.X) * SCALE;
+    double y = (vertex.Y + _transformVector.Y) * SCALE;
+    double z = (vertex.Z + _transformVector.Z) * SCALE;
+    var uvKey = GetUvKey(uv);
+    var hardEdgeKey = new HardEdgeVertexKey(x, y, z, materialKey, normalClusterKey, uvKey);
+
+    if (vertexIndexByKey.TryGetValue(hardEdgeKey, out int existingIndex))
+    {
+      return existingIndex;
+    }
+
+    int newIndex = vertices.Count / 3;
+    vertices.Add(x);
+    vertices.Add(y);
+    vertices.Add(z);
+    vertexIndexByKey[hardEdgeKey] = newIndex;
+    return newIndex;
   }
 
   private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
   {
+    MeshOptimizationMetricsTracker.RecordLines(lines.Count);
     var result = new List<Line>(lines.Count);
-
-    foreach (var line in lines)
-    {
-      result.Add(
-        new Line
-        {
-          start = new Point(
-            (line.Start.X + _transformVector.X) * SCALE,
-            (line.Start.Y + _transformVector.Y) * SCALE,
-            (line.Start.Z + _transformVector.Z) * SCALE,
-            _settings.Derived.SpeckleUnits
-          ),
-          end = new Point(
-            (line.End.X + _transformVector.X) * SCALE,
-            (line.End.Y + _transformVector.Y) * SCALE,
-            (line.End.Z + _transformVector.Z) * SCALE,
-            _settings.Derived.SpeckleUnits
-          ),
-          units = _settings.Derived.SpeckleUnits,
-        }
-      );
-    }
+    result.AddRange(
+      lines.Select(line => new Line
+      {
+        start = new Point(
+          (line.Start.X + _transformVector.X) * SCALE,
+          (line.Start.Y + _transformVector.Y) * SCALE,
+          (line.Start.Z + _transformVector.Z) * SCALE,
+          _settings.Derived.SpeckleUnits
+        ),
+        end = new Point(
+          (line.End.X + _transformVector.X) * SCALE,
+          (line.End.Y + _transformVector.Y) * SCALE,
+          (line.End.Z + _transformVector.Z) * SCALE,
+          _settings.Derived.SpeckleUnits
+        ),
+        units = _settings.Derived.SpeckleUnits,
+      })
+    );
 
     return result;
   }
@@ -421,7 +769,7 @@ public sealed class GeometryToSpeckleConverter(
   }
 
   /// <summary>
-  /// Transforms a 4x4 matrix from Y-up to Z-up coordinate system.
+  /// Transforms a 4x4 matrix from the Y-up to the Z-up coordinate system.
   /// Applies P * M * P^-1 where P is the coordinate transform (x, y, z) -> (x, -z, y).
   /// </summary>
   private static double[] TransformMatrixYUpToZUp(double[] m)

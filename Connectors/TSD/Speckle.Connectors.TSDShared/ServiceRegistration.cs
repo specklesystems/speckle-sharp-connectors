@@ -63,6 +63,7 @@ internal static class ServiceRegistration
     services.AddScoped<TsdResultsExtractorFactory>();
     services.AddScoped<TsdAnalysisResultsExtractor>();
     services.AddScoped<TsdEntitySnapshotBuilder>();
+    services.AddScoped<TsdSendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<IEntity>, TsdRootObjectBuilder>();
     services.AddScoped<IArtifactRootObjectBuilder<IEntity>, TsdArtifactRootObjectBuilder>();
     services.AddSingleton<

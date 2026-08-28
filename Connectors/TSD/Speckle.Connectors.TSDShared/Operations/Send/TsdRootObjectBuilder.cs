@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Converters.TSDShared;
 using Speckle.Converters.TSDShared.Results;
+using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -17,18 +18,21 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
   private readonly ITSDApplicationService _applicationService;
   private readonly TsdEntitySnapshotBuilder _snapshotBuilder;
   private readonly TsdAnalysisResultsExtractor _analysisResultsExtractor;
+  private readonly TsdSendCollectionManager _sendCollectionManager;
   private readonly TsdConversionSettings _conversionSettings;
 
   public TsdRootObjectBuilder(
     ITSDApplicationService applicationService,
     TsdEntitySnapshotBuilder snapshotBuilder,
     TsdAnalysisResultsExtractor analysisResultsExtractor,
-    TsdConversionSettings conversionSettings
+    TsdConversionSettings conversionSettings,
+    TsdSendCollectionManager sendCollectionManager
   )
   {
     _applicationService = applicationService;
     _snapshotBuilder = snapshotBuilder;
     _analysisResultsExtractor = analysisResultsExtractor;
+    _sendCollectionManager = sendCollectionManager;
     _conversionSettings = conversionSettings;
   }
 
@@ -63,8 +67,12 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
       results.Add(result);
       if (converted is not null)
       {
-        rootObjectCollection.elements.Add(converted);
-        propertyTrees.Add(converted.properties);
+        var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, rootObjectCollection);
+        collection.elements.Add(converted);
+        if (converted is TsdObject tsdObject)
+        {
+          propertyTrees.Add(tsdObject.properties);
+        }
       }
 
       count++;

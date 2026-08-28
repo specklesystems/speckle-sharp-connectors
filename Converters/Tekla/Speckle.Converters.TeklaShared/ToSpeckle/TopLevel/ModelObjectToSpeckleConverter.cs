@@ -29,7 +29,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 
   private TeklaObject Convert(TSM.ModelObject target)
   {
-    string type = target.GetType().ToString().Split('.').Last();
+    string type = target.GetSpeckleType();
 
     // get children
     // POC: This logic should be same in the material unpacker in connector
