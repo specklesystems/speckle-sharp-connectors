@@ -24,14 +24,20 @@ public class PropertySetBaker
   private readonly ILogger<PropertySetBaker> _logger;
   private readonly PropertyHandler _propertyHandler;
 
-  /// <summary>
-  /// Map of property set definition name to its ObjectId. Populated during ParsePropertySetDefinitions.
-  /// </summary>
-  private readonly Dictionary<string, ADB.ObjectId> _propertySetDefinitionMap = new();
+  /// <summary>Map of property set definition name to every definition baked under that name, in schema order.
+  /// A LIST because Civil 3D allows two same-named definitions and the bundle keeps them apart by set_key; the
+  /// value paths carry only the name, so which one an object's values belong to is decided per object by
+  /// <see cref="SelectDefinition"/> [ENG-9363]. Populated during ParsePropertySetDefinitions / BakeSchemas.</summary>
+  private readonly Dictionary<string, List<BakedDefinition>> _propertySetDefinitionMap = new();
 
-  /// <summary>set name → (FieldBucketId → field name), from tier-1/3 schemas — the rebind's join index.
-  /// Empty for carrier-built definitions (tier 2), which never shipped bucket ids.</summary>
-  private readonly Dictionary<string, Dictionary<string, string>> _bucketToFieldNameBySet = new();
+  /// <summary>One definition baked this run: its ObjectId, its (FieldBucketId → field name) rebind index, and
+  /// its field names. The latter two are what tell same-named definitions apart. Both are empty for
+  /// carrier-built definitions (tier 2), which never shipped bucket ids.</summary>
+  private sealed record BakedDefinition(
+    ADB.ObjectId DefId,
+    Dictionary<string, string> BucketToFieldName,
+    HashSet<string> FieldNames
+  );
 
   public PropertySetBaker(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
@@ -94,7 +100,6 @@ public class PropertySetBaker
   public void ParseAndBakePropertySetDefinitions(Dictionary<string, object?> definitions, string namePrefix)
   {
     _propertySetDefinitionMap.Clear();
-    _bucketToFieldNameBySet.Clear();
     ResetRunCounters();
 
     if (definitions.Count == 0)
@@ -134,7 +139,7 @@ public class PropertySetBaker
         ADB.ObjectId defId = CreatePropertySetDefinition(setName, propertyDefinitions, namePrefix, tr);
         if (!defId.IsNull)
         {
-          _propertySetDefinitionMap[setName] = defId;
+          Register(setName, defId, new Dictionary<string, string>(), new HashSet<string>(propertyDefinitions.Keys));
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -152,7 +157,6 @@ public class PropertySetBaker
   public void BakeSchemas(IReadOnlyList<PropertySetSchema> schemas, string namePrefix)
   {
     _propertySetDefinitionMap.Clear();
-    _bucketToFieldNameBySet.Clear();
     ResetRunCounters();
     if (schemas.Count == 0)
     {
@@ -162,14 +166,9 @@ public class PropertySetBaker
     using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
     foreach (var schema in schemas)
     {
-      if (_propertySetDefinitionMap.ContainsKey(schema.SetName))
-      {
-        // Two same-named sets (distinct set_key). The name-keyed map — and the value paths, which only
-        // carry the name — cannot address both: first wins, matching send's first-wins Definitions dict.
-        _logger.LogWarning("Duplicate property set name {SetName}; keeping the first definition", schema.SetName);
-        continue;
-      }
-
+      // Two same-named schemas (distinct set_key) are BOTH baked — the second lands under "{name}-{prefix}",
+      // because the reuse check below compares set_key and cannot match it to the first. Which one an object's
+      // values attach to is decided per object by SelectDefinition [ENG-9363].
       // Naming/collision policy [user feedback: no blanket project-name prefixing]:
       //   (a) an existing def with the ORIGINAL name that is schema-identical (same set_key recipe over its
       //       live fields) is REUSED — no create, no prefix; re-receives of unchanged schemas converge here,
@@ -190,8 +189,7 @@ public class PropertySetBaker
             TryReadSetKeyStamp(existingId, tr) ?? ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
           if (string.Equals(incomingKey, existingKey, StringComparison.OrdinalIgnoreCase))
           {
-            _propertySetDefinitionMap[schema.SetName] = existingId;
-            AddBucketMap(schema);
+            Register(schema, existingId);
             DefinitionsReused++;
             CleanupRetryCopies(schema.SetName, incomingKey, existingId, tr);
             continue;
@@ -211,8 +209,7 @@ public class PropertySetBaker
         {
           continue;
         }
-        _propertySetDefinitionMap[schema.SetName] = defId;
-        AddBucketMap(schema);
+        Register(schema, defId);
         CleanupRetryCopies(schema.SetName, PropertySetDefinitionLadder.EffectiveSetKey(schema), defId, tr);
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -296,7 +293,7 @@ public class PropertySetBaker
   public int DefinitionsCreated { get; private set; }
   public int DefinitionsReused { get; private set; }
 
-  public int DefinitionCount => _propertySetDefinitionMap.Count;
+  public int DefinitionCount => _propertySetDefinitionMap.Values.Sum(baked => baked.Count);
 
   private void ResetRunCounters()
   {
@@ -304,20 +301,83 @@ public class PropertySetBaker
     DefinitionsReused = 0;
   }
 
-  private void AddBucketMap(PropertySetSchema schema)
+  private void Register(PropertySetSchema schema, ADB.ObjectId defId)
   {
     var bucketMap = new Dictionary<string, string>();
+    var fieldNames = new HashSet<string>(StringComparer.Ordinal);
     foreach (var field in schema.Fields)
     {
+      fieldNames.Add(field.Name);
       if (field.BucketId is not null)
       {
         bucketMap[field.BucketId] = field.Name;
       }
     }
-    if (bucketMap.Count > 0)
+    Register(schema.SetName, defId, bucketMap, fieldNames);
+  }
+
+  private void Register(
+    string setName,
+    ADB.ObjectId defId,
+    Dictionary<string, string> bucketMap,
+    HashSet<string> fieldNames
+  )
+  {
+    if (!_propertySetDefinitionMap.TryGetValue(setName, out var baked))
     {
-      _bucketToFieldNameBySet[schema.SetName] = bucketMap;
+      baked = new List<BakedDefinition>();
+      _propertySetDefinitionMap[setName] = baked;
     }
+    if (baked.Count > 0)
+    {
+      _logger.LogInformation(
+        "Property set name {SetName} now has {Count} definitions; values are matched to one by field_bucket_id",
+        setName,
+        baked.Count + 1
+      );
+    }
+    baked.Add(new BakedDefinition(defId, bucketMap, fieldNames));
+  }
+
+  /// <summary>Picks which of several same-named definitions THIS object's values belong to. The value paths
+  /// carry only the set name, so the discriminator is field_bucket_id membership — the rule the spec names for
+  /// exactly this case — with field-name overlap as the tiebreak for producers that ship no bucket ids. The
+  /// single-candidate case (every ordinary drawing) short-circuits and behaves as before [ENG-9363].</summary>
+  private static BakedDefinition SelectDefinition(List<BakedDefinition> candidates, Dictionary<string, object?> setData)
+  {
+    if (candidates.Count == 1)
+    {
+      return candidates[0];
+    }
+
+    BakedDefinition best = candidates[0];
+    int bestScore = -1;
+    foreach (var candidate in candidates)
+    {
+      int score = 0;
+      foreach (var entry in setData)
+      {
+        string? bucketId =
+          entry.Value is Dictionary<string, object?> leaf && leaf.TryGetValue("internalDefinitionName", out var idn)
+            ? idn as string
+            : null;
+        // A bucket-id hit is hard evidence; a field-name hit is weaker (same-named sets often share names).
+        if (bucketId is { Length: > 0 } && candidate.BucketToFieldName.ContainsKey(bucketId))
+        {
+          score += 2;
+        }
+        else if (candidate.FieldNames.Contains(entry.Key))
+        {
+          score += 1;
+        }
+      }
+      if (score > bestScore)
+      {
+        bestScore = score;
+        best = candidate;
+      }
+    }
+    return best;
   }
 
   private const string SET_KEY_XRECORD = "SPECKLE_SET_KEY";
@@ -431,18 +491,52 @@ public class PropertySetBaker
   }
 
   /// <summary>The set_key recipe computed over a LIVE definition's fields, for reuse-if-identical. Mirrors
-  /// the send-side capture exactly: DataType.ToString(), unit = UnitType display text (throw → absent, and
-  /// deliberately NOT "(none)"-filtered — the send handler doesn't filter it either).</summary>
+  /// the send-side capture exactly: DataType.ToString(), unit = PropertyHandler.TryGetUnitDisplay (throw and
+  /// "(none)" both → null). Must stay in step with PropertySetDefinitionHandler: filter here without filtering
+  /// there (or vice versa) and every re-receive of an unchanged schema mints a "-{prefix}" copy [ENG-9360].</summary>
   private string ComputeExistingDefinitionKey(string setName, ADB.ObjectId defId, ADB.Transaction tr)
   {
     var setDefinition = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForRead);
     var fields = new List<(string Name, string? DataType, string? Unit)>();
     foreach (AAECPDB.PropertyDefinition propDef in setDefinition.Definitions)
     {
-      _propertyHandler.TryGetValue(() => propDef.UnitType.GetTypeDisplayName(true), out string? unit);
+      string? unit = _propertyHandler.TryGetUnitDisplay(() => propDef.UnitType.GetTypeDisplayName(true));
       fields.Add((propDef.Name, propDef.DataType.ToString(), unit));
     }
     return PropertySetDefinitionLadder.ComputeSetKey(setName, fields);
+  }
+
+  /// <summary>Scopes the definition to the entity types the sender captured in applies_to; a NULL/empty column
+  /// means apply-to-all — the sender either had an apply-to-all set, or is a producer that cannot enumerate the
+  /// filter (dwgextract) [ENG-9362]. Object-based only: the sender never publishes style filters, so byStyle is
+  /// false. A class name the receiving Civil 3D release does not know makes SetAppliesToFilter throw — that
+  /// degrades to apply-to-all rather than losing the definition.</summary>
+  private void ApplyAppliesTo(AAECPDB.PropertySetDefinition propSetDef, PropertySetSchema schema)
+  {
+    string[] classNames = schema.AppliesTo?.Split(',').Select(n => n.Trim()).Where(n => n.Length > 0).ToArray() ?? [];
+    if (classNames.Length == 0)
+    {
+      propSetDef.AppliesToAll = true;
+      return;
+    }
+
+    try
+    {
+      System.Collections.Specialized.StringCollection filter = new();
+      filter.AddRange(classNames);
+      propSetDef.SetAppliesToFilter(filter, false);
+      propSetDef.AppliesToAll = false;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(
+        ex,
+        "Could not scope property set definition {SetName} to {AppliesTo}; it applies to all object types",
+        schema.SetName,
+        schema.AppliesTo
+      );
+      propSetDef.AppliesToAll = true;
+    }
   }
 
   private ADB.ObjectId CreatePropertySetDefinitionFromSchema(
@@ -461,9 +555,7 @@ public class PropertySetBaker
     {
       propSetDef.Description = schema.SetDescription;
     }
-    // schema.AppliesTo is shipped but not applied: only AppliesToAll has repo-confirmed API surface
-    // (expected filter member: PropertySetDefinition.AppliesToFilter — wire when confirmed on Windows).
-    propSetDef.AppliesToAll = true;
+    ApplyAppliesTo(propSetDef, schema);
 
     foreach (var field in schema.Fields)
     {
@@ -574,18 +666,19 @@ public class PropertySetBaker
   {
     try
     {
-      if (!_propertySetDefinitionMap.TryGetValue(setName, out ADB.ObjectId propertySetDefId))
+      if (!_propertySetDefinitionMap.TryGetValue(setName, out var candidates) || candidates.Count == 0)
       {
         _logger.LogWarning("Property set definition {SetName} not found in definition map", setName);
         return false;
       }
 
-      if (propertySetDefId.IsNull)
+      BakedDefinition baked = SelectDefinition(candidates, setData);
+      if (baked.DefId.IsNull)
       {
         return false;
       }
 
-      return AddPropertySetToEntity(entity, setName, propertySetDefId, setData, tr);
+      return AddPropertySetToEntity(entity, setName, baked, setData, tr);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -610,6 +703,8 @@ public class PropertySetBaker
     propSetDef.SetToStandard(db);
     propSetDef.SubSetDatabaseDefaults(db);
     //propSetDef.Description = "Property Set Definition added by Speckle"; // POC: should use the description that was published. can this back in if needed
+    // The tier-2 carrier never shipped an entity-type filter, so apply-to-all is all this path can honour;
+    // tier-1 schemas go through ApplyAppliesTo instead [ENG-9362].
     propSetDef.AppliesToAll = true;
 
     foreach (var propertyDefinition in propertyDefinitions)
@@ -700,11 +795,12 @@ public class PropertySetBaker
   private bool AddPropertySetToEntity(
     ADB.Entity entity,
     string setName,
-    ADB.ObjectId propertySetDefId,
+    BakedDefinition baked,
     Dictionary<string, object?> setData,
     ADB.Transaction tr
   )
   {
+    ADB.ObjectId propertySetDefId = baked.DefId;
     try
     {
       if (!entity.IsWriteEnabled)
@@ -719,23 +815,23 @@ public class PropertySetBaker
         AAECPDB.PropertyDataServices.AddPropertySet(entity, propertySetDefId);
       }
 
-      return TrySetPropertyValues(entity, setName, propertySetDefId, setData, tr);
+      return TrySetPropertyValues(entity, baked, setData, tr);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogWarning(ex, "Failed to add property set to entity");
+      _logger.LogWarning(ex, "Failed to add property set {SetName} to entity", setName);
       return false;
     }
   }
 
   private bool TrySetPropertyValues(
     ADB.Entity entity,
-    string setName,
-    ADB.ObjectId propertySetDefId,
+    BakedDefinition baked,
     Dictionary<string, object?> setData,
     ADB.Transaction tr
   )
   {
+    ADB.ObjectId propertySetDefId = baked.DefId;
     try
     {
       ADB.ObjectId propertySetId = AAECPDB.PropertyDataServices.GetPropertySet(entity, propertySetDefId);
@@ -749,7 +845,7 @@ public class PropertySetBaker
         propertyNameToDef[propDef.Name] = (propDef.Id, propDef.DataType);
       }
 
-      _bucketToFieldNameBySet.TryGetValue(setName, out var bucketMap);
+      var bucketMap = baked.BucketToFieldName;
       foreach (var propertyEntry in setData)
       {
         // Bucket-id-first field matching: internalDefinitionName is the FieldBucketId the producer shipped;

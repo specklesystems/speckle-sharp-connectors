@@ -103,15 +103,10 @@ public class PropertySetExtractor
         // Definition-level API exposes no bucket id — observe it here so the property_set_definitions
         // file can ship field_bucket_id (the eav.internal_definition_name join key).
         _propertySetDefinitionHandler.RecordFieldBucketId(name, dataName, data.FieldBucketId);
+        // The eav `unit` column contract is real-unit-or-absent; TryGetUnitDisplay is the one filter shared
+        // with the definition rows and the set_key recipe [ENG-9360].
         PropertyHandler propHandler = new();
-        // Units aren't always applicable to a def (the getter throws — swallowed by TryGetValue), and a unitless
-        // def reports Autodesk's literal display name "(none)" — UI text, not a unit. The eav `unit` column
-        // contract is real-unit-or-absent, so add `units` only when a genuine unit comes back.
-        if (
-          propHandler.TryGetValue(() => data.UnitType.GetTypeDisplayName(true), out string? unitDisplay)
-          && unitDisplay is { Length: > 0 }
-          && unitDisplay != "(none)"
-        )
+        if (propHandler.TryGetUnitDisplay(() => data.UnitType.GetTypeDisplayName(true)) is { } unitDisplay)
         {
           propertyValueDict["units"] = unitDisplay;
         }

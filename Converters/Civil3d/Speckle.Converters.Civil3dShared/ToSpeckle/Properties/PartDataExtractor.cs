@@ -1,3 +1,5 @@
+using Speckle.Converters.Civil3dShared.Helpers;
+
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
 /// <summary>
@@ -64,7 +66,7 @@ public class PartDataExtractor
         ["context"] = fieldName,
       };
       // eav `unit` contract is real-unit-or-absent — skip empty / "(none)" placeholder units.
-      if (field.Units is { Length: > 0 } fieldUnits && fieldUnits != "(none)")
+      if (PropertyHandler.NormalizeUnitDisplay(field.Units) is { } fieldUnits)
       {
         fieldDictionary["units"] = fieldUnits;
       }
