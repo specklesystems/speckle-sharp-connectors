@@ -51,19 +51,6 @@ internal static class Consts
       ]
     ),
     new(
-      "navisworks",
-      [
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2020", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2021", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2022", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2023", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2025", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2026", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2027", "net48"),
-      ]
-    ),
-    new(
       "teklastructures",
       [
         new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
