@@ -417,6 +417,8 @@ public sealed class SendOperation<T>(
   {
     SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, saveToCache, cancellationToken);
 
+    // This is the deliberate legacy rail for connectors without an IBundleBuilder; migration off it is per-connector.
+#pragma warning disable CS0618 // Type or member is obsolete
     Version version = await sendInfo.Client.Version.Create(
       new(
         result.RootObjId,
@@ -427,6 +429,7 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
+#pragma warning restore CS0618 // Type or member is obsolete
     return (result, version.id, null);
   }
 
