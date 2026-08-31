@@ -100,8 +100,16 @@ public class PropertySetExtractor
           ["name"] = dataName,
           ["internalDefinitionName"] = data.FieldBucketId,
         };
+        // Definition-level API exposes no bucket id — observe it here so the property_set_definitions
+        // file can ship field_bucket_id (the eav.internal_definition_name join key).
+        _propertySetDefinitionHandler.RecordFieldBucketId(name, dataName, data.FieldBucketId);
+        // The eav `unit` column contract is real-unit-or-absent; TryGetUnitDisplay is the one filter shared
+        // with the definition rows and the set_key recipe [ENG-9360].
         PropertyHandler propHandler = new();
-        propHandler.TryAddToDictionary(propertyValueDict, "units", () => data.UnitType.GetTypeDisplayName(true)); // units not always applicable to def, will throw
+        if (propHandler.TryGetUnitDisplay(() => data.UnitType.GetTypeDisplayName(true)) is { } unitDisplay)
+        {
+          propertyValueDict["units"] = unitDisplay;
+        }
 
         propertySetData[dataName] = propertyValueDict;
       }

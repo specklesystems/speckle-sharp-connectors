@@ -1,10 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Autocad.Operations;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
@@ -42,10 +44,16 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }
 
-  protected override void InitializeSettings(IServiceProvider serviceProvider)
+  protected override void InitializeSettings(IServiceProvider serviceProvider, SenderModelCard card)
   {
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
-      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+      .Initialize(
+        _autocadConversionSettingsFactory.Create(
+          Application.DocumentManager.CurrentDocument,
+          ModelPlacementSettings.GetSendApplyTransform(card),
+          ModelPlacementSettings.GetSendPlacement(card, false)
+        )
+      );
   }
 }

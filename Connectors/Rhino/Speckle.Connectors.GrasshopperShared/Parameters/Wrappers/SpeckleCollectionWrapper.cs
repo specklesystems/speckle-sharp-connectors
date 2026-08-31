@@ -162,6 +162,54 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     }
   }
 
+  /// <summary>Assigns <paramref name="context"/> to this collection and everything beneath it.</summary>
+  /// <remarks>
+  /// Definitions are only reached one level deep, through the instances referencing them. Only the legacy path relies
+  /// on this walk and there's no bundle to query there; the artefact builder stamps definitions from its own map.
+  /// </remarks>
+  public void SetModelContext(SpeckleModelContext? context)
+  {
+    ModelContext = context;
+    foreach (var element in Elements)
+    {
+      switch (element)
+      {
+        case SpeckleCollectionWrapper child:
+          child.SetModelContext(context);
+          break;
+        case SpeckleBlockInstanceWrapper instance:
+          instance.ModelContext = context;
+          StampDefinition(instance.Definition, context);
+          break;
+        case SpeckleDataObjectWrapper dataObject:
+          dataObject.ModelContext = context;
+          foreach (var geometry in dataObject.Geometries)
+          {
+            geometry.ModelContext = context;
+          }
+          break;
+        case SpeckleWrapper wrapper:
+          wrapper.ModelContext = context;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  private static void StampDefinition(SpeckleBlockDefinitionWrapper? definition, SpeckleModelContext? context)
+  {
+    if (definition is null)
+    {
+      return;
+    }
+    definition.ModelContext = context;
+    foreach (var member in definition.Objects)
+    {
+      member.ModelContext = context;
+    }
+  }
+
   public SpeckleCollectionWrapper DeepCopy() =>
     new()
     {
@@ -177,6 +225,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
       Name = Name,
       Path = Path,
       Topology = Topology,
+      ModelContext = ModelContext,
       Elements = Elements
         .Select(e =>
           e switch

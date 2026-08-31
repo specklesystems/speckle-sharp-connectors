@@ -95,7 +95,12 @@ public class DataObjectConverter
         geom.Transform(unitsTransform);
         resultPairs.Add((geom, target));
       }
-      return resultPairs;
+      // Only short-circuit if the raw 3dm actually re-materialised. Otherwise fall through to the displayValue
+      // meshes so the object still bakes (e.g. an artefact-reconstructed object whose 3dm couldn't be decoded).
+      if (resultPairs.Count > 0)
+      {
+        return resultPairs;
+      }
     }
 
     // normal display value conversion

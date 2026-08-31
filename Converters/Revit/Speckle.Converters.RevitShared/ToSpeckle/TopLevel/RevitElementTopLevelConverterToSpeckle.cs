@@ -140,7 +140,15 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     foreach (var childrenId in childrenIds)
     {
       var childElement = _converterSettings.Current.Document.GetElement(childrenId);
-      yield return Convert(childElement);
+      RevitObject child = Convert(childElement);
+
+      // Only the ROOT conversion result gets an applicationId stamped (RevitRootToSpeckleConverter), so nested
+      // children — curtain panels/mullions, stacked-wall members, top rails — arrived with none, and the artefact
+      // send fell back to a fresh Guid per emission: identity that could not be traced back to Revit, was not
+      // stable across sends, and could never be the endpoint of a hosting/ownership relation [ENG-9212]. Stamp the
+      // source UniqueId here so it recurses to grandchildren too; the send qualifies it per linked-model placement.
+      child.applicationId = childElement.UniqueId;
+      yield return child;
     }
   }
 

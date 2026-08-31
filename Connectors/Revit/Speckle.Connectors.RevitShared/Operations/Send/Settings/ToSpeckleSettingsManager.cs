@@ -19,6 +19,7 @@ public class ToSpeckleSettingsManager(
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = [];
   private readonly Dictionary<string, Transform?> _referencePointCache = [];
+  private readonly Dictionary<string, bool?> _applyTransformCache = [];
   private readonly Dictionary<string, bool?> _sendNullParamsCache = [];
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = [];
   private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = [];
@@ -77,6 +78,36 @@ public class ToSpeckleSettingsManager(
     _referencePointCache[modelCard.ModelCardId.NotNull()] = null;
     return null;
   }
+
+  /// <summary>
+  /// The REQUESTED reference-point kind (independent of whether the model actually has that base point). Mirrors
+  /// the setting resolution in <see cref="GetReferencePointSetting"/>; used by the 4.0 send pipeline to record
+  /// reference_point_kind in the bundle meta (ENG-8947). Absent/invalid setting → InternalOrigin.
+  /// </summary>
+  public ReferencePointType GetReferencePointKind(ModelCard modelCard)
+  {
+    var referencePointString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == SendReferencePointSetting.SETTING_ID)?.Value as string;
+    if (
+      referencePointString is not null
+      && SendReferencePointSetting.ReferencePointMap.TryGetValue(referencePointString, out ReferencePointType kind)
+    )
+    {
+      return kind;
+    }
+
+    return SendReferencePointSetting.DEFAULT_VALUE;
+  }
+
+  public bool GetApplyTransformSetting(Document document, SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      document,
+      SendApplyTransformSetting.SETTING_ID,
+      SendApplyTransformSetting.DEFAULT_VALUE,
+      modelCard,
+      _applyTransformCache,
+      "Apply transform"
+    );
 
   public bool GetSendParameterNullOrEmptyStringsSetting(Document document, SenderModelCard modelCard) =>
     GetBooleanSettingWithCache(

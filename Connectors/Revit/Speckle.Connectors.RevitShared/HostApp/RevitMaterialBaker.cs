@@ -183,20 +183,12 @@ public class RevitMaterialBaker
     return objectIdAndMaterialIndexMap;
   }
 
-  public void PurgeMaterials(string baseGroupName)
-  {
-    var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
-    var document = _converterSettings.Current.Document;
-
-    using var collector = new FilteredElementCollector(document);
-    var materialIds = collector
-      .OfClass(typeof(Material))
-      .Where(m => m.Name.Contains(validBaseGroupName))
-      .Select(m => m.Id)
-      .ToList();
-
-    document.Delete(materialIds);
-  }
+  // NOTE: there is deliberately no material purge here [ENG-8805]. A previous PurgeMaterials(baseGroupName) deleted
+  // every Material whose name CONTAINED the base group name — which never matched anything BakeMaterial creates
+  // (materials are named after the Speckle material alone, with no project/model suffix), so it was a no-op that
+  // nonetheless carried an unscoped delete: a user's own material named after the project would have gone with it.
+  // Receive reuses materials by name instead and never writes over an existing one, so re-receiving cannot accumulate
+  // duplicates and a user's edits to a received material survive.
 
   /// <summary>
   /// After CNX-2661, we've seen some edge cases contradicting the expected 0 - 1 range for PRB properties.

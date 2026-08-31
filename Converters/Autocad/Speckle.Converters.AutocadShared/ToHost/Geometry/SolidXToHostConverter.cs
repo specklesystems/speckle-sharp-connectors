@@ -14,13 +14,13 @@ namespace Speckle.Converters.Autocad.Geometry;
 [NameAndRankValue(typeof(SOG.SolidX), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.SolidX, List<(ADB.Entity a, Base b)>>
 {
-  private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
+  private readonly ITypedConverter<SOG.Mesh, ADB.Entity> _meshConverter;
   private readonly ITypedConverter<RawEncoding, List<ADB.Entity>> _rawEncodingConverter;
   private readonly EntityUnitConverter _entityUnitConverter;
   private readonly ISdkActivityFactory _activityFactory;
 
   public SolidXToHostConverter(
-    ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
+    ITypedConverter<SOG.Mesh, ADB.Entity> meshConverter,
     ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter,
     EntityUnitConverter entityUnitConverter,
     ISdkActivityFactory activityFactory
@@ -59,14 +59,14 @@ public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
       }
     }
 
-    // Fallback: Convert displayValue meshes to PolyFaceMesh
-    var result = new List<ADB.PolyFaceMesh>();
+    // Fallback: Convert displayValue meshes to native meshes
+    var result = new List<ADB.Entity>();
     foreach (SOG.Mesh mesh in target.displayValue)
     {
-      ADB.PolyFaceMesh convertedMesh = _meshConverter.Convert(mesh);
+      ADB.Entity convertedMesh = _meshConverter.Convert(mesh);
       result.Add(convertedMesh);
     }
 
-    return result.Zip(target.displayValue, (a, b) => ((ADB.Entity)a, (Base)b)).ToList();
+    return result.Zip(target.displayValue, (a, b) => (a, (Base)b)).ToList();
   }
 }

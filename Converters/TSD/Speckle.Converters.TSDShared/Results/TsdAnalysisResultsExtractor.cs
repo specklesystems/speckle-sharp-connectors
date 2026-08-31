@@ -31,7 +31,7 @@ public sealed class TsdAnalysisResultsExtractor
     _factory = factory;
   }
 
-  public async Task<Dictionary<string, object?>?> ExtractAsync(
+  public async Task<TsdResultsPayload?> ExtractAsync(
     IReadOnlyList<string> selectedLoadings,
     IReadOnlyList<string> selectedResultTypes,
     CancellationToken cancellationToken
@@ -65,7 +65,7 @@ public sealed class TsdAnalysisResultsExtractor
       );
     }
 
-    var (analysis3D, solvedIdSet) = analysis.Value;
+    var (analysis3D, solvedIdSet, solverModel) = analysis.Value;
 
     var loadings = requestedLoadings.Where(loading => solvedIdSet.Contains(loading.Id)).ToList();
 
@@ -73,6 +73,10 @@ public sealed class TsdAnalysisResultsExtractor
     // indices the rest of the payload uses, so the extractors need the map to publish them against the right node
     var nodes = await TsdNodeIndexMap.CreateAsync(model, cancellationToken).ConfigureAwait(false);
     var context = new TsdResultsContext(analysis3D, loadings, nodes);
+
+    // element results stay keyed by solver element index (see TsdElementIndexMap for why they are not rewritten in
+    // place); this rides alongside the tree so the consumer can point those rows at the member they belong to
+    var elements = await TsdElementIndexMap.CreateAsync(solverModel, cancellationToken).ConfigureAwait(false);
 
     var tree = new Dictionary<string, object?>();
     foreach (var resultType in selectedResultTypes)
@@ -82,10 +86,14 @@ public sealed class TsdAnalysisResultsExtractor
       tree[extractor.ResultsKey] = await extractor.GetResultsAsync(context, cancellationToken).ConfigureAwait(false);
     }
 
-    return tree;
+    return new TsdResultsPayload(tree, elements);
   }
 
-  private static async Task<(IAnalysis3DResults Results, HashSet<Guid> SolvedLoadingIds)?> ResolveAnalysis3DAsync(
+  private static async Task<(
+    IAnalysis3DResults Results,
+    HashSet<Guid> SolvedLoadingIds,
+    IModelBase SolverModel
+  )?> ResolveAnalysis3DAsync(
     StructureModel model,
     IReadOnlyCollection<Guid> requestedLoadingIds,
     CancellationToken cancellationToken
@@ -117,7 +125,7 @@ public sealed class TsdAnalysisResultsExtractor
       var solvedIdSet = solvedIds?.ToHashSet() ?? new HashSet<Guid>();
       if (solvedIdSet.Overlaps(requestedLoadingIds))
       {
-        return (analysis3D, solvedIdSet);
+        return (analysis3D, solvedIdSet, solverModel);
       }
     }
 

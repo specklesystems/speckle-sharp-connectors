@@ -47,7 +47,7 @@ public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logg
     try
     {
       //ensures both UTF8JsonWriter.ctor and JsonWriterHelper.NeedsEscaping are hit
-      operations.SerializeNew(
+      operations.Serialize(
         new Base()
         {
           ["abcde"] = "This is a test",

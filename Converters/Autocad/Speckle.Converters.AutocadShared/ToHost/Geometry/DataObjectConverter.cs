@@ -16,7 +16,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<ICurve, List<(ADB.Entity, Base)>> _curveConverter;
   private readonly ITypedConverter<SOG.BrepX, List<(ADB.Entity a, Base b)>> _brepXConverter;
   private readonly ITypedConverter<SOG.ExtrusionX, List<(ADB.Entity a, Base b)>> _extrusionXConverter;
-  private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
+  private readonly ITypedConverter<SOG.Mesh, ADB.Entity> _meshConverter;
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
@@ -27,7 +27,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
     ITypedConverter<SOG.BrepX, List<(ADB.Entity a, Base b)>> brepXConverter,
     ITypedConverter<SOG.ExtrusionX, List<(ADB.Entity a, Base b)>> extrusionXConverter,
-    ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
+    ITypedConverter<SOG.Mesh, ADB.Entity> meshConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
     ITypedConverter<SOG.Region, ADB.Entity> regionConverter,

@@ -1,0 +1,16 @@
+<Project>
+  <!-- net48 only: deploy IronCompress's native nironcompress.dll next to the plugin so Parquet.Net's Zstd codec
+       resolves on .NET Framework (4.0 artefact send). Pre-loaded by full path in CsiArtifactRootObjectBuilder. net8+
+       (ETABS22) gets the native via its RID automatically; imported only by the net48 ETABS21 project. -->
+  <ItemGroup>
+    <PackageReference Include="IronCompress" GeneratePathProperty="true" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PkgIronCompress)' != ''">
+    <None Include="$(PkgIronCompress)\runtimes\win-x64\native\nironcompress.dll">
+      <Link>nironcompress.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </None>
+  </ItemGroup>
+</Project>

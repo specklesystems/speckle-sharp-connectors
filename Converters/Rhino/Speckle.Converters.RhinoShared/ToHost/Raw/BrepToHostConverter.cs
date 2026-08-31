@@ -5,6 +5,7 @@ using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
+[Obsolete("Brep is obsolete")]
 public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
 {
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;

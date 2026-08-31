@@ -34,7 +34,6 @@ public sealed class RevitHostObjectBuilder(
   ITransactionManager transactionManager,
   ISdkActivityFactory activityFactory,
   RevitGroupBaker groupManager,
-  RevitMaterialBaker materialBaker,
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
   IThreadContext threadContext,
@@ -47,7 +46,8 @@ public sealed class RevitHostObjectBuilder(
   RevitFamilyBaker familyBaker,
   DirectShapeUnpackStrategy directShapeUnpackStrategy,
   FamilyUnpackStrategy familyUnpackStrategy,
-  RevitPreBakeSetupService preBakeSetupService
+  RevitPreBakeSetupService preBakeSetupService,
+  RevitReceiveTracker receiveTracker
 ) : IHostObjectBuilder, IDisposable
 {
   public Task<HostObjectBuilderResult> Build(
@@ -79,6 +79,17 @@ public sealed class RevitHostObjectBuilder(
     {
       referencePointTransformFromRootObject = ReferencePointHelper.GetTransformFromRootObject(transformValue);
     }
+
+    // ENG-9099: computed once so BakeObjects (via the settings push below) and BakeInstancesAsFamilies (which runs
+    // OUTSIDE that push, after it's disposed — see step 5/"Bakes instances as families" below) apply the SAME
+    // effective reference-point transform to their respective outermost placements.
+    // Composed unconditionally (NOT gated on the Apply Transform receive setting): a v1 root object records
+    // REFERENCE_POINT_TRANSFORM only when the send actually baked it, so presence implies baked geometry that
+    // must be unbaked — and the receiver's own reference-point setting must stay effective either way.
+    var effectiveReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
+      converterSettings.Current.ReferencePointTransform,
+      referencePointTransformFromRootObject
+    );
 
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
@@ -127,10 +138,7 @@ public sealed class RevitHostObjectBuilder(
         converterSettings.Push(currentSettings =>
           currentSettings with
           {
-            ReferencePointTransform = CalculateNewTransform(
-              currentSettings.ReferencePointTransform,
-              referencePointTransformFromRootObject
-            ),
+            ReferencePointTransform = effectiveReferencePointTransform,
           }
         )
       )
@@ -176,7 +184,8 @@ public sealed class RevitHostObjectBuilder(
         conversionResults,
         speckleObjectLookup,
         materialProxies,
-        onOperationProgressed
+        onOperationProgressed,
+        effectiveReferencePointTransform
       );
     }
 
@@ -188,11 +197,19 @@ public sealed class RevitHostObjectBuilder(
       transactionManager.CommitTransaction();
     }
 
-    // 7 - Create group
+    // 7 - Create the group AND record it, so the next receive can clean up exactly what this one produced
+    // [ENG-8805]. This path has no project/model ids to key the record on, so it is found again by the marker name —
+    // the same rename-fragility v1 always had.
     {
       using var _ = activityFactory.Start("Grouping");
       transactionManager.StartTransaction(true, "Grouping");
-      groupManager.BakeGroupForTopLevel(baseGroupName);
+      receiveTracker.BakeGroupAndRecord(
+        converterSettings.Current.Document,
+        baseGroupName,
+        null,
+        null,
+        null // members were accumulated through groupManager.AddToTopLevelGroup during the bake
+      );
       transactionManager.CommitTransaction();
     }
 
@@ -210,7 +227,8 @@ public sealed class RevitHostObjectBuilder(
     ) currentResults,
     Dictionary<string, TraversalContext> speckleObjectLookup,
     IReadOnlyCollection<RenderMaterialProxy> materialProxies,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    Autodesk.Revit.DB.Transform? referencePointTransform
   )
   {
     using var _ = activityFactory.Start("Creating families");
@@ -220,7 +238,8 @@ public sealed class RevitHostObjectBuilder(
       instanceComponents,
       speckleObjectLookup,
       materialProxies,
-      onOperationProgressed
+      onOperationProgressed,
+      referencePointTransform
     );
 
     // Merge results
@@ -246,24 +265,6 @@ public sealed class RevitHostObjectBuilder(
       new HostObjectBuilderResult(mergedBakedObjectIds, mergedConversionResults),
       currentResults.postBakePaintTargets
     );
-  }
-
-  private Autodesk.Revit.DB.Transform? CalculateNewTransform(
-    Autodesk.Revit.DB.Transform? receiveTransform,
-    Autodesk.Revit.DB.Transform? rootTransform
-  )
-  {
-    if (receiveTransform == null)
-    {
-      return rootTransform;
-    }
-
-    if (rootTransform == null)
-    {
-      return receiveTransform;
-    }
-
-    return rootTransform.Multiply(receiveTransform);
   }
 
   private (
@@ -375,8 +376,11 @@ public sealed class RevitHostObjectBuilder(
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
     revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it looks legit
-    groupManager.PurgeGroups(baseGroupName);
-    materialBaker.PurgeMaterials(baseGroupName);
+    var doc = converterSettings.Current.Document;
+    receiveTracker.PurgePriorReceive(doc, baseGroupName, null, null);
+    // A previous receive of this model may have gone through the artefact direct-bake path and left
+    // Comments-marker-stamped elements behind — those are in no Revit Group, so the purge above won't find them.
+    RevitReceiveTracker.PurgeMarkedElements(doc, baseGroupName);
   }
 
   public void Dispose() => transactionManager.Dispose();

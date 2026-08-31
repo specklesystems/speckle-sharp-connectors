@@ -84,7 +84,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     using var activity = _activityFactory.Start("Build");
 
     string modelFileName = _csiApplicationService.SapModel.GetModelFilename(false) ?? "Unnamed model";
-    (string forceUnit, string tempUnit) = GetForceAndTemperatureUnits();
+    (string forceUnit, string tempUnit) = CsiDatabaseUnits.GetForceAndTemperature(_converterSettings.Current.SapModel);
 
     Collection rootObjectCollection = new()
     {
@@ -225,20 +225,4 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         group => group.Key, // ModelObjectType (FRAME, JOINT, etc.)
         group => group.Select(obj => obj.Name).ToList() // Extract Name from each ICsiWrapper and convert to List<string>
       );
-
-  /// <summary>
-  /// Instantiates a Base object and pre-populates it with the models defined force units.
-  /// </summary>
-  /// <returns></returns>
-  /// <exception cref="SpeckleException"></exception>
-  private (string, string) GetForceAndTemperatureUnits()
-  {
-    var forceUnit = eForce.NotApplicable;
-    var lengthUnit = eLength.NotApplicable;
-    var temperatureUnit = eTemperature.NotApplicable;
-
-    _converterSettings.Current.SapModel.GetDatabaseUnits_2(ref forceUnit, ref lengthUnit, ref temperatureUnit);
-
-    return (forceUnit.ToString(), temperatureUnit.ToString());
-  }
 }

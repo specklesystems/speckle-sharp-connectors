@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Autocad.Operations;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
@@ -190,12 +191,13 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public virtual List<ICardSetting> GetSendSettings() =>
+    [new SendModelPlacementSetting(), new SendApplyTransformSetting()];
 
   public async Task Send(string modelCardId) =>
     await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
 
-  protected abstract void InitializeSettings(IServiceProvider serviceProvider);
+  protected abstract void InitializeSettings(IServiceProvider serviceProvider, SenderModelCard card);
 
   private async Task SendInternal(string modelCardId)
   {
@@ -209,7 +211,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       await manager.Process(
         Commands,
         modelCardId,
-        (sp, card) => InitializeSettings(sp),
+        InitializeSettings,
         card => Application.DocumentManager.CurrentDocument.GetObjects(card.SendFilter.NotNull().RefreshObjectIds()),
         Application.DocumentManager.CurrentDocument.Name,
         null

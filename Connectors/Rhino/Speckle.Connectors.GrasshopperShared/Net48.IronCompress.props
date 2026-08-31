@@ -1,0 +1,17 @@
+<Project>
+  <!-- net48 only: deploy IronCompress's native nironcompress.dll next to the Grasshopper plugin so Parquet.Net's Zstd
+       codec resolves on .NET Framework (4.0 artefact send). On net48 the bare DllImport does no runtimes/ probing, so
+       the native must sit next to the plugin AND be pre-loaded by full path (GrasshopperArtifactRootObjectBuilder).
+       GH7/GH8 are net48; imported by both connector projects. -->
+  <ItemGroup>
+    <PackageReference Include="IronCompress" GeneratePathProperty="true" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PkgIronCompress)' != ''">
+    <None Include="$(PkgIronCompress)\runtimes\win-x64\native\nironcompress.dll">
+      <Link>nironcompress.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </None>
+  </ItemGroup>
+</Project>

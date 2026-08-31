@@ -8,6 +8,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Bundles;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Helpers;
@@ -37,9 +38,18 @@ public sealed class SendOperation<T>(
   ISpeckleHttp speckleHttp,
   ISendPipelineFactory sendPipelineFactory,
   IAssemblyCompatibilityCheck compatabilityCheck,
-  IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
+  IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null,
+  IArtifactRootObjectBuilder<T>? artifactRootObjectBuilder = null,
+  IBundleBuilder<T>? bundleBuilder = null,
+  IBundleSender? bundleSender = null
 ) : ISendOperation<T>
 {
+  /// <param name="useArtifacts">
+  /// Grasshopper-only escape hatch, don't use elsewhere. False skips the 4.0 artefact path and falls through to the
+  /// v3 routes below. GH's deprecated Publish components pass false because a saved .gh file outlives the connector
+  /// upgrade - an upgraded author shouldn't silently create versions their teammates can't read. Remove this
+  /// parameter when those components go.
+  /// </param>
   public async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> Send(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
@@ -48,12 +58,28 @@ public sealed class SendOperation<T>(
     string? versionMessage,
     IProgress<CardProgress> uiProgress,
     bool saveToCache,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    bool useArtifacts = true
   )
   {
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
     if (useModelIngestionSend)
     {
+      // Speckle 4.0 artefact path: when a producer (SGEO + eav + envelope parquet) builder is wired (i.e. the
+      // connector registers IArtifactRootObjectBuilder<T> — today Revit + Rhino; the SDK producer now builds on
+      // netstandard2.0 too, so it runs on the net48 plugins as well as net8), it owns the whole write+upload and
+      // creates the version via the v2 endpoints. Takes precedence over the packfile / legacy ingestion paths.
+      // useArtifacts is a Grasshopper-only opt-out - see the param docs.
+      // Preferred: the connector converts into a BundleBuilder and the SDK ships it (Send3 / IBundleSender).
+      if (bundleBuilder != null && bundleSender != null && useArtifacts)
+      {
+        return await SendViaBundle(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
+      }
+      if (artifactRootObjectBuilder != null && useArtifacts)
+      {
+        return await SendViaArtifacts(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
+      }
+
       bool usePackfileSend =
         rootContinuousTraversalBuilder != null
         && await CheckPackfileSendEndpoints(sendInfo, cancellationToken)
@@ -190,6 +216,128 @@ public sealed class SendOperation<T>(
     }
   }
 
+  /// <summary>
+  /// The Speckle 2026.9.0 send: the connector's <see cref="IBundleBuilder{T}"/> converts into a
+  /// <see cref="BundleBuilder"/>, then <see cref="IBundleSender"/> creates the ingestion (server pre-allocated
+  /// version id), finishes the bundle under that id, uploads it over the v2 artifacts rail and reports failure or
+  /// cancellation to the server. The version's <c>referencedObject</c> is the bundle reference.
+  /// </summary>
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaBundle(
+    IReadOnlyList<T> objects,
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+    IProgress<CardProgress> uiProgress,
+    CancellationToken cancellationToken
+  )
+  {
+    BundleBuild built = await bundleBuilder!.Build(objects, sendInfo.ProjectId, uiProgress, cancellationToken);
+    using BundleBuilder bundle = built.Bundle;
+
+    // Finish + upload on a worker thread: the parquet finalize is sync-over-async and deadlocks on a UI dispatcher.
+    uiProgress.Report(new("Uploading...", null));
+    SendResult sent = await threadContext.RunOnWorkerAsync(() =>
+      bundleSender!.SendAsync(
+        sendInfo.Account,
+        sendInfo.ProjectId,
+        sendInfo.ModelId,
+        bundle,
+        new SendOptions(FileName: fileName, FileSizeBytes: fileSizeBytes),
+        cancellationToken
+      )
+    );
+
+    // The version exists once the server finishes ingesting; the ingestion id is what the DUI subscribes on.
+    return (
+      new SendOperationResult(sent.BundleReference, new Dictionary<Id, ObjectReference>(), built.ConversionResults),
+      sent.VersionId,
+      sent.IngestionId
+    );
+  }
+
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaArtifacts(
+    IReadOnlyList<T> objects,
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+    IProgress<CardProgress> uiProgress,
+    CancellationToken cancellationToken
+  )
+  {
+    if (artifactRootObjectBuilder == null)
+    {
+      throw new InvalidOperationException("artifactRootObjectBuilder cannot be null");
+    }
+
+    ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
+      new(
+        sendInfo.ModelId,
+        sendInfo.ProjectId,
+        $"Sending from {speckleApplication.ApplicationAndVersion}",
+        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        600
+      ),
+      cancellationToken
+    );
+    using var ingestionScope = ActivityScope.SetTag("modelIngestion.Id", ingestion.id);
+
+    // The artefact pipeline bakes the version id into the artefact filenames and uses it as the commit PK
+    // at complete — so it MUST be pre-allocated at ingestion creation. Older servers that only mint the id
+    // at complete time don't support this path.
+    if (string.IsNullOrEmpty(ingestion.versionId))
+    {
+      throw new InvalidOperationException(
+        "The server did not pre-allocate a version id for this ingestion; the Speckle 4.0 artefact upload path requires a server that supports the v2 data endpoints."
+      );
+    }
+
+    var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
+      sendInfo.Client,
+      ingestion,
+      TimeSpan.FromSeconds(5),
+      cancellationToken
+    );
+    AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
+    try
+    {
+      ArtifactBuildResult buildResult = await artifactRootObjectBuilder.BuildAndUpload(
+        objects,
+        sendInfo.ProjectId,
+        ingestion.id,
+        ingestion.versionId!,
+        sendInfo.Account,
+        progress,
+        cancellationToken
+      );
+
+      SendOperationResult result = new(
+        buildResult.RootId,
+        new Dictionary<Id, ObjectReference>(),
+        buildResult.ConversionResults
+      );
+
+      // The pipeline's `complete` only signals "upload done" — the server creates the version after datgen.
+      // Returning the ingestion id makes the DUI subscribe and show "version created" only when it truly exists.
+      return (result, buildResult.VersionId, ingestion.id);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithCancel(
+        new(ingestion.id, sendInfo.ProjectId, "User requested cancellation"),
+        CancellationToken.None
+      );
+      throw;
+    }
+    catch (Exception ex)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithError(
+        ModelIngestionFailedInput.FromException(ingestion.id, sendInfo.ProjectId, ex),
+        CancellationToken.None
+      );
+      throw;
+    }
+  }
+
   private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaIngestion(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
@@ -224,10 +372,16 @@ public sealed class SendOperation<T>(
     {
       SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, saveToCache, cancellationToken);
 
+      // NOTE: Ingestion.Complete is obsolete (ENG-9221) - completeWithVersion bypasses the v2 REST uploads/complete
+      // seam, so the version it creates is not viewer-consumable in the bundle era. This is the legacy fallback path,
+      // only reached when the connector has neither an artefact builder nor packfile endpoints, so it keeps using it.
+      // ENG-9264 tracks migrating this path to the v2 REST flow (or deleting it) and dropping the suppression.
+#pragma warning disable CS0618
       string createdVersionId = await sendInfo.Client.Ingestion.Complete(
         new(ingestion.id, sendInfo.ProjectId, result.RootObjId, versionMessage),
         CancellationToken.None
       );
+#pragma warning restore CS0618
 
       // NOTE: it might seem weird to pass null for ingestion.id 'null' here but there is a reason.
       // Because we complete ingestion here in .NET which is safe to pass null ingestion id that we don't want DUI explicitly subscribe to ingestion changes.

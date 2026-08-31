@@ -14,26 +14,31 @@ public class RevitConversionSettingsFactory(
   public RevitConversionSettings Create(
     DetailLevelType detailLevelType,
     DB.Transform? referencePointTransform,
+    bool applyTransform,
     bool sendEmptyOrNullParams,
     bool sendLinkedModels,
     bool sendRebarsAsVolumetric,
     bool sendAreasAsMesh,
     bool receiveInstancesAsFamilies,
-    double tolerance = 0.0164042 // 5mm in ft
+    double tolerance = 0.0164042, // 5mm in ft
+    ReferencePointType referencePointKind = ReferencePointType.InternalOrigin
   )
   {
     var document = revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
     return new(
       document,
       detailLevelType,
-      referencePointTransform,
+      applyTransform ? referencePointTransform : null,
+      applyTransform,
       unitConverter.ConvertOrThrow(document.GetUnits().GetFormatOptions(DB.SpecTypeId.Length).GetUnitTypeId()),
       sendEmptyOrNullParams,
       sendLinkedModels,
       sendRebarsAsVolumetric,
       sendAreasAsMesh,
       receiveInstancesAsFamilies,
-      tolerance
+      tolerance,
+      referencePointKind,
+      referencePointTransform
     );
   }
 }

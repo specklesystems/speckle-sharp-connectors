@@ -37,6 +37,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<Speckle.Converters.Plant3dShared.ToSpeckle.PropertiesExtractor>(); // for plant3d
     serviceCollection.AddScoped<Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor, PropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
+    serviceCollection.AddScoped<Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor>(); // plain acad text in a plant drawing
     serviceCollection.AddScoped<Plant3dDataExtractor>();
     serviceCollection.AddScoped<EntityUnitConverter>();
   }

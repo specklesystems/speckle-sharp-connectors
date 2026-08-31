@@ -171,6 +171,10 @@
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
   </Folder>
+  <Folder Name="/Connectors/Rhino/9/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoHeadless\Speckle.Connectors.RhinoHeadless.csproj" />
+    <Project Path="Converters\Rhino\Speckle.Converters.Rhino9\Speckle.Converters.Rhino9.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Rhino/Shared/">
     <Project Path="Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.shproj" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.shproj" />
