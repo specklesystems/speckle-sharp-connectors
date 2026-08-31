@@ -148,13 +148,13 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "2026.9.0-beta.3",
-        "contentHash": "NA3HfHLvcc0oUsY1d8iB5g7SIOPYWtcjnWe1maUiUXBS2d+57T2WrR6HTEPK4U0l3T7hXD+LfP+Vl65noX7dPQ=="
+        "resolved": "2026.9.0-beta.4",
+        "contentHash": "o+u1sRKl+KUmxvGHoNhBu+JJtGseDDxevu0khtPrZ6A15AMQ8+jRK7n9C2HkOXlNexVUwKiC8WnAa6/LUo6JHQ=="
       },
       "Speckle.Sdk.Parquet": {
         "type": "Transitive",
-        "resolved": "2026.9.0-beta.3",
-        "contentHash": "w4uMP0D60AsxngTGg9ZTweJZsbrIjZ63nzRMVT8pxiwQ8AF2j7wDUyHlVotAlVSXQwi2+W/MJxnDiyc8o5eqxg=="
+        "resolved": "2026.9.0-beta.4",
+        "contentHash": "l2Oa6SC8hq8f48mdWIXfnVbaUTlhKlrRVsGVUJSOnB77qPuwmj3CyZXoWFH/Gs9kcaEuC2wkbLRHndLpA77zcg=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -201,7 +201,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[2026.9.0-beta.3, )"
+          "Speckle.Sdk": "[2026.9.0-beta.4, )"
         }
       },
       "speckle.connectors.dui": {
@@ -223,7 +223,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Sdk": "[2026.9.0-beta.3, )"
+          "Speckle.Sdk": "[2026.9.0-beta.4, )"
         }
       },
       "Microsoft.Web.WebView2": {
@@ -240,9 +240,9 @@
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[2026.9.0-beta.3, )",
-        "resolved": "2026.9.0-beta.3",
-        "contentHash": "sjlSYDskN9cQ50By13Qt4TtFBetO5EpuvAuj/e/3/PFkTHQzP8Kj+L42VucBHYS2zbf77pfr6J0ytu7n5fGXVw==",
+        "requested": "[2026.9.0-beta.4, )",
+        "resolved": "2026.9.0-beta.4",
+        "contentHash": "qdHMddzoXCFv8dFe6FrwnLlSzlZNvZ1cv1842zO6HArROE1NOHK50zT8OtrPJJCwZSbBCaogyVxQTXWffDPl4A==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Data.Sqlite": "7.0.5",
@@ -250,8 +250,8 @@
           "Microsoft.Extensions.ObjectPool": "8.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "2026.9.0-beta.3",
-          "Speckle.Sdk.Parquet": "2026.9.0-beta.3"
+          "Speckle.Sdk.Dependencies": "2026.9.0-beta.4",
+          "Speckle.Sdk.Parquet": "2026.9.0-beta.4"
         }
       }
     }
