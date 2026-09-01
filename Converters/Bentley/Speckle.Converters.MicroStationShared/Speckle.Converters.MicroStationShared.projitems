@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\MicroStationConverterServiceRegistration.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryMapper.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\SharedCellPlacement.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Services\MicroStationToSpeckleUnitConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettings.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettingsFactory.cs"/>

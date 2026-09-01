@@ -23,13 +23,16 @@ namespace Speckle.Connectors.MicroStation.Plugin;
 /// </summary>
 internal static class ProbeCommand
 {
-  public static void Run()
+  public static void Run(string? unparsed = null)
   {
     string logPath = Path.Combine(Path.GetTempPath(), "speckle-msprobe.log");
     var log = new StringBuilder();
     try
     {
-      Probe(log);
+      var assembly = typeof(ProbeCommand).Assembly;
+      log.AppendLine($"build: {assembly.Location}");
+      log.AppendLine($"build time: {File.GetLastWriteTime(assembly.Location):yyyy-MM-dd HH:mm:ss}");
+      Probe(log, unparsed);
     }
     catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
@@ -38,7 +41,7 @@ internal static class ProbeCommand
     File.WriteAllText(logPath, log.ToString(), Encoding.UTF8);
   }
 
-  private static void Probe(StringBuilder log)
+  private static void Probe(StringBuilder log, string? unparsed)
   {
     DPN.DgnModel? model = Session.Instance?.GetActiveDgnModel();
     if (model == null)
@@ -128,6 +131,25 @@ internal static class ProbeCommand
       log.AppendLine($"{kv.Key} | {v.elements} | {v.geoms} | {v.empty} | {v.errors} | {v.ecProps}");
     }
 
+    DumpLevelDiagnostics(log, model);
+
+    // ── Per-id detail (keyin: `Speckle probe 544761,78994,...`) ───────────────────────────
+    if (!string.IsNullOrWhiteSpace(unparsed))
+    {
+      var wanted = new HashSet<string>(
+        unparsed!.Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries),
+        StringComparer.Ordinal
+      );
+      foreach (MgdElement? element in model.GetGraphicElements())
+      {
+        if (element == null || !wanted.Contains(((ulong)element.ElementId).ToString()))
+        {
+          continue;
+        }
+        DumpElementDetail(log, model, element);
+      }
+    }
+
     // Attachment summary
     try
     {
@@ -154,6 +176,143 @@ internal static class ProbeCommand
     catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
       log.AppendLine($"attachment walk failed: {ex.Message}");
+    }
+  }
+
+  private static void DumpLevelDiagnostics(StringBuilder log, DPN.DgnModel model)
+  {
+    // ── Level diagnostics: own-level resolution + global/per-view display ─────────────────
+    try
+    {
+      DPN.LevelCache? levelCache = model.GetLevelCache();
+      DPN.ViewInformation? viewInfo = Session.GetActiveViewport()?.GetViewInformation();
+      int validOwn = 0,
+        invalidOwn = 0;
+      var invalidSampleTypes = new Dictionary<string, int>();
+      foreach (MgdElement? element in model.GetGraphicElements())
+      {
+        if (element == null)
+        {
+          continue;
+        }
+        DPN.LevelHandle? handle = levelCache?.GetLevel(element.LevelId, true);
+        if (handle is { IsValid: true })
+        {
+          validOwn++;
+        }
+        else
+        {
+          invalidOwn++;
+          string t = element.TypeName ?? element.ElementType.ToString();
+          invalidSampleTypes[t] = invalidSampleTypes.TryGetValue(t, out int n) ? n + 1 : 1;
+        }
+      }
+      log.AppendLine($"own-level resolution: valid={validOwn} invalid={invalidOwn}");
+      foreach (var kv in invalidSampleTypes.OrderByDescending(k => k.Value).Take(8))
+      {
+        log.AppendLine($"  invalid-own-level type: {kv.Key} x{kv.Value}");
+      }
+
+      if (levelCache != null)
+      {
+        log.AppendLine("levels: name | code | globalDisplay | frozen | effectiveInActiveView");
+        foreach (DPN.LevelHandle? handle in levelCache.GetHandles())
+        {
+          if (handle is not { IsValid: true })
+          {
+            continue;
+          }
+          string effective = "?";
+          if (viewInfo != null)
+          {
+            try
+            {
+              viewInfo.GetEffectiveLevelDisplay(out bool shown, model, handle.LevelId);
+              effective = shown.ToString();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+              effective = "err";
+            }
+          }
+          log.AppendLine($"  {handle.Name} | {handle.LevelCode} | {handle.Display} | {handle.Frozen} | {effective}");
+        }
+      }
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+    {
+      log.AppendLine($"level diagnostics failed: {ex.Message}");
+    }
+  }
+
+  private static void DumpElementDetail(StringBuilder log, DPN.DgnModel model, MgdElement element)
+  {
+    string id = ((ulong)element.ElementId).ToString();
+    log.AppendLine($"── element {id} ──");
+    log.AppendLine($"  type: {element.TypeName} ({element.ElementType}) clrType: {element.GetType().Name}");
+    try
+    {
+      DPN.LevelHandle? own = model.GetLevelCache()?.GetLevel(element.LevelId, true);
+      log.AppendLine(
+        own is { IsValid: true }
+          ? $"  own level: {own.Name} code={own.LevelCode} display={own.Display} frozen={own.Frozen}"
+          : "  own level: INVALID"
+      );
+      var (effName, effNum) = Speckle.Converters.MicroStation.ToSpeckle.Properties.PropertiesExtractor.GetLevelInfo(
+        element
+      );
+      log.AppendLine($"  effective level: {effName} ({effNum})");
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+    {
+      log.AppendLine($"  level read failed: {ex.Message}");
+    }
+    if (element is MgdElements.DisplayableElement displayable)
+    {
+      if (displayable.CalcElementRange(out BG.DRange3d range).Equals(DPN.StatusInt.Success))
+      {
+        log.AppendLine(
+          $"  range RAW: [{range.Low.X:G6},{range.Low.Y:G6},{range.Low.Z:G6}] .. [{range.High.X:G6},{range.High.Y:G6},{range.High.Z:G6}]"
+        );
+      }
+      log.AppendLine($"  invisible: {element.IsInvisible}");
+      if (displayable.GetBasisTransform(out BG.DTransform3d basis))
+      {
+        log.AppendLine(
+          $"  basisTransform: rows=({basis.RowX.X:G4},{basis.RowX.Y:G4},{basis.RowX.Z:G4})({basis.RowY.X:G4},{basis.RowY.Y:G4},{basis.RowY.Z:G4})({basis.RowZ.X:G4},{basis.RowZ.Y:G4},{basis.RowZ.Z:G4}) t=({basis.Translation.X:G6},{basis.Translation.Y:G6},{basis.Translation.Z:G6})"
+        );
+      }
+    }
+    if (element is MgdElements.SharedCellElement sharedCell)
+    {
+      log.AppendLine(
+        $"  sharedCell: name={sharedCell.CellName} scale=({sharedCell.Scale.X:G4},{sharedCell.Scale.Y:G4},{sharedCell.Scale.Z:G4})"
+      );
+      sharedCell.GetOrientation(out BG.DMatrix3d rot);
+      log.AppendLine(
+        $"  orientation rows: ({rot.RowX.X:G4},{rot.RowX.Y:G4},{rot.RowX.Z:G4})({rot.RowY.X:G4},{rot.RowY.Y:G4},{rot.RowY.Z:G4})({rot.RowZ.X:G4},{rot.RowZ.Y:G4},{rot.RowZ.Z:G4})"
+      );
+      sharedCell.GetTransformOrigin(out BG.DPoint3d origin);
+      log.AppendLine($"  transformOrigin RAW: ({origin.X:G6},{origin.Y:G6},{origin.Z:G6})");
+      DPN.DgnFile? file = sharedCell.DgnModel?.GetDgnFile();
+      MgdElement? definition = file != null ? sharedCell.GetDefinition(file) : null;
+      if (definition is MgdElements.DisplayableElement displayableDefinition)
+      {
+        displayableDefinition.GetTransformOrigin(out BG.DPoint3d defOrigin);
+        log.AppendLine($"  defOrigin RAW: ({defOrigin.X:G6},{defOrigin.Y:G6},{defOrigin.Z:G6})");
+        if (
+          Speckle.Converters.MicroStation.Services.SharedCellPlacement.TryCompute(
+            sharedCell,
+            definition,
+            out BG.DTransform3d placement
+          )
+        )
+        {
+          log.AppendLine(
+            $"  computed placement: rows=({placement.RowX.X:G4},{placement.RowX.Y:G4},{placement.RowX.Z:G4})({placement.RowY.X:G4},{placement.RowY.Y:G4},{placement.RowY.Z:G4})({placement.RowZ.X:G4},{placement.RowZ.Y:G4},{placement.RowZ.Z:G4}) t=({placement.Translation.X:G6},{placement.Translation.Y:G6},{placement.Translation.Z:G6})"
+          );
+        }
+      }
     }
   }
 

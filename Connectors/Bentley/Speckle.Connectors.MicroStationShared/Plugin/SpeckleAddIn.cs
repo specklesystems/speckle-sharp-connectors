@@ -43,11 +43,11 @@ public class SpeckleAddIn : AddIn
   /// Keyin handler (`Speckle probe`) — writes the offline-verification report to
   /// %TEMP%\speckle-msprobe.log. See <see cref="ProbeCommand"/>.
   /// </summary>
-  public static void Probe(string _)
+  public static void Probe(string unparsed)
   {
     try
     {
-      ProbeCommand.Run();
+      ProbeCommand.Run(unparsed);
     }
     catch (Exception ex)
     {

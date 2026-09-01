@@ -246,8 +246,9 @@ public class DisplayValueExtractor(
     }
     try
     {
-      if (!sharedCell.GetBasisTransform(out BG.DTransform3d placement))
+      if (!SharedCellPlacement.TryCompute(sharedCell, definition, out BG.DTransform3d placement))
       {
+        logger.LogWarning("Shared cell '{Name}' placement unavailable; skipped.", sharedCell.CellName);
         return;
       }
       using IDisposable scope = mapper.PushTransform(placement);

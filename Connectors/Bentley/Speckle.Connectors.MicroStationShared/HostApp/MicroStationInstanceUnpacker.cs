@@ -56,9 +56,9 @@ public class MicroStationInstanceUnpacker(
         logger.LogWarning("Shared cell '{Name}' has no definition; left un-instanced.", instance.CellName);
         return;
       }
-      if (!instance.GetBasisTransform(out BG.DTransform3d placement))
+      if (!SharedCellPlacement.TryCompute(instance, definition, out BG.DTransform3d placement))
       {
-        logger.LogWarning("Shared cell '{Name}' basis transform unavailable; left un-instanced.", instance.CellName);
+        logger.LogWarning("Shared cell '{Name}' placement unavailable; left un-instanced.", instance.CellName);
         return;
       }
       // dgnextract warns on non-uniform scale placements — the viewer assumes conformal instances.
