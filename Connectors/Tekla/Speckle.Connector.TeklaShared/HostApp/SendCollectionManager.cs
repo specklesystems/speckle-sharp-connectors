@@ -1,3 +1,4 @@
+using Speckle.Converters.TeklaShared.Extensions;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.TeklaShared.HostApp;
@@ -11,7 +12,7 @@ public class SendCollectionManager
     // Tekla Data Structure: rootObject > objectType > name
     // Very high-level, would be good to have sub-groups in future releases
     // TODO: Refine further according to section types (for beams), constituent elements (for components) etc. at later stage
-    var path = teklaObject.GetType().ToString().Split('.').Last();
+    var path = teklaObject.GetSpeckleType();
 
     // NOTE: First pass at seeing if a collection key already exists
     if (_collectionCache.TryGetValue(path, out Collection? value))

@@ -32,12 +32,14 @@
     <Compile Include="$(MSBuildThisFileDirectory)Filters\TeklaSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaCoordinateSystemTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsSolidSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TeklaContinuousTraversalBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TeklaArtifactRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TeklaRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\TeklaPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />

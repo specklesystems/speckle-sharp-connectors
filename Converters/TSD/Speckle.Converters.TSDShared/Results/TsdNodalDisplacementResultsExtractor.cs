@@ -16,14 +16,15 @@ public sealed class TsdNodalDisplacementResultsExtractor : TsdLoadingResultsExtr
       .GetNodalDisplacementsAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
       .ConfigureAwait(false);
 
-  protected override Dictionary<string, object?> Build(IEnumerable<INodalDisplacement> items)
+  protected override Dictionary<string, object?> Build(IEnumerable<INodalDisplacement> items, TsdResultsContext context)
   {
     var perNode = new Dictionary<string, object?>();
     foreach (var nodalDisplacement in items)
     {
-      perNode[nodalDisplacement.NodeIndex.ToString()] = TsdResultValueBuilder.Displacement(
-        nodalDisplacement.Displacement
-      );
+      foreach (var nodeKey in context.Nodes.GetNodeKeys(nodalDisplacement.NodeIndex))
+      {
+        perNode[nodeKey] = TsdResultValueBuilder.Displacement(nodalDisplacement.Displacement);
+      }
     }
 
     return perNode;

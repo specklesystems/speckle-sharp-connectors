@@ -58,6 +58,8 @@ public class GrasshopperReceiveOperation
 
     double? previousPercentage = null;
     _progressDisplayManager.Begin();
+    // Legacy fallback (no artefact bundle for this version); the receive components take the bundle path first.
+#pragma warning disable CS0618
     Base commitObject = await _operations
       .Receive2(
         new Uri(account.serverInfo.url),
@@ -94,6 +96,7 @@ public class GrasshopperReceiveOperation
         cancellationToken: cancellationToken
       )
       .ConfigureAwait(false);
+#pragma warning restore CS0618
 
     await apiClient
       .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug), cancellationToken)

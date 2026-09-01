@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Rhino 9 WIP head for the headless linux converter leg (rhino.inside, net10), consumed by the
+       speckle-converters host via sibling-checkout project references.
+       EXACT version pins only: the RhinoCommon/Rhino.Inside pins move in lockstep with the converters
+       image's rhino3d deb pin — a float on either side silently skews the managed API surface against
+       the installed Rhino and fails at runtime. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <DefineConstants>$(DefineConstants);RHINO9;RHINO7_OR_GREATER;RHINO8_OR_GREATER;RHINO9_OR_GREATER</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference
+      Include="RhinoCommon"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="9.0.26167.11545-wip"
+    />
+    <!-- Resolver for hosts that boot Rhino in-process; flows transitively so the host exe inherits the pin. -->
+    <PackageReference Include="Rhino.Inside" VersionOverride="9.0.26084.13070-beta" />
+    <!-- Not used by the converter: pinned only to keep restore consistent — Rhino.Inside's open-range
+         Grasshopper floor exact-pins an older RhinoCommon (NU1608). Same date-code as the RhinoCommon pin. -->
+    <PackageReference
+      Include="Grasshopper"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="9.0.26167.11545-wip"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared" />
+</Project>

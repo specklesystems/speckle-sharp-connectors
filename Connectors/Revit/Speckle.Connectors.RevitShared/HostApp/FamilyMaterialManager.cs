@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.DB;
+﻿using System.Globalization;
+using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -143,6 +144,69 @@ public class FamilyMaterialManager
         {
           _logger.LogWarning(ex, "Failed to setup family material {MatName}", renderMat.name);
         }
+      }
+    }
+  }
+
+  // ENG-9101: bundle-native counterparts of the two methods above, keyed by MATERIAL node index instead of a
+  // sanitized material name — the artifact bundle already gives us a stable int key, so no name-collision handling
+  // is needed. "Material_a{node}" (not "Material_{node}") so it can never collide with a v1 safeName-derived param.
+  public void SetupFamilyMaterialsFromArtifact(
+    Document famDoc,
+    IEnumerable<int> materialNodeKeys,
+    IReadOnlyDictionary<int, RenderMaterial> materialsByNode
+  )
+  {
+    foreach (var matNodeK in materialNodeKeys)
+    {
+      if (!materialsByNode.TryGetValue(matNodeK, out var renderMat))
+      {
+        continue;
+      }
+      string key = matNodeK.ToString(CultureInfo.InvariantCulture);
+      if (BakedMaterials.ContainsKey(key))
+      {
+        continue;
+      }
+
+      try
+      {
+        ElementId famMatId = _materialBaker.BakeMaterial(renderMat, famDoc);
+        BakedMaterials[key] = famMatId;
+
+        string paramName = $"Material_a{key}";
+        FamilyParameters[key] =
+          famDoc.FamilyManager.get_Parameter(paramName)
+          ?? famDoc.FamilyManager.AddParameter(paramName, GroupTypeId.Materials, SpecTypeId.Reference.Material, false);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed to setup family material for node {MaterialNodeKey}", matNodeK);
+      }
+    }
+  }
+
+  public static void AssignProjectMaterialsToFamilyFromArtifact(
+    FamilySymbol symbol,
+    IReadOnlyDictionary<int, ElementId> projectMaterialIdByNode
+  )
+  {
+    foreach (Parameter p in symbol.Parameters)
+    {
+      if (
+        p.Definition.Name.StartsWith("Material_a", StringComparison.Ordinal)
+        && p.StorageType == StorageType.ElementId
+        && !p.IsReadOnly
+        && int.TryParse(
+          p.Definition.Name["Material_a".Length..],
+          NumberStyles.Integer,
+          CultureInfo.InvariantCulture,
+          out int matNodeK
+        )
+        && projectMaterialIdByNode.TryGetValue(matNodeK, out var projMatId)
+      )
+      {
+        p.Set(projMatId);
       }
     }
   }

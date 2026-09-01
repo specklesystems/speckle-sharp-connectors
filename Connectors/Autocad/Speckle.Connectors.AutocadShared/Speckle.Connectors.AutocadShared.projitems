@@ -19,6 +19,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\AutocadConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\AutocadSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorSemanticKeys.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupUnpacker.cs" />
@@ -38,8 +39,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\EntityExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TransactionContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectArtefactBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\ModelPlacementSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadArtifactRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadContinuousTraversalBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadContinuousTraversalBuilder.cs" />

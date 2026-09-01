@@ -10,6 +10,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.TeklaShared.HostApp;
 using Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.TeklaShared;
@@ -36,6 +37,7 @@ public sealed class TeklaSendBinding : ISendBinding
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly Events _events;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly TeklaCoordinateSystemTracker _coordinateSystemTracker;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
@@ -48,7 +50,8 @@ public sealed class TeklaSendBinding : ISendBinding
     ILogger<TeklaSendBinding> logger,
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    TeklaCoordinateSystemTracker coordinateSystemTracker
   )
   {
     _store = store;
@@ -61,6 +64,7 @@ public sealed class TeklaSendBinding : ISendBinding
     Commands = new SendBindingUICommands(parent);
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _coordinateSystemTracker = coordinateSystemTracker;
 
     _model = new Model();
     _events = new Events();
@@ -104,10 +108,14 @@ public sealed class TeklaSendBinding : ISendBinding
       Commands,
       modelCardId,
       (sp, card) =>
+      {
+        // objects cached in a different coordinate frame carry the wrong coordinates, so they go before we convert
+        _coordinateSystemTracker.ClearCacheIfCoordinateSystemChanged(_model);
         sp.GetRequiredService<IConverterSettingsStore<TeklaConversionSettings>>()
           .Initialize(
             _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(card))
-          ),
+          );
+      },
       card =>
         card.SendFilter.NotNull()
           .RefreshObjectIds()

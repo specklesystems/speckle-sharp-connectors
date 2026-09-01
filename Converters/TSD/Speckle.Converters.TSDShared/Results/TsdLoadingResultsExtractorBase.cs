@@ -12,27 +12,26 @@ public abstract class TsdLoadingResultsExtractorBase<TResult> : ITsdResultsExtra
     CancellationToken cancellationToken
   );
 
-  protected abstract Dictionary<string, object?> Build(IEnumerable<TResult> items);
+  protected abstract Dictionary<string, object?> Build(IEnumerable<TResult> items, TsdResultsContext context);
 
   public async Task<Dictionary<string, object?>> GetResultsAsync(
-    IAnalysis3DResults analysisResults,
-    IReadOnlyList<TsdLoadingRef> loadings,
+    TsdResultsContext context,
     CancellationToken cancellationToken
   )
   {
     var results = new Dictionary<string, object?>();
 
-    foreach (var loading in loadings)
+    foreach (var loading in context.Loadings)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var items = await FetchAsync(analysisResults, loading.Id, cancellationToken).ConfigureAwait(false);
+      var items = await FetchAsync(context.AnalysisResults, loading.Id, cancellationToken).ConfigureAwait(false);
       if (items is null)
       {
         continue;
       }
 
-      var entries = Build(items);
+      var entries = Build(items, context);
       if (entries.Count > 0)
       {
         results[loading.Name] = entries;

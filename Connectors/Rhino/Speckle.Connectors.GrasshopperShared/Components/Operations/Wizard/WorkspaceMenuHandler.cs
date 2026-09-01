@@ -1,4 +1,5 @@
 using System.Drawing.Drawing2D;
+using Speckle.Sdk;
 using Speckle.Sdk.Api.GraphQL.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
@@ -98,7 +99,7 @@ public class WorkspaceMenuHandler
         (_, _) => OnWorkspaceSelected(workspace),
         SelectedWorkspace?.id != workspace.id,
         SelectedWorkspace?.id == workspace.id,
-        Base64ToImage(workspace.logo)
+        Base64ToImage(workspace.logoUrl)
       );
     }
   }
@@ -119,7 +120,7 @@ public class WorkspaceMenuHandler
       : "Selection is disabled due to component input.";
     if (workspace != null && !IsPersonalProjects)
     {
-      Logo = Get24X24IconFromBase64(workspace.logo);
+      Logo = Get24X24IconFromBase64(workspace.logoUrl);
       WorkspaceContextMenuButton.SetIconOverride(Logo);
       WorkspaceContextMenuButton.Name = workspace.name;
       WorkspaceContextMenuButton.NickName = workspace.id;
@@ -141,27 +142,22 @@ public class WorkspaceMenuHandler
     }
   }
 
-  private Image? Base64ToImage(string? base64)
+  private Image? Base64ToImage(string? logoUri)
   {
-    if (base64 == null)
+    if (!TryDecodeLogo(logoUri, out byte[] bytes))
     {
       return null;
     }
-    var base64Data = base64[(base64.IndexOf(',') + 1)..]; // remove data:image/...;base64, part
-    byte[] bytes = Convert.FromBase64String(base64Data);
     using var ms = new MemoryStream(bytes);
     return Image.FromStream(ms);
   }
 
-  private Bitmap? Get24X24IconFromBase64(string? base64)
+  private Bitmap? Get24X24IconFromBase64(string? logoUri)
   {
-    if (base64 == null)
+    if (!TryDecodeLogo(logoUri, out byte[] bytes))
     {
       return null;
     }
-    // Strip metadata prefix
-    var base64Data = base64[(base64.IndexOf(',') + 1)..];
-    byte[] bytes = Convert.FromBase64String(base64Data);
 
     using (var ms = new MemoryStream(bytes))
     {
@@ -169,6 +165,28 @@ public class WorkspaceMenuHandler
       {
         return ResizeImageToBitmap(originalImage, 24, 24);
       }
+    }
+  }
+
+  // workspace.logoUri is a base64 data URI (data:image/...;base64,XXXX); decode it, tolerating a bare base64 string
+  // too. Returns false (rather than throwing) for null/empty or a remote http(s) URL, so a server-side switch to a
+  // hosted logo URL degrades to "no icon" instead of crashing the menu redraw.
+  private static bool TryDecodeLogo(string? logoUri, out byte[] bytes)
+  {
+    bytes = Array.Empty<byte>();
+    if (string.IsNullOrEmpty(logoUri) || logoUri!.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+    {
+      return false;
+    }
+    try
+    {
+      var base64Data = logoUri[(logoUri.IndexOf(',') + 1)..]; // strip any data:image/...;base64, prefix
+      bytes = Convert.FromBase64String(base64Data);
+      return true;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return false;
     }
   }
 

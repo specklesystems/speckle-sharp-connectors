@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
@@ -16,19 +17,19 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 {
-  private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
   private readonly IPropertiesExtractor _propertiesExtractor;
   private readonly ILogger<AutocadInstanceUnpacker> _logger;
 
   public AutocadInstanceUnpacker(
-    IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager,
     IPropertiesExtractor propertiesExtractor,
     ILogger<AutocadInstanceUnpacker> logger
   )
   {
-    _unitsConverter = unitsConverter;
+    _settingsStore = settingsStore;
     _instanceObjectsManager = instanceObjectsManager;
     _propertiesExtractor = propertiesExtractor;
     _logger = logger;
@@ -81,7 +82,8 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         definitionId = definitionId.ToString(),
         maxDepth = depth,
         transform = TransformHelper.ConvertToInstanceMatrix4x4(instance.BlockTransform),
-        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits),
+        // The settings store, not INSUNITS directly: Civil 3D initialises it with the Civil drawing unit [ENG-9326].
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
       var properties = _propertiesExtractor.GetProperties(instance) ?? new Dictionary<string, object?>();

@@ -1,0 +1,1246 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
+using Speckle.Converters.Autocad;
+using Speckle.Converters.Autocad.Helpers;
+using Speckle.Converters.Common;
+using Speckle.DoubleNumerics;
+using Speckle.Objects.Data;
+using Speckle.Objects.Other;
+using Speckle.Objects.Utils;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Models.Proxies;
+using Speckle.Sdk.Pipelines;
+using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Send.Artifacts;
+#if NETFRAMEWORK
+using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
+#endif
+
+namespace Speckle.Connectors.Autocad.Operations.Send;
+
+/// <summary>
+/// Speckle 4.0 send path for AutoCAD (+ Civil3D / Plant3D verticals): instead of building a
+/// <see cref="Speckle.Sdk.Models.Collections.Collection"/> graph of <see cref="AutocadObject"/>s and serializing it
+/// through the v1 pipeline, this drives the SDK <see cref="ObjectsArtifactPipeline"/> to write the client-side
+/// artefact triple directly — <c>geometries.parquet</c> (SGEO blobs + raw ACIS-SAT solid blobs),
+/// <c>eav.*.parquet</c> (properties), <c>envelope.*.parquet</c> (relations + value-node topology) — then uploads
+/// the bundle via <see cref="ArtifactPipeline"/>.
+/// </summary>
+/// <remarks>
+/// <para>Mirrors <c>RhinoBundleBuilder</c>. Two AutoCAD-specific shapes:</para>
+/// <list type="number">
+///   <item><b>Solids.</b> A <c>Solid3d</c> is kept losslessly as the raw ACIS-SAT blob the converter already
+///   produced (<see cref="AutocadObject.rawEncoding"/>, base64 SAT). It is written to <c>geometries.parquet</c>
+///   verbatim with <c>type = "sat"</c> and linked via the <c>SOLID</c> rel, alongside its display meshes which
+///   link via <c>DISPLAY</c>.</item>
+///   <item><b>Layers are flat.</b> Unlike Rhino's nested layer tree, AutoCAD has a flat layer namespace — each
+///   layer becomes a single top-level <c>COLLECTION</c> node, with an <c>IN_COLLECTION</c> rel per object; the
+///   default scene view projects on <c>IN_COLLECTION</c>.</item>
+/// </list>
+/// <para><b>Threading.</b> Two phases, exactly as Rhino: phase 1 (<see cref="CollectOnMain"/>) runs on the host UI
+/// thread (the AutoCAD API + converters are document-bound) producing a pure-Speckle snapshot; phase 2
+/// (<see cref="WriteBundle"/>) runs on a worker thread and builds the parquet bundle (the pipeline does
+/// sync-over-async parquet IO that deadlocks on the UI thread).</para>
+/// <para>The single builder serves AutoCAD, Civil3D and Plant3D: the injected <see cref="IRootToSpeckleConverter"/>
+/// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct
+/// without subclassing. Deferred this pass: Civil3D property-set definitions.</para>
+/// </remarks>
+public class AutocadArtifactRootObjectBuilder(
+  IRootToSpeckleConverter converter,
+  IConverterSettingsStore<AutocadConversionSettings> converterSettings,
+  AutocadInstanceUnpacker instanceUnpacker,
+  AutocadMaterialUnpacker materialUnpacker,
+  AutocadColorUnpacker colorUnpacker,
+  IThreadContext threadContext,
+  IArtifactPipelineFactory artifactPipelineFactory,
+  ISpeckleApplication speckleApplication,
+  ILogger<AutocadArtifactRootObjectBuilder> logger
+) : IArtifactRootObjectBuilder<AutocadRootObject>
+{
+  public async Task<ArtifactBuildResult> BuildAndUpload(
+    IReadOnlyList<AutocadRootObject> objects,
+    string projectId,
+    string ingestionId,
+    string versionId,
+    Account account,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    // Bundle base name = the server pre-allocated versionId, so the parquet files carry their final names from byte one.
+    var outputDir = Path.Combine(Path.GetTempPath(), "Speckle", "artifacts", versionId);
+    Directory.CreateDirectory(outputDir);
+
+    using var session = ArtefactSessionLog.Start("Autocad", ArtefactDirection.Send, projectId, null, versionId, logger);
+
+    // Phase 1 — convert + unpack on the host UI thread (AutoCAD is document/main-thread-affine) → pure-Speckle snapshot.
+    CollectedModel collected;
+    using (session.Phase("Collect"))
+    {
+      collected = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      );
+    }
+
+    // Phase 2 — build the parquet bundle + upload on a WORKER thread (no UI SynchronizationContext, so the
+    // pipeline's sync-over-async parquet IO doesn't deadlock — see the class <remarks>).
+    return await threadContext.RunOnWorkerAsync(async () =>
+    {
+      BundleResult built;
+      using (session.Phase("Write"))
+      {
+        built = WriteBundle(collected, session, versionId, outputDir, onOperationProgressed, cancellationToken);
+      }
+
+      using var pipeline = artifactPipelineFactory.CreateInstance(
+        projectId,
+        ingestionId,
+        versionId,
+        account,
+        outputDir,
+        cancellationToken
+      );
+
+      onOperationProgressed.Report(new("Uploading...", null));
+      string finalVersionId;
+      using (session.Phase("Upload"))
+      {
+        finalVersionId = await pipeline
+          .UploadFilesAsync(built.Bundle, built.RootId, built.ObjectCount)
+          .ConfigureAwait(false);
+      }
+
+      return new ArtifactBuildResult(finalVersionId, built.RootId, built.Results);
+    });
+  }
+
+  // ── Phase 1 (UI thread): AutoCAD API → pure-Speckle snapshot ──────────────────────────────────────────
+  private CollectedModel CollectOnMain(
+    IReadOnlyList<AutocadRootObject> objects,
+    ArtefactSessionLog session,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    var units = converterSettings.Current.SpeckleUnits;
+
+    // Unpack instances → atomic objects (incl. block-definition members) + instance/definition proxies.
+    var (atomicObjects, atomicDefinitionObjectIds, instanceProxies, instanceDefinitionProxies) =
+      instanceUnpacker.UnpackSelection(objects);
+
+    // Publishing from a custom UCS: the converter rebases every point/vector it emits through
+    // ReferencePointConverter (the inverse of the settings' UCS matrix). Two compensations are needed on top of
+    // that, exactly as the v1 AutocadRootObjectBaseBuilder does them [ENG-9116] — see CollectObject.
+    Matrix3d? referencePointInverse = converterSettings.Current.ReferencePointTransform is Matrix3d ucs
+      ? ucs.Inverse()
+      : null;
+
+    var collectedObjects = new List<CollectedObject>(atomicObjects.Count);
+    var results = new List<SendConversionResult>(atomicObjects.Count);
+
+    int count = 0;
+    foreach (var (entity, applicationId) in atomicObjects)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      string sourceType = entity.GetType().Name;
+      var sw = Stopwatch.StartNew();
+      try
+      {
+        CollectedObject collected = atomicDefinitionObjectIds.Contains(applicationId)
+          // Definition members live in DEFINITION-LOCAL coordinates and are placed by their instance's transform.
+          // Rebasing them into the UCS too would transform them twice, so convert them with no reference point.
+          ? CollectWithoutReferencePoint(entity, applicationId, sourceType, instanceProxies)
+          : CollectObject(entity, applicationId, sourceType, instanceProxies, referencePointInverse);
+        collectedObjects.Add(collected);
+        results.Add(new(Status.SUCCESS, applicationId, sourceType, collected.Converted));
+        session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogError(ex, "Failed to convert {SourceType}", sourceType);
+        results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+        session.RecordObject(applicationId, sourceType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
+      }
+
+      onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
+    }
+
+    if (results.Count > 0 && results.All(x => x.Status == Status.ERROR))
+    {
+      throw new SpeckleException("Failed to convert all objects.");
+    }
+
+    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Colours: only
+    // explicit object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer
+    // COLLECTION nodes' NODE_HAS_COLOR edge instead (mirrors Rhino), so ByLayer objects inherit the restored layer
+    // colour on receive with no edge. A layer's authored material rides its COLLECTION node the same way
+    // (NODE_HAS_MATERIAL [ENG-9346]); the flatten onto inheriting objects' geometry stays the render carrier
+    // [ENG-9118].
+    var (materials, layerMaterialInheritors, layerNameByAppId) = UnpackMaterialsWithLayers(atomicObjects);
+    var colors = colorUnpacker.UnpackColors(atomicObjects, new List<LayerTableRecord>());
+    var layerArgbByName = CollectLayerColors(atomicObjects);
+
+    // Authored scene groups → plain snapshot records (Base-free — no GroupProxy). Membership lists OBJECT ids.
+    var groups = CollectGroups(atomicObjects);
+
+    return new CollectedModel(
+      units,
+      collectedObjects,
+      materials,
+      colors,
+      layerArgbByName,
+      instanceDefinitionProxies,
+      groups,
+      layerMaterialInheritors,
+      layerNameByAppId,
+      converterSettings.Current.ApplyTransform,
+      converterSettings.Current.ModelPlacementSource,
+      converterSettings.Current.ModelPlacementOptions,
+      converterSettings.Current.CoordinateMetadata,
+      results
+    );
+  }
+
+  // Unpacks render materials INCLUDING the layer stage, and records which objects inherit a layer's material.
+  //
+  // An entity whose material is ByLayer gets no object-level proxy (the unpacker's object stage skips it by design);
+  // its material rides the proxy the LAYER stage builds, which lists the LAYER id — and a layer id resolves to no
+  // geometry in phase 2, so the inherited material was dropped from the bundle entirely and the object drew with the
+  // default material [ENG-9118]. Recording object → the id of the layer whose material it inherits lets phase 2 land
+  // HAS_MATERIAL on the object's own geometry instead. The inheritance is only recorded when the layer actually
+  // carries a (non-default) material — the same condition the unpacker's layer stage uses to build the proxy — so
+  // every recorded object is guaranteed to resolve to a MATERIAL node.
+  //
+  // AutoCAD-API-bound (transaction) → phase 1 only. The layer records must stay OPEN across the UnpackMaterials call,
+  // hence the single transaction wrapping both. LayerNameByAppId keys the layer-stage proxies (which list LAYER
+  // application ids) back to the layer names the COLLECTION nodes are interned by, so phase 2 can hang each layer's
+  // authored material on its node (NODE_HAS_MATERIAL) [ENG-9346].
+  private (
+    List<RenderMaterialProxy> Materials,
+    Dictionary<string, string> LayerMaterialInheritors,
+    Dictionary<string, string> LayerNameByAppId
+  ) UnpackMaterialsWithLayers(List<AutocadRootObject> atomicObjects)
+  {
+    var inheritors = new Dictionary<string, string>(StringComparer.Ordinal);
+    var layerNameByAppId = new Dictionary<string, string>(StringComparer.Ordinal);
+    var usedLayers = new List<LayerTableRecord>();
+    try
+    {
+      var db = converterSettings.Current.Document.Database;
+      using var tr = db.TransactionManager.StartTransaction();
+      var layerTable = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+      var recordsByName = new Dictionary<string, LayerTableRecord>(StringComparer.Ordinal);
+
+      foreach (var (entity, applicationId) in atomicObjects)
+      {
+        string layerName = entity.Layer;
+        if (!recordsByName.TryGetValue(layerName, out LayerTableRecord? record))
+        {
+          if (!layerTable.Has(layerName))
+          {
+            continue;
+          }
+          record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+          recordsByName[layerName] = record;
+          usedLayers.Add(record);
+          layerNameByAppId[record.GetSpeckleApplicationId()] = layerName;
+        }
+
+        if (entity.Material == "ByLayer" && LayerHasRenderMaterial(record, tr))
+        {
+          inheritors[applicationId] = record.GetSpeckleApplicationId();
+        }
+      }
+
+      var unpacked = materialUnpacker.UnpackMaterials(atomicObjects, usedLayers);
+      tr.Commit();
+      return (unpacked, inheritors, layerNameByAppId);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogError(ex, "Failed to unpack layer render materials for the artefact bundle");
+      // Object-level materials must still make it into the bundle even if the layer pass fell over.
+      return (
+        materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>()),
+        inheritors,
+        layerNameByAppId
+      );
+    }
+  }
+
+  // True when the layer itself carries a render material worth sending — mirrors the skip the material unpacker's
+  // layer stage applies ("Global" is AutoCAD's default material, present on every layer) [ENG-9118].
+  private static bool LayerHasRenderMaterial(LayerTableRecord layer, Transaction tr) =>
+    !layer.MaterialId.IsNull
+    && tr.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material
+    && material.Name != "Global";
+
+  // AutoCAD groups → plain snapshot records. Membership rides persistent reactors on each entity (a Group is a
+  // reactor on its members); AutoCAD groups don't nest, so each membership is one flat IN_GROUP edge.
+  // AutoCAD-API-bound (transaction) → phase 1 only.
+  private List<CollectedGroup> CollectGroups(List<AutocadRootObject> atomicObjects)
+  {
+    var groups = new Dictionary<string, CollectedGroup>(StringComparer.Ordinal);
+    using var transaction = converterSettings.Current.Document.Database.TransactionManager.StartTransaction();
+    foreach (var (dbObject, applicationId) in atomicObjects)
+    {
+      try
+      {
+        foreach (ObjectId reactorId in dbObject.GetPersistentReactorIds())
+        {
+          if (transaction.GetObject(reactorId, OpenMode.ForRead) is not Group group)
+          {
+            continue;
+          }
+          string groupAppId = group.GetSpeckleApplicationId();
+          if (!groups.TryGetValue(groupAppId, out CollectedGroup? collected))
+          {
+            collected = new CollectedGroup(groupAppId, group.Name, new List<string>());
+            groups[groupAppId] = collected;
+          }
+          collected.MemberIds.Add(applicationId);
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Failed to unpack groups for {AppId}", applicationId);
+      }
+    }
+    return groups.Values.ToList();
+  }
+
+  // Captures the colour of every layer used by the selection (AutoCAD API is document-bound → phase 1 only), so
+  // phase 2 can stamp each layer COLLECTION node's argb — the layer half of colour inheritance.
+  private Dictionary<string, int> CollectLayerColors(List<AutocadRootObject> atomicObjects)
+  {
+    var result = new Dictionary<string, int>(StringComparer.Ordinal);
+    try
+    {
+      var db = converterSettings.Current.Document.Database;
+      using var tr = db.TransactionManager.StartTransaction();
+      var layerTable = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+      foreach (var (entity, _) in atomicObjects)
+      {
+        string layerName = entity.Layer;
+        if (result.ContainsKey(layerName) || !layerTable.Has(layerName))
+        {
+          continue;
+        }
+        var record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+        result[layerName] = record.Color.ColorValue.ToArgb();
+      }
+      tr.Commit();
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogError(ex, "Failed to collect layer colours for the artefact bundle");
+    }
+    return result;
+  }
+
+  // A block-definition member, converted with the reference point switched off so it stays in definition-local
+  // coordinates. Mirrors the v1 builder's atomicDefinitionObjectIds branch [ENG-9116]. The push is scoped to this
+  // one conversion — the settings store is restored on dispose, so the next top-level object rebases as usual.
+  private CollectedObject CollectWithoutReferencePoint(
+    Entity entity,
+    string applicationId,
+    string sourceType,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies
+  )
+  {
+    using (converterSettings.Push(current => current with { ReferencePointTransform = null }))
+    {
+      return CollectObject(entity, applicationId, sourceType, instanceProxies, null);
+    }
+  }
+
+  // Converts one AutoCAD entity to its Speckle representation (instance proxy or AutocadObject carrier). The
+  // AutocadObject is a transient carrier — phase 2 reads its displayValue/rawEncoding/properties and never serializes
+  // it (the same way Rhino transiently uses InstanceProxy/RenderMaterialProxy).
+  private CollectedObject CollectObject(
+    Entity entity,
+    string applicationId,
+    string sourceType,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
+    Matrix3d? referencePointInverse
+  )
+  {
+    if (instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
+    {
+      // A block placement's transform is authored in WORLD coordinates, while the definition members it places were
+      // converted into the (UCS-rebased) coordinates the rest of the send speaks. Pre-multiplying a TOP-LEVEL
+      // placement by the inverse UCS puts the two back in the same frame — without it the instance drifts away from
+      // the loose geometry it was drawn against [ENG-9116]. A nested placement is already definition-local.
+      if (instanceProxy.maxDepth == 0 && referencePointInverse is Matrix3d inverse && entity is BlockReference br)
+      {
+        instanceProxy.transform = TransformHelper.ConvertToInstanceMatrix4x4(br.BlockTransform.PreMultiplyBy(inverse));
+      }
+
+      var instanceProps =
+        instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
+      return new CollectedObject(applicationId, sourceType, entity.Layer, instanceProps, instanceProxy);
+    }
+
+    Base converted = converter.Convert(entity);
+    // AutoCAD wraps entities in AutocadObject, Civil3D in Civil3dObject — both are DataObjects carrying the
+    // converted properties + display meshes.
+    var properties = converted is DataObject dataObject ? dataObject.properties : new Dictionary<string, object?>();
+    return new CollectedObject(applicationId, sourceType, entity.Layer, properties, converted);
+  }
+
+  // ── Phase 2 (worker thread): pure-Speckle snapshot → parquet bundle ──────────────────────────────────
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
+  private BundleResult WriteBundle(
+    CollectedModel model,
+    ArtefactSessionLog session,
+    string versionId,
+    string outputDir,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
+
+    // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).
+    foreach (var defProxy in model.Definitions)
+    {
+      pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
+    }
+
+    var layerCollectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    var geometryKsByObjectId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+    var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
+
+    // Block-definition members are interned as atomic objects too, but they render ONLY through their definition
+    // (via a placed instance's transform). They get NO standalone top-level RENDER edges — suppressed in EmitObject —
+    // while keeping their scene membership (IN_COLLECTION) and joining the definition graph via DEFINES_MEMBER /
+    // PLACES (see EmitValueNodes), so their layer, properties and colour source stay reachable [ENG-9344].
+    var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
+
+    // Every selected object, known up-front so a Civil3D child that is ALSO a top-level object (a subassembly under a
+    // corridor) defers its properties/geometry to its own EmitObject regardless of which is visited first [ENG-9333].
+    var topLevelIds = model.Objects.Select(o => o.ApplicationId).ToHashSet(StringComparer.Ordinal);
+
+    // AutoCAD colour SEMANTICS the ARGB-only COLOR node cannot carry [ENG-9117] — see CollectColorSemantics.
+    var colorSemantics = CollectColorSemantics(model.Colors);
+
+    // The Collect-phase results are provisional: the write phase can still drop an object's entire geometry
+    // (SGEO-unencodable types). Amend those to ERROR so the report card matches the bundle contents [ENG-8826].
+    var results = model.Results.ToList();
+    var resultIndexByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
+    for (int i = 0; i < results.Count; i++)
+    {
+      resultIndexByAppId[results[i].SourceId] = i;
+    }
+
+    int count = 0;
+    foreach (CollectedObject co in model.Objects)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      int collK = GetOrAddLayerCollection(pipeline, co.LayerName, model.LayerArgbByName, layerCollectionKByName);
+      string? dropReason = EmitObject(
+        pipeline,
+        co,
+        collK,
+        model.Units,
+        geometryKsByObjectId,
+        instanceKByObjectId,
+        definitionMemberIds,
+        topLevelIds,
+        colorSemantics.TryGetValue(co.ApplicationId, out var semantics) ? semantics : null
+      );
+      if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
+      {
+        results[ri] = new(Status.ERROR, co.ApplicationId, co.SourceType, null, new SpeckleException(dropReason));
+        session.RecordObject(co.ApplicationId, co.SourceType, Status.ERROR, dropReason, 0);
+      }
+      onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
+    }
+
+    EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, layerCollectionKByName);
+    EmitGroups(pipeline, model.Groups, definitionMemberIds);
+    EmitCivilNetworkTopology(pipeline, model.Objects);
+    EmitModelPlacement(pipeline, model);
+    EmitAdditionalNodes(pipeline);
+
+    // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
+    pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
+
+    pipeline.Complete();
+
+    var bundle = Directory
+      .EnumerateFiles(outputDir, versionId + ".*")
+      .Where(p => p.EndsWith(".parquet", StringComparison.Ordinal))
+      .ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.Ordinal);
+
+    var objectCount = results.Count(r => r.Status == Status.SUCCESS);
+    var rootId = $"binary-{versionId}";
+
+    session.SetStat("files", bundle.Count);
+    session.SetStat("objects", objectCount);
+    session.SetStat("definitions", model.Definitions.Count);
+    session.SetStat("materials", model.Materials.Count);
+    session.SetStat("layers", layerCollectionKByName.Count);
+    session.SetStat("groups", model.Groups.Count);
+
+    logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
+    return new BundleResult(bundle, rootId, objectCount, results);
+  }
+
+  // Emits one object: eav labels + IN_COLLECTION, then a block placement (DISPLAY_INSTANCE → INSTANCE node) or
+  // geometry — the lossless SAT SOLID blob (if present) plus the DISPLAY meshes. Pure Speckle (no AutoCAD API).
+  // Returns null on success, or a drop reason when the object had display geometry but NONE of it could be
+  // encoded (and no solid landed) — the caller downgrades the object's Collect-phase SUCCESS [ENG-8826].
+  private string? EmitObject(
+    ObjectsArtifactPipeline pipeline,
+    CollectedObject co,
+    int collK,
+    string units,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    Dictionary<string, int> instanceKByObjectId,
+    HashSet<string> definitionMemberIds,
+    HashSet<string> topLevelIds,
+    ColorSemantics? colorSemantics
+  )
+  {
+    // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE / SOLID) — that would draw it untransformed at
+    // the model origin. It DOES keep the ordinary object-sourced IN_COLLECTION, which is how its layer travels
+    // [ENG-9344]; render-less objects are skipped by every consumer that walks objects, so carrying the membership
+    // costs nothing in the scene tree. Its geometry/instance K is still registered below so DEFINES /
+    // DEFINES_INSTANCE resolve, and DEFINES_MEMBER / PLACES join it back to this object row (EmitValueNodes).
+    bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
+
+    int objK = pipeline.InternObject(co.ApplicationId);
+    pipeline.InCollection(objK, collK, 0);
+    pipeline.AddProperties(
+      co.ApplicationId,
+      co.Properties,
+      RootScalars(co.Converted.speckle_type, ObjectName(co), units, co.SourceType, colorSemantics)
+    );
+
+    // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
+    if (co.Converted is InstanceProxy instanceProxy)
+    {
+      int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
+      int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
+      instanceKByObjectId[co.ApplicationId] = instK;
+      if (!isDefinitionMember)
+      {
+        pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
+      }
+      return null;
+    }
+
+    // ── geometry object ───────────────────────────────────────────────────────────────────────────────
+    // The DataObject carrier (AutocadObject / Civil3dObject) already split display meshes from the lossless raw
+    // encoding (a Solid3d carries both; a plain mesh/curve/point is its own display). AutoCAD solids carry an
+    // ACIS-SAT rawEncoding; Civil3D objects carry their base curve(s) as a display FALLBACK (see
+    // WithCivilBaseCurveFallback).
+    List<Base> displayGeometry;
+    RawEncoding? rawEncoding = null;
+    if (co.Converted is DataObject dataObject)
+    {
+      displayGeometry = new List<Base>(dataObject.displayValue);
+      if (co.Converted is Civil3dObject civil)
+      {
+        displayGeometry = WithCivilBaseCurveFallback(displayGeometry, civil);
+      }
+      // Civil3D's Solid3d converter (Civil3dObject, not AutocadObject) parks the SAT under "encodedValue", which is
+      // also what the v1 receive accepted; without this fallback a Civil solid shipped no SOLID rel [ENG-9325].
+      rawEncoding = (co.Converted as AutocadObject)?.rawEncoding ?? dataObject["encodedValue"] as RawEncoding;
+    }
+    else
+    {
+      displayGeometry = new List<Base> { co.Converted };
+    }
+
+    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. A standalone object links it
+    // via the SOLID rel (tracked in hasSolid so a mesh-less solid isn't reported as a drop [ENG-8826]); a definition
+    // member instead lets it ride DEFINES (added to gKs below) so the block reconstructs the native Solid3d, not
+    // just its display mesh [ENG-8855] — but a member still gets NO standalone SOLID edge (it renders only through
+    // a placed instance's transform). Mirrors the Rhino builder.
+    bool hasSolid = false;
+    int? memberSolidK = null;
+    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
+    {
+      byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
+      int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.ACAD_SAT);
+      if (isDefinitionMember)
+      {
+        memberSolidK = solidK;
+      }
+      else
+      {
+        pipeline.Solid(objK, solidK, 0);
+        hasSolid = true;
+      }
+    }
+
+    // Renderable display meshes (and self-display primitives the SGEO encoder supports: points/curves). A bad
+    // fragment is isolated (poison-element rule: it must never abort the send) — but its reason is kept so a
+    // fully-dropped object can be reported instead of silently claiming SUCCESS.
+    var gKs = new List<int>();
+    string? lastSkip = null;
+    if (memberSolidK is int msk)
+    {
+      gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the SAT per member
+    }
+    // A Civil3D entity already reached through a corridor's .elements tree (EmitCivilChild) has that copy's corridor
+    // solids registered under its id; this object's own display is appended after them, not in their place [ENG-9333].
+    geometryKsByObjectId.TryGetValue(co.ApplicationId, out List<int>? priorGKs);
+    int ord = priorGKs?.Count ?? 0;
+    foreach (Base fragment in displayGeometry)
+    {
+      try
+      {
+        string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
+        int gK = pipeline.AddGeometry(gAppId, fragment);
+        if (!isDefinitionMember)
+        {
+          pipeline.Display(objK, gK, ord); // members render only via DEFINES through a placed instance's transform
+        }
+        gKs.Add(gK);
+        ord++;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        lastSkip = $"{fragment.speckle_type}: {ex.Message}";
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported display geometry {Type} on {AppId}",
+          fragment.speckle_type,
+          co.ApplicationId
+        );
+      }
+    }
+
+    if (priorGKs is not null)
+    {
+      priorGKs.AddRange(gKs);
+    }
+    else
+    {
+      geometryKsByObjectId[co.ApplicationId] = gKs;
+    }
+
+    // A ByLayer definition member deliberately gets NO colour edge: its layer rides IN_COLLECTION and the layer's
+    // colour rides NODE_HAS_COLOR, so consumers resolve the inheritance from the graph (DEFINES_MEMBER joins the
+    // member back to this object row) — pinning the resolved layer colour here (the retired ENG-8825 flatten) came
+    // back as an EXPLICIT colour on the member after a round trip, losing its ByLayer-ness [ENG-9344].
+
+    // Every display fragment was dropped and no solid landed → the bundle carries nothing renderable for this
+    // object; report it instead of standing on the Collect-phase SUCCESS. An object that never had display
+    // geometry (e.g. a Civil3D parent whose content rides its children) is NOT a drop.
+    string? dropReason =
+      displayGeometry.Count > 0 && gKs.Count == 0 && !hasSolid
+        ? lastSkip ?? "no display geometry could be encoded"
+        : null;
+
+    // Civil3D sub-object tree (Civil3dObject.elements): corridor → baseline → region → applied assembly →
+    // subassembly; alignment → profiles; site → parcels/feature-lines. The converter builds this graph but the
+    // display-only path drops it. Intern each child, emit its geometry, and link it to its parent with a SUBELEMENT
+    // edge (guarded against re-emitting geometry for a child that's also a top-level object).
+    if (co.Converted is Civil3dObject civilParent)
+    {
+      int childOrd = 0;
+      foreach (Base child in civilParent.elements)
+      {
+        EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId, topLevelIds);
+      }
+      if (childOrd > 0)
+      {
+        return null; // the parent's content rides its emitted children — not a drop even if its own display failed
+      }
+    }
+
+    return dropReason;
+  }
+
+  // A Civil3dObject's baseCurves are a display FALLBACK, never extra geometry on top of displayValue.
+  // CivilEntityToSpeckleTopLevelConverter already fills displayValue FROM the base curves for every entity with no
+  // display of its own (alignments, parcels, parcel segments — via ProcessICurvesForDisplay), so appending them
+  // wholesale emitted each of those curves TWICE: the viewer hid it, but receive baked two coincident entities per
+  // curve, and every alignment/parcel arrived doubled [ENG-8835]. Emitting displayValue alone is also what the v1
+  // path bakes (DataObjectConverter reads displayValue only, never baseCurves), so this restores parity.
+  //
+  // The fallback still matters for the one case displayValue cannot cover: ProcessICurvesForDisplay only passes
+  // Line/Polyline/Arc (and recurses Polycurve), so a base curve of any other type — a circular or spline parcel
+  // boundary — leaves displayValue empty, and the raw base curve is then the object's only geometry.
+  private static List<Base> WithCivilBaseCurveFallback(List<Base> displayGeometry, Civil3dObject civil) =>
+    displayGeometry.Count == 0 && civil.baseCurves is { Count: > 0 } baseCurves
+      ? baseCurves.Cast<Base>().ToList()
+      : displayGeometry;
+
+  // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always, then:
+  //  - properties + IN_COLLECTION once per child id — and NEVER for a child that is also a top-level object (a
+  //    subassembly entity under its corridor): the corridor copy carries an EMPTY properties bag, and emitting it here
+  //    too wrote the root scalars (name/type/units/speckle_type) twice whenever the corridor was visited before the
+  //    entity, or replaced the real properties with the empty bag in the other order [ENG-9333];
+  //  - display geometry for EVERY copy: the same subassembly entity appears under each region that applies its
+  //    assembly and each copy carries THAT region's corridor solids, which are distinct from the entity's own
+  //    (2D shape) display that EmitObject emits.
+  // Recurses into its own .elements.
+  private void EmitCivilChild(
+    ObjectsArtifactPipeline pipeline,
+    Base child,
+    int collK,
+    string units,
+    int parentObjK,
+    int subOrd,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    HashSet<string> topLevelIds
+  )
+  {
+    string childAppId = child.applicationId ?? Guid.NewGuid().ToString();
+    int childK = pipeline.InternObject(childAppId);
+    pipeline.Subelement(parentObjK, childK, subOrd);
+
+    if (!geometryKsByObjectId.TryGetValue(childAppId, out List<int>? gKs))
+    {
+      gKs = new List<int>();
+      geometryKsByObjectId[childAppId] = gKs;
+      if (!topLevelIds.Contains(childAppId))
+      {
+        pipeline.InCollection(childK, collK, 0);
+        var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
+        string childName = child is DataObject dn ? dn.name : child.speckle_type;
+        string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
+        pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
+      }
+    }
+
+    var display = child is Civil3dObject cc
+      ? WithCivilBaseCurveFallback(new List<Base>(cc.displayValue), cc)
+      : new List<Base> { child };
+    foreach (Base fragment in display)
+    {
+      try
+      {
+        int ord = gKs.Count;
+        int gK = pipeline.AddGeometry(fragment.applicationId ?? $"{childAppId}:g{ord}", fragment);
+        pipeline.Display(childK, gK, ord);
+        gKs.Add(gK);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported Civil3D child geometry {Type} on {AppId}",
+          fragment.speckle_type,
+          childAppId
+        );
+      }
+    }
+
+    if (child is Civil3dObject civilChild)
+    {
+      int grandOrd = 0;
+      foreach (Base grandChild in civilChild.elements)
+      {
+        EmitCivilChild(pipeline, grandChild, collK, units, childK, grandOrd++, geometryKsByObjectId, topLevelIds);
+      }
+    }
+  }
+
+  // Civil3D pipe-network topology, grounded in the resolved "Assignments" property app-ids (ClassPropertiesExtractor):
+  //   IN_SYSTEM    part (pipe/structure) → its pipe network (a CONTAINER, subtype "Network").
+  //   CONNECTS_TO  pipe → its start/end structure (guarded to sent objects; a structure not in the send set is skipped).
+  // Non-Civil3D objects carry no "Assignments" dict and are skipped. InternObject is idempotent, so re-resolving an
+  // object's K here is a lookup, not a new object.
+  private static void EmitCivilNetworkTopology(ObjectsArtifactPipeline pipeline, IReadOnlyList<CollectedObject> objects)
+  {
+    var sent = objects.Select(o => o.ApplicationId).ToHashSet(StringComparer.Ordinal);
+    var networkKById = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var co in objects)
+    {
+      if (!co.Properties.TryGetValue("Assignments", out var a) || a is not IDictionary<string, object?> assign)
+      {
+        continue;
+      }
+      int objK = pipeline.InternObject(co.ApplicationId);
+
+      if (assign.TryGetValue("networkId", out var nid) && nid is string networkId && networkId.Length > 0)
+      {
+        if (!networkKById.TryGetValue(networkId, out int netK))
+        {
+          netK = pipeline.AddContainer(
+            networkId,
+            assign.TryGetValue("networkName", out var nn) ? nn as string : null,
+            null,
+            "Network"
+          );
+          networkKById[networkId] = netK;
+        }
+        pipeline.InSystem(objK, netK, 0);
+      }
+
+      foreach (var key in s_structureKeys)
+      {
+        if (
+          assign.TryGetValue(key, out var sid)
+          && sid is string structId
+          && structId.Length > 0
+          && sent.Contains(structId)
+        )
+        {
+          pipeline.ConnectsTo(objK, pipeline.InternObject(structId));
+        }
+      }
+    }
+  }
+
+  private static readonly string[] s_structureKeys = { "startStructureId", "endStructureId" };
+
+  // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL) → object colors (HAS_COLOR).
+  // Order matters: all referenced meshes/instances must exist (added in the object loop) before the edges resolve them.
+  private void EmitValueNodes(
+    ObjectsArtifactPipeline pipeline,
+    CollectedModel model,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    Dictionary<string, int> instanceKByObjectId,
+    IReadOnlyDictionary<string, int> layerCollectionKByName
+  )
+  {
+    // 1) instance definitions → DEFINES (member meshes) / DEFINES_INSTANCE (nested block placements).
+    foreach (var defProxy in model.Definitions)
+    {
+      int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
+      int memberOrd = 0;
+      foreach (var memberId in defProxy.objects)
+      {
+        if (instanceKByObjectId.TryGetValue(memberId, out var instK))
+        {
+          pipeline.DefinesInstance(defK, instK, memberOrd);
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK);
+        }
+        else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
+        {
+          // All geometry of one member shares its member ordinal, so receive can group the member's authoritative SAT
+          // solid with its display mesh(es) and prefer the solid (see AutocadHostObjectArtefactBuilder.BuildDefinitions).
+          foreach (var gK in memberGKs)
+          {
+            pipeline.Defines(defK, gK, memberOrd);
+          }
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK: null);
+        }
+        memberOrd++;
+      }
+    }
+
+    // The layer-stage material proxies list LAYER application ids — key them to the layer COLLECTION nodes so the
+    // authored layer → material assignment itself makes the bundle (NODE_HAS_MATERIAL below) [ENG-9346].
+    var collKByLayerId = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerNameByAppId)
+    {
+      if (layerCollectionKByName.TryGetValue(kv.Value, out int layerCollK))
+      {
+        collKByLayerId[kv.Key] = layerCollK;
+      }
+    }
+
+    EmitMaterialNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, collKByLayerId);
+    EmitColorNodes(pipeline, model.Colors, geometryKsByObjectId, instanceKByObjectId);
+  }
+
+  // 2) render materials → HAS_MATERIAL (geometry → material node). Material proxies list OBJECT ids.
+  // A LAYER-sourced proxy lists a LAYER id instead, which owns no geometry — the authored assignment lands on the
+  // layer's COLLECTION node (NODE_HAS_MATERIAL [ENG-9346]) and the flatten below lands it on the geometry of every
+  // object inheriting that layer's material (ByLayer) [ENG-9118].
+  private void EmitMaterialNodes(
+    ObjectsArtifactPipeline pipeline,
+    CollectedModel model,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    Dictionary<string, int> instanceKByObjectId,
+    Dictionary<string, int> collKByLayerId
+  )
+  {
+    var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerMaterialInheritors)
+    {
+      if (!inheritorsByLayerId.TryGetValue(kv.Value, out var forLayer))
+      {
+        inheritorsByLayerId[kv.Value] = forLayer = new List<string>();
+      }
+      forLayer.Add(kv.Key);
+    }
+
+    foreach (var materialProxy in model.Materials)
+    {
+      var value = materialProxy.value;
+      int matK = pipeline.AddMaterial(
+        materialProxy.applicationId.NotNull(),
+        value.name,
+        value.diffuse,
+        value.opacity,
+        value.metalness,
+        value.roughness,
+        value.emissive,
+        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+      );
+      foreach (var objectId in materialProxy.objects)
+      {
+        if (geometryKsByObjectId.TryGetValue(objectId, out var gKs))
+        {
+          foreach (var gK in gKs)
+          {
+            pipeline.HasMaterial(gK, matK);
+          }
+        }
+        else if (instanceKByObjectId.ContainsKey(objectId))
+        {
+          // A material assigned directly to a block REFERENCE: it owns no geometry to hang a HAS_MATERIAL edge on,
+          // so it rides the object plane instead [bundle-spec rel 26 OBJECT_HAS_MATERIAL] — FILL semantics: members
+          // with their own geometry-level material keep it, ByBlock members inherit this one [ENG-9119].
+          pipeline.ObjectHasMaterial(pipeline.InternObject(objectId), matK);
+        }
+        else if (collKByLayerId.TryGetValue(objectId, out int layerCollK))
+        {
+          // The authored layer → material assignment itself [bundle-spec rel 28 NODE_HAS_MATERIAL] — receive
+          // restores it on the rebuilt layer record, so ByLayer objects keep inheriting after a round trip
+          // [ENG-9346]. Weakest ladder tier; the flatten below stays the render carrier.
+          pipeline.NodeHasMaterial(layerCollK, matK);
+          // layer-sourced: the layer owns no geometry, so the inherited material also lands on each object that
+          // draws with it — block-definition members included, since their geometry Ks are registered too.
+          if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+          {
+            foreach (var inheritorId in inheritors)
+            {
+              if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+              {
+                foreach (var gK in inheritorGKs)
+                {
+                  pipeline.HasMaterial(gK, matK);
+                }
+              }
+              else if (instanceKByObjectId.ContainsKey(inheritorId))
+              {
+                // A block REFERENCE inheriting from its layer: no geometry of its own, so its effective material
+                // rides the object plane — ByBlock members fill from it, exactly as in AutoCAD [ENG-9119].
+                pipeline.ObjectHasMaterial(pipeline.InternObject(inheritorId), matK);
+              }
+            }
+          }
+        }
+        else
+        {
+          logger.LogWarning(
+            "Render material '{Material}' lists {AppId}, which resolved to no geometry — the material is not in the bundle for it",
+            materialProxy.value.name,
+            objectId
+          );
+        }
+      }
+    }
+  }
+
+  // 3) object colors → HAS_COLOR (geometry → color node). Color proxies list OBJECT ids. A block INSTANCE has
+  // no geometry of its own (it enters instanceKByObjectId, not geometryKsByObjectId), so its colour rides the
+  // object plane instead [bundle-spec rel 27 OBJECT_HAS_COLOR] — OVERRIDE semantics: object > geometry >
+  // container — so per-placement colour overrides survive [ENG-8825] [ENG-9369].
+  private static void EmitColorNodes(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<ColorProxy> colors,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    Dictionary<string, int> instanceKByObjectId
+  )
+  {
+    foreach (var colorProxy in colors)
+    {
+      // A "block"-sourced proxy is INHERITANCE, not an explicit colour: a ByBlock member must take its placing
+      // instance's colour — exactly the object-sourced edge below — and the unpacker itself notes ByBlock's
+      // ColorValue is garbage (near-black/white). Emitting it as an explicit edge pinned members to white.
+      if (colorProxy["source"] is "block")
+      {
+        continue;
+      }
+      int colorK = pipeline.AddColor(colorProxy.value);
+      foreach (var objectId in colorProxy.objects)
+      {
+        if (geometryKsByObjectId.TryGetValue(objectId, out var gKs))
+        {
+          foreach (var gK in gKs)
+          {
+            pipeline.HasColor(gK, colorK);
+          }
+        }
+        else if (instanceKByObjectId.ContainsKey(objectId))
+        {
+          // Successor of the tagged HAS_COLOR (rel 6, ord=1) stopgap from ENG-8822: rel 27 is object-sourced by
+          // definition, so no namespace tag is needed. Receive folds both vintages into ColorByObject [ENG-9369].
+          pipeline.ObjectHasColor(pipeline.InternObject(objectId), colorK);
+        }
+      }
+    }
+  }
+
+  // Graph-native member join [bundle-spec rels 24 PLACES / 25 DEFINES_MEMBER]: DEFINES_MEMBER def → member OBJECT
+  // with ord = the same member ordinal the member's DEFINES/DEFINES_INSTANCE rows carry (join key (definition, ord) —
+  // immune to content-hash dedup, which can hand two members in different definitions the same geometry K); PLACES
+  // member object → its nested INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's
+  // job). This is what keeps a member's identity — its layer, eav properties and colour source — reachable from the
+  // definition graph [ENG-9344]. Mirrors RhinoBundleBuilder.
+  private static void EmitMemberGraphJoin(
+    ObjectsArtifactPipeline pipeline,
+    int defK,
+    string memberId,
+    int memberOrd,
+    int? instK
+  )
+  {
+    int memberObjK = pipeline.InternObject(memberId);
+    pipeline.DefinesMember(defK, memberObjK, memberOrd);
+    if (instK is { } placementK)
+    {
+      pipeline.Places(memberObjK, placementK);
+    }
+  }
+
+  protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
+
+  // modelPlacement.* — same contract as the Revit producer: transform / options.*.transform map WCS (the drawing's
+  // internal frame) → that datum's space and are emitted regardless of baking; appliedToGeometry says whether the
+  // sender already applied `transform` to stored coordinates.
+  private static void EmitModelPlacement(ObjectsArtifactPipeline pipeline, CollectedModel model)
+  {
+    var options = model.ModelPlacementOptions ?? new Dictionary<string, Matrix3d>();
+    Matrix3d defaultPlacement = Matrix3d.Identity;
+
+    foreach (var option in options)
+    {
+      pipeline.AddModelProperty($"modelPlacement.options.{option.Key}.transform", MatrixToCsv(option.Value));
+      if (option.Key == model.ModelPlacementSource)
+      {
+        defaultPlacement = option.Value;
+      }
+    }
+
+    pipeline.AddModelProperty("modelPlacement.default", model.ModelPlacementSource);
+    pipeline.AddModelProperty("modelPlacement.source", model.ModelPlacementSource);
+    pipeline.AddModelProperty("modelPlacement.transform", MatrixToCsv(defaultPlacement));
+    pipeline.AddModelProperty("modelPlacement.units", model.Units);
+    pipeline.AddModelProperty("modelPlacement.appliedToGeometry", model.ApplyTransform);
+
+    if (model.CoordinateMetadata is not null)
+    {
+      foreach (var property in model.CoordinateMetadata)
+      {
+        pipeline.AddModelProperty(property.Key, property.Value.Value, property.Value.Units);
+      }
+    }
+  }
+
+  private static string MatrixToCsv(Matrix3d matrix) =>
+    string.Join(
+      ",",
+      new[]
+      {
+        matrix[0, 0],
+        matrix[0, 1],
+        matrix[0, 2],
+        matrix[0, 3],
+        matrix[1, 0],
+        matrix[1, 1],
+        matrix[1, 2],
+        matrix[1, 3],
+        matrix[2, 0],
+        matrix[2, 1],
+        matrix[2, 2],
+        matrix[2, 3],
+        matrix[3, 0],
+        matrix[3, 1],
+        matrix[3, 2],
+        matrix[3, 3],
+      }.Select(x => x.ToString("R", CultureInfo.InvariantCulture))
+    );
+
+  // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
+  // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
+  // edges. Definition members get no scene edges (same suppression as IN_COLLECTION), so a group emptied by
+  // that is skipped entirely.
+  private static void EmitGroups(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<CollectedGroup> groups,
+    HashSet<string> definitionMemberIds
+  )
+  {
+    foreach (CollectedGroup group in groups)
+    {
+      var memberIds = group.MemberIds.Where(id => !definitionMemberIds.Contains(id)).ToList();
+      if (memberIds.Count == 0)
+      {
+        continue;
+      }
+      int groupK = pipeline.AddContainer(group.Id, group.Name, null, "Group");
+      int ord = 0;
+      foreach (string memberId in memberIds)
+      {
+        pipeline.InGroup(pipeline.InternObject(memberId), groupK, ord++);
+      }
+    }
+  }
+
+  // Resolves (and interns once) the flat COLLECTION node for a layer name (with the layer's colour as its argb).
+  // AutoCAD has no nested layers.
+  private static int GetOrAddLayerCollection(
+    ObjectsArtifactPipeline pipeline,
+    string layerName,
+    IReadOnlyDictionary<string, int> layerArgbByName,
+    Dictionary<string, int> cache
+  )
+  {
+    if (cache.TryGetValue(layerName, out var existing))
+    {
+      return existing;
+    }
+    int? argb = layerArgbByName.TryGetValue(layerName, out int a) ? a : null;
+    // Layer colour as a first-class edge [bundle-spec rel 29 NODE_HAS_COLOR]; the argb-on-CONTAINER column
+    // stamp it replaces stays a read fallback on consumers for pre-vocab bundles.
+    int collK = pipeline.AddCollection(layerName, layerName, null, "Layer");
+    if (argb is int layerArgb)
+    {
+      pipeline.NodeHasColor(collK, pipeline.AddColor(layerArgb));
+    }
+    cache[layerName] = collK;
+    return collK;
+  }
+
+  // The object's authored name lives on the DataObject carrier the converter produced — a Civil3D entity name
+  // ("Alignment - (1)", "Corridor - (1)"), a Plant3D tag, a Civil3D subassembly name. Labelling every object with its
+  // .NET type name instead lost all of them [ENG-8831]. AutoCAD's own carrier sets name = type name anyway, so plain
+  // AutoCAD entities are unchanged; an InstanceProxy (block placement) carries no name and keeps the type.
+  private static string ObjectName(CollectedObject co) =>
+    co.Converted is DataObject { name.Length: > 0 } dataObject ? dataObject.name : co.SourceType;
+
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string name,
+    string units,
+    string sourceType,
+    ColorSemantics? colorSemantics = null
+  )
+  {
+    var scalars = new List<KeyValuePair<string, object?>>(6)
+    {
+      new("speckle_type", speckleType),
+      new("name", name),
+      new("units", units),
+      new("type", sourceType),
+    };
+    if (colorSemantics is { } cs)
+    {
+      scalars.Add(new(AutocadColorSemanticKeys.SOURCE, cs.ByBlock ? "block" : "aci"));
+      if (cs.Aci is int aci)
+      {
+        scalars.Add(new(AutocadColorSemanticKeys.INDEX, aci));
+      }
+    }
+    return scalars.ToArray();
+  }
+
+  /// <summary>The AutoCAD colour facts an ARGB-only COLOR node cannot express: the ACI index behind a
+  /// <c>ColorMethod.ByAci</c> colour, and whether the entity was explicitly set to <c>ByBlock</c>.</summary>
+  private sealed record ColorSemantics(int? Aci, bool ByBlock);
+
+  // The bundle's COLOR node stores ARGB only, so an AutoCAD→AutoCAD round trip flattened every ACI colour to
+  // truecolor (same pixels, but the plot-style/standards-relevant index and method were gone) and every explicit
+  // ByBlock to a fixed value [ENG-9117]. The unpacker already recorded both on the proxy — carry them through as
+  // object properties, which every other consumer simply ignores while the ARGB edge keeps rendering unchanged.
+  //
+  // Only reaches objects that own the colour themselves (atomic entities + block references). A block-DEFINITION
+  // member is not addressable this way: its geometry carries no back-reference to an object in the bundle, so it
+  // still round-trips as truecolor.
+  private static Dictionary<string, ColorSemantics> CollectColorSemantics(IReadOnlyList<ColorProxy> colors)
+  {
+    var result = new Dictionary<string, ColorSemantics>(StringComparer.Ordinal);
+    foreach (ColorProxy proxy in colors)
+    {
+      bool byBlock = proxy["source"] is "block";
+      int? aci = proxy["autocadColorIndex"] as int?;
+      if (!byBlock && aci is null)
+      {
+        continue; // a plain truecolor (ByColor) object: the ARGB edge is already lossless
+      }
+      foreach (string objectId in proxy.objects)
+      {
+        result[objectId] = new ColorSemantics(aci, byBlock);
+      }
+    }
+    return result;
+  }
+
+  // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
+  private static double[] Flatten(Matrix4x4 m) =>
+    new[]
+    {
+      m.M11,
+      m.M12,
+      m.M13,
+      m.M14,
+      m.M21,
+      m.M22,
+      m.M23,
+      m.M24,
+      m.M31,
+      m.M32,
+      m.M33,
+      m.M34,
+      m.M41,
+      m.M42,
+      m.M43,
+      m.M44,
+    };
+
+  // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
+  private sealed record CollectedObject(
+    string ApplicationId,
+    string SourceType,
+    string LayerName,
+    Dictionary<string, object?> Properties,
+    Base Converted // InstanceProxy for block instances, otherwise the AutocadObject carrier (display meshes + SAT)
+  );
+
+  private sealed record CollectedGroup(string Id, string? Name, List<string> MemberIds);
+
+  private sealed record CollectedModel(
+    string Units,
+    IReadOnlyList<CollectedObject> Objects,
+    IReadOnlyList<RenderMaterialProxy> Materials,
+    IReadOnlyList<ColorProxy> Colors,
+    IReadOnlyDictionary<string, int> LayerArgbByName,
+    IReadOnlyList<InstanceDefinitionProxy> Definitions,
+    IReadOnlyList<CollectedGroup> Groups,
+    // object id → the id of the layer whose render material it inherits (ByLayer material only) [ENG-9118]
+    IReadOnlyDictionary<string, string> LayerMaterialInheritors,
+    // layer application id → layer name, keying the layer-stage material proxies to the COLLECTION nodes [ENG-9346]
+    IReadOnlyDictionary<string, string> LayerNameByAppId,
+    bool ApplyTransform,
+    string ModelPlacementSource,
+    IReadOnlyDictionary<string, Matrix3d>? ModelPlacementOptions,
+    IReadOnlyDictionary<string, AutocadModelProperty>? CoordinateMetadata,
+    IReadOnlyList<SendConversionResult> Results
+  );
+
+  private sealed record BundleResult(
+    IReadOnlyDictionary<string, string> Bundle,
+    string RootId,
+    int ObjectCount,
+    IReadOnlyList<SendConversionResult> Results
+  );
+}

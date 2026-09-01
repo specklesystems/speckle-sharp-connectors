@@ -31,6 +31,7 @@
     <Compile Update="Plugin\SpeckleForm.cs" />
   </ItemGroup>
 
+  <Import Project="..\Speckle.Connectors.CSiShared\Net48.IronCompress.props" />
   <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
 
   <Import Project="..\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems" Label="Shared" />

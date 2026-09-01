@@ -16,6 +16,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)TsdWallPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Results\ITsdResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Results\TsdResultValueBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdNodeIndexMap.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdElementIndexMap.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TsdConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Results\TsdResultsKeys.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Results\TsdLoadingResultsExtractorBase.cs" />

@@ -68,7 +68,7 @@ public class CsiContinuousTraversalBuilder : IRootContinuousTraversalBuilder<ICs
     using var activity = _activityFactory.Start("Build");
 
     string modelFileName = _csiApplicationService.SapModel.GetModelFilename(false) ?? "Unnamed model";
-    (string forceUnit, string tempUnit) = GetForceAndTemperatureUnits();
+    (string forceUnit, string tempUnit) = CsiDatabaseUnits.GetForceAndTemperature(_converterSettings.Current.SapModel);
 
     Collection rootObjectCollection = new()
     {
@@ -196,15 +196,4 @@ public class CsiContinuousTraversalBuilder : IRootContinuousTraversalBuilder<ICs
     csiObjects
       .GroupBy(csiObject => csiObject.ObjectType)
       .ToDictionary(group => group.Key, group => group.Select(obj => obj.Name).ToList());
-
-  private (string, string) GetForceAndTemperatureUnits()
-  {
-    var forceUnit = eForce.NotApplicable;
-    var lengthUnit = eLength.NotApplicable;
-    var temperatureUnit = eTemperature.NotApplicable;
-
-    _converterSettings.Current.SapModel.GetDatabaseUnits_2(ref forceUnit, ref lengthUnit, ref temperatureUnit);
-
-    return (forceUnit.ToString(), temperatureUnit.ToString());
-  }
 }

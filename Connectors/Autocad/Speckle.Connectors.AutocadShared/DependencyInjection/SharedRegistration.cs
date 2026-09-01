@@ -24,6 +24,10 @@ public static class SharedRegistration
 {
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
+    // Pre-load IronCompress's native Zstd lib (net48 only) at startup so BOTH the artefact send and receive paths can
+    // (de)compress parquet — receive reads the bundle before the host builder runs. No-op on net8+.
+    ZstdNativeLoader.Ensure();
+
     serviceCollection.AddConnectors();
     serviceCollection.AddDUI<DefaultThreadContext, AutocadDocumentStore>();
     serviceCollection.AddDUIView();
@@ -77,6 +81,15 @@ public static class SharedRegistration
       IInstanceObjectsManager<AutocadRootObject, List<Entity>>,
       InstanceObjectsManager<AutocadRootObject, List<Entity>>
     >();
+
+    // Speckle 4.0 client-side artefact send (SGEO + raw SAT + eav + envelope parquet). Registering the builder makes
+    // SendOperation route AutoCAD/Civil3D/Plant3D sends through the artefact path (the ctor param is optional). The SDK
+    // producer builds on netstandard2.0, so this is registered on every TFM (incl. net48), like Rhino.
+    serviceCollection.AddScoped<IArtifactRootObjectBuilder<AutocadRootObject>, AutocadArtifactRootObjectBuilder>();
+    serviceCollection.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
   }
 
   public static void LoadReceive(this IServiceCollection serviceCollection)
@@ -86,6 +99,17 @@ public static class SharedRegistration
 
     // Object Builders
     serviceCollection.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();
+
+    // Speckle 4.0 artefact receive: download the parquet bundle + native bake (SGEO meshes / SAT solids, Base-free).
+    // Registering both the receiver and the host builder activates the direct-bake branch in ReceiveOperation; legacy
+    // (non-4.0) versions fall back to the v1 IHostObjectBuilder. PreferSolids = true (AutoCAD imports SAT natively).
+    serviceCollection.AddScoped<
+      Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
+      Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
+    >();
+    serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: true));
+    serviceCollection.AddScoped<IArtifactReceiver, ArtifactReceiver>();
+    serviceCollection.AddScoped<IArtifactHostObjectBuilder, AutocadHostObjectArtefactBuilder>();
 
     // Register bindings
     serviceCollection.AddSingleton<IBinding, AutocadReceiveBinding>();

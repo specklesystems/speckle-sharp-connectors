@@ -4,7 +4,7 @@ namespace Speckle.Converters.TSDShared.Results;
 
 public abstract class TsdElementForceResultsExtractorBase : TsdLoadingResultsExtractorBase<IElementEndForces>
 {
-  protected override Dictionary<string, object?> Build(IEnumerable<IElementEndForces> items)
+  protected override Dictionary<string, object?> Build(IEnumerable<IElementEndForces> items, TsdResultsContext context)
   {
     var perElement = new Dictionary<string, object?>();
     foreach (var elementForces in items)

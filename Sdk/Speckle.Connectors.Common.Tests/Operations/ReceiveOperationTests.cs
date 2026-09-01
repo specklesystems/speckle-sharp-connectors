@@ -38,7 +38,17 @@ public class ReceiveOperationTests : MoqTest
       userInfo = new UserInfo() { email = "test_user@example.com" },
       serverInfo = new ServerInfo() { url = "https://myserver.example.com" },
     };
-    var version = new Speckle.Sdk.Api.GraphQL.Models.Version();
+    var version = new Speckle.Sdk.Api.GraphQL.Models.Version()
+    {
+      authorUser = null,
+      createdAt = default,
+      id = null!,
+      message = null,
+      previewUrl = null!,
+      referencedObject = null!,
+      sourceApplication = null!,
+    };
+
     var projectName = "projectName";
     var modelName = "modelName";
 
@@ -99,7 +109,16 @@ public class ReceiveOperationTests : MoqTest
       serverInfo = new ServerInfo() { url = serverUrl.ToString() },
     };
     string referencedObject = "referencedObject";
-    var version = new Speckle.Sdk.Api.GraphQL.Models.Version() { referencedObject = referencedObject };
+    var version = new Speckle.Sdk.Api.GraphQL.Models.Version()
+    {
+      authorUser = null,
+      createdAt = default,
+      id = null!,
+      message = null,
+      previewUrl = null!,
+      referencedObject = referencedObject,
+      sourceApplication = null!,
+    };
 
     var ct = new CancellationToken();
     var receiveInfo = new ReceiveInfo(
