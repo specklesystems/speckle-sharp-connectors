@@ -3,7 +3,7 @@ name: .NET Build and Publish
 on:
   push:
     branches: ["main", "installer-test/**"]
-    tags: ["v3.*.*"] # Manual delivery on every 3.x tag
+    tags: ["202[0-9].*.*"] # unprefixed CalVer, v-prefix dropped at 2026.9 (ENG-9392)
   workflow_call: 
     secrets:
       CONNECTORS_GH_TOKEN:
