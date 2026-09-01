@@ -49,8 +49,7 @@ public class MicroStationInstanceUnpacker(
   {
     try
     {
-      DPN.DgnFile? file = instance.DgnModel?.GetDgnFile();
-      MgdElement? definition = file != null ? instance.GetDefinition(file) : null;
+      MgdElement? definition = SharedCellPlacement.FindDefinition(instance);
       if (definition == null)
       {
         logger.LogWarning("Shared cell '{Name}' has no definition; left un-instanced.", instance.CellName);

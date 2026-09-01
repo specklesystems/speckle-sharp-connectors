@@ -97,15 +97,20 @@ public class AppearanceResolver(IConverterSettingsStore<MicroStationConversionSe
     {
       DPN.DgnModelRef modelRef = element.DgnModelRef ?? settingsStore.Current.ActiveModel;
 
-      // 1. Directly attached material (strongest).
-      DPN.Material? material = DPN.MaterialManager.FindMaterialAttachment(
-        out DPN.MaterialSearchStatus _,
-        element,
-        modelRef,
-        true
-      );
+      // 1. The DISPLAY-resolved material — what MicroStation itself renders with. This covers
+      //    every assignment mechanism (attachment, element template, level/colour table) in one
+      //    call, including ones the explicit chain below misses (office.dgn's furniture).
+      DPN.Material? material = null;
+      if (element is MgdElements.DisplayableElement displayResolved)
+      {
+        using DPN.ElementDisplayParameters displayParams = displayResolved.GetElementDisplayParameters(true);
+        material = displayParams.Material;
+      }
 
-      // 2. Symbology chain: level override → (level, colour) assignment → ByLevel.
+      // 2. Directly attached material.
+      material ??= DPN.MaterialManager.FindMaterialAttachment(out DPN.MaterialSearchStatus _, element, modelRef, true);
+
+      // 3. Symbology chain: level override → (level, colour) assignment → ByLevel.
       if (material == null && element is MgdElements.DisplayableElement displayable)
       {
         using DPN.ElementDisplayParameters displayParams = displayable.GetElementDisplayParameters(false);

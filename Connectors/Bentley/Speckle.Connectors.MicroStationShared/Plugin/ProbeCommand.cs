@@ -132,6 +132,7 @@ internal static class ProbeCommand
     }
 
     DumpLevelDiagnostics(log, model);
+    DumpSharedCellAndMaterialDiagnostics(log, model, appearance);
 
     // ── Per-id detail (keyin: `Speckle probe 544761,78994,...`) ───────────────────────────
     if (!string.IsNullOrWhiteSpace(unparsed))
@@ -242,6 +243,97 @@ internal static class ProbeCommand
     catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
       log.AppendLine($"level diagnostics failed: {ex.Message}");
+    }
+  }
+
+  /// <summary>Explains instancing coverage (why a shared cell would bake instead of proxy) and
+  /// how many elements resolve a real render material in this session.</summary>
+  private static void DumpSharedCellAndMaterialDiagnostics(
+    StringBuilder log,
+    DPN.DgnModel model,
+    AppearanceResolver appearance
+  )
+  {
+    try
+    {
+      int sharedTotal = 0,
+        notClrSharedCell = 0,
+        defNull = 0,
+        placementFail = 0,
+        ok = 0;
+      var clrOther = new Dictionary<string, int>();
+      int materialHits = 0;
+      var materialNames = new HashSet<string>(StringComparer.Ordinal);
+      int scanned = 0;
+
+      foreach (MgdElement? element in model.GetGraphicElements())
+      {
+        if (element == null)
+        {
+          continue;
+        }
+        if (++scanned > 8000)
+        {
+          log.AppendLine("... shared-cell scan cap hit");
+          break;
+        }
+
+        if (appearance.ResolveMaterial(element) is { } material)
+        {
+          materialHits++;
+          materialNames.Add(material.Name);
+        }
+
+        if (element.ElementType != DPN.MSElementType.SharedCellInstance)
+        {
+          continue;
+        }
+        sharedTotal++;
+        if (element is not MgdElements.SharedCellElement sharedCell)
+        {
+          notClrSharedCell++;
+          string t = element.GetType().Name;
+          clrOther[t] = clrOther.TryGetValue(t, out int n) ? n + 1 : 1;
+          continue;
+        }
+        MgdElement? definition = Speckle.Converters.MicroStation.Services.SharedCellPlacement.FindDefinition(
+          sharedCell
+        );
+        if (definition == null)
+        {
+          defNull++;
+          continue;
+        }
+        if (
+          !Speckle.Converters.MicroStation.Services.SharedCellPlacement.TryCompute(
+            sharedCell,
+            definition,
+            out BG.DTransform3d _
+          )
+        )
+        {
+          placementFail++;
+          continue;
+        }
+        ok++;
+      }
+
+      log.AppendLine(
+        $"sharedCells: total={sharedTotal} instanceable={ok} notClrSharedCell={notClrSharedCell} "
+          + $"defNull={defNull} placementFail={placementFail}"
+      );
+      foreach (var kv in clrOther.OrderByDescending(k => k.Value).Take(5))
+      {
+        log.AppendLine($"  shared-cell clr type: {kv.Key} x{kv.Value}");
+      }
+      log.AppendLine(
+        $"materials: elementsWithMaterial={materialHits} distinct={materialNames.Count} "
+          + $"names=[{string.Join(", ", materialNames.Take(12))}]"
+      );
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+    {
+      log.AppendLine($"shared-cell/material diagnostics failed: {ex.Message}");
     }
   }
 

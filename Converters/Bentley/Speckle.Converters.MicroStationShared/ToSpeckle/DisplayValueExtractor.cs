@@ -231,8 +231,7 @@ public class DisplayValueExtractor(
 
   private void BakeSharedCell(MgdElements.SharedCellElement sharedCell, List<ExtractedGeometry> output)
   {
-    DPN.DgnFile? file = sharedCell.DgnModel?.GetDgnFile();
-    MgdElement? definition = file != null ? sharedCell.GetDefinition(file) : null;
+    MgdElement? definition = SharedCellPlacement.FindDefinition(sharedCell);
     if (definition == null)
     {
       logger.LogWarning("Shared cell '{Name}' has no definition; skipped.", sharedCell.CellName);

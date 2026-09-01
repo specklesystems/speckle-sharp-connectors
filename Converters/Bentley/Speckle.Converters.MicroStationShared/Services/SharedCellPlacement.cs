@@ -16,6 +16,38 @@ namespace Speckle.Converters.MicroStation.Services;
 /// </summary>
 public static class SharedCellPlacement
 {
+  /// <summary>
+  /// Resolves the instance's definition element: <c>GetDefinition(file)</c> first, then the file's
+  /// named shared-cell definitions by cell name (<c>SharedCellQuery.FindDefinitionByName</c>) —
+  /// office-furniture files resolve only through the fallback.
+  /// </summary>
+  public static MgdElement? FindDefinition(MgdElements.SharedCellElement instance)
+  {
+    try
+    {
+      DPN.DgnFile? file = instance.DgnModel?.GetDgnFile();
+      if (file == null)
+      {
+        return null;
+      }
+      MgdElement? definition = instance.GetDefinition(file);
+      if (definition != null)
+      {
+        return definition;
+      }
+      string name = instance.CellName;
+      if (string.IsNullOrEmpty(name))
+      {
+        return null;
+      }
+      return MgdElements.SharedCellQuery.FindDefinitionByName(name, file);
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+    {
+      return null;
+    }
+  }
+
   public static bool TryCompute(
     MgdElements.SharedCellElement instance,
     MgdElement definition,
