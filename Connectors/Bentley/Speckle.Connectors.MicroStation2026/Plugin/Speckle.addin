@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MicroStation 2026 managed add-in manifest.
+  This file is read when MS_ADDINPATH points to the directory containing it.
+  The classname must be the fully-qualified name of the ManagedHost subclass.
+-->
+<AssemblyAddIn
+  id="SpeckleMicroStation"
+  displayname="Speckle for MicroStation 2026"
+  assembly="Speckle.Connectors.MicroStation2026.dll"
+  classname="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn"
+  addintype="ManagedAssembly">
+  <Keywords>Speckle BIM AEC</Keywords>
+  <Description>Speckle connector for Bentley MicroStation 2026</Description>
+</AssemblyAddIn>
