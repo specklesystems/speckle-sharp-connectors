@@ -85,7 +85,7 @@ internal static class ProbeCommand
     );
     var properties = new PropertiesExtractor(NullLogger<PropertiesExtractor>.Instance);
 
-    var perType = new Dictionary<string, (int elements, int geoms, int empty, int errors, int ecProps)>();
+    var perType = new Dictionary<string, (int elements, int geoms, int matGeoms, int empty, int errors, int ecProps)>();
     int scanned = 0;
     foreach (MgdElement? element in model.GetGraphicElements())
     {
@@ -106,6 +106,7 @@ internal static class ProbeCommand
       {
         var extracted = extractor.Extract(element);
         entry.geoms += extracted.Count;
+        entry.matGeoms += extracted.Count(g => g.Material != null);
         if (extracted.Count == 0)
         {
           entry.empty++;
@@ -124,11 +125,11 @@ internal static class ProbeCommand
     }
 
     log.AppendLine($"scanned: {scanned}");
-    log.AppendLine("type | elements | geoms | empty | errors | ecPropKeys");
+    log.AppendLine("type | elements | geoms | matGeoms | empty | errors | ecPropKeys");
     foreach (var kv in perType.OrderByDescending(kv => kv.Value.elements))
     {
       var v = kv.Value;
-      log.AppendLine($"{kv.Key} | {v.elements} | {v.geoms} | {v.empty} | {v.errors} | {v.ecProps}");
+      log.AppendLine($"{kv.Key} | {v.elements} | {v.geoms} | {v.matGeoms} | {v.empty} | {v.errors} | {v.ecProps}");
     }
 
     DumpLevelDiagnostics(log, model);

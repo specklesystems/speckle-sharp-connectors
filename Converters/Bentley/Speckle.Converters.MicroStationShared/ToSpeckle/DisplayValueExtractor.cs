@@ -340,20 +340,38 @@ public class DisplayValueExtractor(
     }
   }
 
-  private void AddMeshes(MgdElement element, List<Base> meshes, List<ExtractedGeometry> output)
+  /// <summary>Captured meshes carry vectorizer-announced PER-FACE appearance (SmartSolid per-face
+  /// material attachments — the channel dgnextract never ported); anything unannounced falls back
+  /// to the element-level resolution.</summary>
+  private void AddMeshes(MgdElement element, List<CapturedMesh> meshes, List<ExtractedGeometry> output)
   {
     if (meshes.Count == 0)
     {
       return;
     }
-    ResolvedMaterial? material = appearance.ResolveMaterial(element);
-    int? color = material == null ? appearance.ResolveColorArgb(element) : null;
-    foreach (Base mesh in meshes)
+    ResolvedMaterial? elementMaterial = null;
+    int? elementColor = null;
+    bool elementResolved = false;
+
+    foreach (CapturedMesh captured in meshes)
     {
+      ResolvedMaterial? material = captured.Material;
+      int? color = material == null ? captured.ColorArgb : null;
+      if (material == null && color == null)
+      {
+        if (!elementResolved)
+        {
+          elementMaterial = appearance.ResolveMaterial(element);
+          elementColor = elementMaterial == null ? appearance.ResolveColorArgb(element) : null;
+          elementResolved = true;
+        }
+        material = elementMaterial;
+        color = elementColor;
+      }
       output.Add(
         new ExtractedGeometry
         {
-          Geometry = mesh,
+          Geometry = captured.Mesh,
           Material = material,
           ColorArgb = color,
         }

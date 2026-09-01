@@ -125,11 +125,25 @@ public class AppearanceResolver(IConverterSettingsStore<MicroStationConversionSe
         );
       }
 
-      if (material == null)
-      {
-        return null;
-      }
+      return TryConvertMaterial(material);
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+    {
+      return null;
+    }
+  }
 
+  /// <summary>A resolved <see cref="DPN.Material"/> → our material record (name, diffuse, opacity).
+  /// Also used by the graphics-capture path for per-face materials announced during vectorization
+  /// (the SmartSolid B-rep channel dgnextract never ported).</summary>
+  public static ResolvedMaterial? TryConvertMaterial(DPN.Material? material)
+  {
+    if (material == null)
+    {
+      return null;
+    }
+    try
+    {
       string name = material.Name ?? "";
       int argb = DEFAULT_WHITE_ARGB;
       double opacity = 1.0;
@@ -146,7 +160,6 @@ public class AppearanceResolver(IConverterSettingsStore<MicroStationConversionSe
           opacity = Math.Max(0.0, Math.Min(1.0, 1.0 - settings.TransmitIntensity));
         }
       }
-
       return new ResolvedMaterial(Key: name.Length > 0 ? name : "unnamed-material", Name: name, argb, opacity);
     }
     catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
