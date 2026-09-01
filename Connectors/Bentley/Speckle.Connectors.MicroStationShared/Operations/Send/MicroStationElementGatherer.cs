@@ -23,14 +23,27 @@ public class MicroStationElementGatherer(ILogger<MicroStationElementGatherer> lo
   {
     var result = new List<MicroStationRootObject>();
 
-    // Base model occurrence: only the filter-selected elements.
+    // Base model occurrence: only the filter-selected elements. Elements on switched-off/frozen
+    // levels are invisible in the host viewport — an interactive send skips them even when the
+    // host's Select All grabbed them (dgnextract has no view context and would include them;
+    // documented deviation).
     var idSet = new HashSet<string>(selectedIds);
+    int skippedHidden = 0;
     foreach (MgdElement? element in activeModel.GetGraphicElements())
     {
       if (element != null && idSet.Contains(((ulong)element.ElementId).ToString()))
       {
+        if (!Speckle.Converters.MicroStation.ToSpeckle.Properties.PropertiesExtractor.IsLevelDisplayed(element))
+        {
+          skippedHidden++;
+          continue;
+        }
         result.Add(MicroStationRootObject.InActiveModel(element));
       }
+    }
+    if (skippedHidden > 0)
+    {
+      logger.LogInformation("Skipped {Count} elements on non-displayed/frozen levels.", skippedHidden);
     }
 
     if (includeReferences)
@@ -124,7 +137,10 @@ public class MicroStationElementGatherer(ILogger<MicroStationElementGatherer> lo
 
         foreach (MgdElement? element in model.GetGraphicElements())
         {
-          if (element != null)
+          if (
+            element != null
+            && Speckle.Converters.MicroStation.ToSpeckle.Properties.PropertiesExtractor.IsLevelDisplayed(element)
+          )
           {
             result.Add(
               new MicroStationRootObject(

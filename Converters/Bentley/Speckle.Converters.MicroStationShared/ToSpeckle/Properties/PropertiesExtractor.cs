@@ -62,60 +62,87 @@ public class PropertiesExtractor(ILogger<PropertiesExtractor> logger)
   /// collection an object files under.</summary>
   public static (string? Name, string? Number) GetLevelInfo(MgdElement element)
   {
+    DPN.LevelHandle? handle = ResolveEffectiveLevelHandle(element);
+    if (handle is not { IsValid: true })
+    {
+      return (null, null);
+    }
+    return (handle.Name, handle.LevelCode.ToString());
+  }
+
+  /// <summary>True when the element's effective level is displayed and not frozen. Elements on
+  /// switched-off levels are hidden in the host viewport, so an interactive send skips them — a
+  /// deliberate deviation from dgnextract (which scans the whole model with no view context).</summary>
+  public static bool IsLevelDisplayed(MgdElement element)
+  {
+    DPN.LevelHandle? handle = ResolveEffectiveLevelHandle(element);
+    if (handle is not { IsValid: true })
+    {
+      return true; // unresolvable level → don't drop the element on a guess
+    }
+    try
+    {
+      return handle.Display && !handle.Frozen;
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+    {
+      return true;
+    }
+  }
+
+  /// <summary>
+  /// The element's own level — unless the element is a container (cell) sitting on the DEFAULT
+  /// level (the common template state) while its content lives elsewhere: then the VALID level
+  /// shared by the most descendant graphics leaves wins (dgnextract's majority rule — own-level
+  /// wins whenever it is a real, non-Default level).
+  /// </summary>
+  private static DPN.LevelHandle? ResolveEffectiveLevelHandle(MgdElement element)
+  {
     try
     {
       DPN.LevelCache? cache = element.DgnModelRef?.GetLevelCache();
       if (cache == null)
       {
-        return (null, null);
+        return null;
       }
-      DPN.LevelId levelId = ResolveEffectiveLevel(element);
-      DPN.LevelHandle handle = cache.GetLevel(levelId, true);
-      if (!handle.IsValid)
+      DPN.LevelHandle? own = cache.GetLevel(element.LevelId, true);
+
+      bool isCell = element is MgdElements.CellHeaderElement or MgdElements.Type2Element;
+      bool ownIsDefaultish = own is not { IsValid: true } || IsDefaultLevel(own);
+      if (!isCell || !ownIsDefaultish)
       {
-        return (null, null);
+        return own;
       }
-      return (handle.Name, handle.LevelCode.ToString());
+
+      var tally = new Dictionary<string, (DPN.LevelHandle Handle, int Count)>(StringComparer.Ordinal);
+      TallyDescendantLevels(element, cache, tally, 0);
+      DPN.LevelHandle? best = own;
+      int bestCount = 0;
+      foreach (var entry in tally.Values)
+      {
+        if (entry.Count > bestCount)
+        {
+          best = entry.Handle;
+          bestCount = entry.Count;
+        }
+      }
+      return best;
     }
     catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
-      return (null, null);
+      return null;
     }
   }
 
-  /// <summary>
-  /// The element's own level — unless the element is a container (cell) whose own record commonly
-  /// sits on the Default level while the content lives elsewhere: then the level shared by the most
-  /// descendant graphics leaves wins (dgnextract's majority rule).
-  /// </summary>
-  private static DPN.LevelId ResolveEffectiveLevel(MgdElement element)
-  {
-    DPN.LevelId own = element.LevelId;
-    if (element is not (MgdElements.CellHeaderElement or MgdElements.Type2Element))
-    {
-      return own;
-    }
+  private static bool IsDefaultLevel(DPN.LevelHandle handle) =>
+    string.Equals(handle.Name, "Default", StringComparison.OrdinalIgnoreCase);
 
-    var tally = new Dictionary<DPN.LevelId, int>();
-    TallyDescendantLevels(element, tally, 0);
-    if (tally.Count == 0)
-    {
-      return own;
-    }
-    DPN.LevelId best = own;
-    int bestCount = -1;
-    foreach (KeyValuePair<DPN.LevelId, int> entry in tally)
-    {
-      if (entry.Value > bestCount)
-      {
-        best = entry.Key;
-        bestCount = entry.Value;
-      }
-    }
-    return best;
-  }
-
-  private static void TallyDescendantLevels(MgdElement element, Dictionary<DPN.LevelId, int> tally, int depth)
+  private static void TallyDescendantLevels(
+    MgdElement element,
+    DPN.LevelCache cache,
+    Dictionary<string, (DPN.LevelHandle Handle, int Count)> tally,
+    int depth
+  )
   {
     if (depth > 8)
     {
@@ -134,12 +161,17 @@ public class PropertiesExtractor(ILogger<PropertiesExtractor> logger)
       }
       if (child.GetChildren() is { } grandchildren && grandchildren.Any(c => c != null))
       {
-        TallyDescendantLevels(child, tally, depth + 1);
+        TallyDescendantLevels(child, cache, tally, depth + 1);
       }
       else if (child.IsGraphics)
       {
-        DPN.LevelId levelId = child.LevelId;
-        tally[levelId] = tally.TryGetValue(levelId, out int n) ? n + 1 : 1;
+        // Only VALID, resolvable levels vote — B-rep/proxy internals carry meaningless level ids
+        // that would otherwise hijack the majority (the ENG-9131-adjacent bug the first send showed).
+        DPN.LevelHandle? handle = cache.GetLevel(child.LevelId, true);
+        if (handle is { IsValid: true } && handle.Name is { Length: > 0 } name)
+        {
+          tally[name] = tally.TryGetValue(name, out var entry) ? (entry.Handle, entry.Count + 1) : (handle, 1);
+        }
       }
     }
   }
