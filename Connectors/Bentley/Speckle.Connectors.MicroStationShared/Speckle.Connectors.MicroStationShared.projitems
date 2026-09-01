@@ -23,6 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationInstanceUnpacker.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationRootObject.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationRootObjectBuilder.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationBundleBuilder.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationElementGatherer.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationSendSettings.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\MicroStationEverythingFilter.cs"/>

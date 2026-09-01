@@ -52,6 +52,9 @@ public static class MicroStationConnectorServiceRegistration
     // builder → the converter's DisplayValueExtractor.
     serviceCollection.AddSingleton<MicroStationElementGatherer>();
     serviceCollection.AddScoped<IRootObjectBuilder<MicroStationRootObject>, MicroStationRootObjectBuilder>();
+    // Speckle 4.0 ("big-truck") artefact bundle send — SendOperation prefers this on servers with
+    // the model-ingestion API (next.speckle.dev); the classic builder above stays the v3 fallback.
+    serviceCollection.AddScoped<IBundleBuilder<MicroStationRootObject>, MicroStationBundleBuilder>();
     serviceCollection.AddScoped<SendOperation<MicroStationRootObject>>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
 

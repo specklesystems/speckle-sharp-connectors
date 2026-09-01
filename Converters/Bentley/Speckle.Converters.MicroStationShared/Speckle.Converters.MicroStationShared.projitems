@@ -20,6 +20,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\MeshExtraction\GraphicsCapture.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CivilPropertiesSource.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CivilQuantities.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CurveConverters.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PolyfaceConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TextConverter.cs"/>
