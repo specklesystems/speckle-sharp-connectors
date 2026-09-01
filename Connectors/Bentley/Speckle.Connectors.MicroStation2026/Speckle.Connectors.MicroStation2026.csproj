@@ -33,6 +33,9 @@
     Label="Shared"
   />
 
+  <!-- net48: co-deploy IronCompress's native nironcompress.dll for Parquet.Net Zstd (bundle sends). -->
+  <Import Project="..\Speckle.Connectors.MicroStationShared\Net48.IronCompress.props" />
+
   <ItemGroup>
     <!--
       Plugin\SpeckleAddInIdentity.cs is auto-included by SDK globbing (it's a regular .cs file
