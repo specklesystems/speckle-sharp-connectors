@@ -112,7 +112,8 @@ public class MicroStationRootObjectBuilder(
         {
           converted = cached;
           // Appearance grouping is conversion-derived; on a cache hit resolve it object-level.
-          AttachAppearance(obj.Element, appId, isMeshy: true, colorProxies, materialProxies);
+          // Curve-bearing element kinds keep the curves-never-get-materials rule.
+          AttachAppearance(obj.Element, appId, IsMeshBearing(obj.Element), colorProxies, materialProxies);
         }
         else
         {
@@ -371,6 +372,22 @@ public class MicroStationRootObjectBuilder(
       }
     }
   }
+
+  /// <summary>Pure-curve element kinds never take render materials (CurveExtractor rule).</summary>
+  private static bool IsMeshBearing(MgdElement element) =>
+    element
+      is not (
+        MgdElements.LineElement
+        or MgdElements.LineStringBaseElement
+        or MgdElements.EllipticArcBaseElement
+        or MgdElements.ComplexShapeElement
+        or MgdElements.ComplexStringElement
+        or MgdElements.BSplineCurveElement
+        or MgdElements.CurveElement
+        or MgdElements.PointStringElement
+        or MgdElements.MultilineElement
+        or MgdElements.TextHandlerBase
+      );
 
   /// <summary>Cache-hit path: geometry-level detail is gone, resolve the element object-level.</summary>
   private void AttachAppearance(

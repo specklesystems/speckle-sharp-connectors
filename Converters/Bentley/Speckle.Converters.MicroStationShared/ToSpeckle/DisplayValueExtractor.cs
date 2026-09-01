@@ -162,8 +162,9 @@ public class DisplayValueExtractor(
         AddCurves(element, captured.Curves, output);
         return;
       }
+      int before = output.Count; // output is the shared accumulator — compare against THIS element's yield
       RecurseChildren(element, output);
-      if (output.Count == 0)
+      if (output.Count == before)
       {
         AddBoundingBoxFallback(element, output);
       }
