@@ -1,30 +1,34 @@
-using Speckle.Converters.MicroStation.Services;
+using Speckle.Converters.Common;
 
 namespace Speckle.Converters.MicroStation.Settings;
 
 public interface IMicroStationConversionSettingsFactory
 {
-  MicroStationConversionSettings Create(bool includeInvisibleElements = false);
+  MicroStationConversionSettings Create(DPN.DgnModel activeModel, bool includeReferenceAttachments = true);
 }
 
 /// <summary>
-/// Creates <see cref="MicroStationConversionSettings"/> from the currently active MicroStation model.
-/// The <see cref="Application"/> COM object is injected by the connector's DI registration so the
-/// converter project does not need to reference the connector project.
+/// Creates <see cref="MicroStationConversionSettings"/> from the given active model. The connector's
+/// send binding resolves the active <see cref="DPN.DgnModel"/> (via <c>Session</c>) and passes it in,
+/// so the converter project needs no reference to <c>ustation.dll</c>.
 /// </summary>
-public class MicroStationConversionSettingsFactory(MicroStationToSpeckleUnitConverter unitConverter, Application app)
+public class MicroStationConversionSettingsFactory(IHostToSpeckleUnitConverter<DPN.UnitDefinition> unitConverter)
   : IMicroStationConversionSettingsFactory
 {
-  public MicroStationConversionSettings Create(bool includeInvisibleElements = false)
+  public MicroStationConversionSettings Create(DPN.DgnModel activeModel, bool includeReferenceAttachments = true)
   {
-    if (!app.HasActiveModelReference)
-    {
-      return new MicroStationConversionSettings(SSC.Units.Meters, includeInvisibleElements);
-    }
+    DPN.ModelInfo info = activeModel.GetModelInfo();
+    string speckleUnits = unitConverter.ConvertOrThrow(info.GetMasterUnit());
+    BG.DPoint3d globalOrigin = info.GlobalOrigin;
 
-    var model = app.ActiveModelReference;
-    var speckleUnits = unitConverter.ConvertOrThrow(model.get_MasterUnit());
-
-    return new MicroStationConversionSettings(speckleUnits, includeInvisibleElements);
+    return new MicroStationConversionSettings(
+      activeModel,
+      speckleUnits,
+      info.UorPerMaster,
+      globalOrigin.X,
+      globalOrigin.Y,
+      globalOrigin.Z,
+      includeReferenceAttachments
+    );
   }
 }

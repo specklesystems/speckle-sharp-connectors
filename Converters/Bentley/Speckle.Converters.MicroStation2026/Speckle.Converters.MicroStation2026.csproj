@@ -52,6 +52,16 @@
       <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <!-- Managed ECObjects (IECInstance/IECPropertyValue) — Item Types property extraction. -->
+    <Reference Include="Bentley.ECObjects3">
+      <HintPath>$(MicroStation2026Dir)Assemblies\ECFramework\Bentley.ECObjects3.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- Base platform interfaces (IExtendable) that IECInstance derives from. -->
+    <Reference Include="Bentley.Platform">
+      <HintPath>$(MicroStation2026Dir)Assemblies\ECFramework\Bentley.Platform.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

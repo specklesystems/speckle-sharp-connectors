@@ -3,53 +3,40 @@ using Speckle.Converters.Common;
 using Speckle.Converters.MicroStation.Services;
 using Speckle.Converters.MicroStation.Settings;
 using Speckle.Converters.MicroStation.ToSpeckle;
-using Speckle.Converters.MicroStation.ToSpeckle.TopLevel;
+using Speckle.Converters.MicroStation.ToSpeckle.Appearance;
+using Speckle.Converters.MicroStation.ToSpeckle.MeshExtraction;
+using Speckle.Converters.MicroStation.ToSpeckle.Properties;
+using Speckle.Converters.MicroStation.ToSpeckle.Raw;
 
 namespace Speckle.Converters.MicroStation.DependencyInjection;
 
 /// <summary>
-/// Wires up the managed-API conversion pipeline. Each top-level converter is a plain class with
-/// a typed <c>Convert(MgdXxxElement)</c> method — no <c>IToSpeckleTopLevelConverter</c> auto-
-/// discovery, no <c>NameAndRankValue</c> attribute, no <c>IConverterManager</c> resolution. The
-/// root dispatcher pattern-matches managed element types and dispatches directly to the right
-/// converter via constructor injection, which keeps the dispatch table compile-time-checked.
+/// Wires the managed conversion pipeline. There is no <c>IToSpeckleTopLevelConverter</c> /
+/// <c>IConverterManager</c> discovery here — the DGN element hierarchy is closed and small, so the
+/// <see cref="DisplayValueExtractor"/> dispatches by pattern-matching managed element types, which
+/// keeps the dgnextract strategy order compile-time-checked. The connector's root object builder
+/// consumes <see cref="DisplayValueExtractor"/> + <see cref="PropertiesExtractor"/> directly.
 /// </summary>
 public static class MicroStationConverterServiceRegistration
 {
   public static IServiceCollection AddMicroStationConverters(this IServiceCollection serviceCollection)
   {
-    // Root dispatcher — single entry point that the SendBinding / RootObjectBuilder calls.
-    // No leaf converter takes a back-reference to this; container elements (CellHeader) get
-    // their children walked by the dispatcher itself via private recursion, so there's no
-    // DI cycle and no need for Lazy<> / IServiceProvider service-locator workarounds.
-    serviceCollection.AddSingleton<IRootToSpeckleConverter, MicroStationRootToSpeckleConverter>();
-
-    // Per-type managed converters (transient — they're stateless).
-    serviceCollection.AddTransient<LineElementConverter>();
-    serviceCollection.AddTransient<ArcElementConverter>();
-    serviceCollection.AddTransient<EllipseElementConverter>();
-    serviceCollection.AddTransient<LineStringElementConverter>();
-    serviceCollection.AddTransient<PointStringElementConverter>();
-    serviceCollection.AddTransient<ShapeElementConverter>();
-    serviceCollection.AddTransient<ComplexShapeElementConverter>();
-    serviceCollection.AddTransient<ComplexStringElementConverter>();
-    serviceCollection.AddTransient<BsplineCurveElementConverter>();
-    serviceCollection.AddTransient<BSplineSurfaceElementConverter>();
-    serviceCollection.AddTransient<CellHeaderElementConverter>();
-    serviceCollection.AddTransient<SharedCellElementConverter>();
-    serviceCollection.AddTransient<TextElementConverter>();
-    serviceCollection.AddTransient<SolidElementConverter>();
-    serviceCollection.AddTransient<MeshHeaderElementConverter>();
-
-    // Bounding-box fallback for any managed element that doesn't match the dispatch table or
-    // whose dedicated converter throws.
-    serviceCollection.AddTransient<FallbackElementMeshConverter>();
+    // Per-operation stateful services (transform stack, ByCell colour stack) — scoped, same
+    // lifetime as the converter settings store the send pipeline creates per operation.
+    serviceCollection.AddScoped<GeometryMapper>();
+    serviceCollection.AddScoped<AppearanceResolver>();
+    serviceCollection.AddScoped<PolyfaceConverter>();
+    serviceCollection.AddScoped<CurvePrimitiveConverter>();
+    serviceCollection.AddScoped<GraphicsCaptureExtractor>();
+    serviceCollection.AddScoped<TextConverter>();
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
     // Unit converter
-    serviceCollection.AddSingleton<MicroStationToSpeckleUnitConverter>();
-    serviceCollection.AddSingleton<IHostToSpeckleUnitConverter<MeasurementUnit>>(sp =>
-      sp.GetRequiredService<MicroStationToSpeckleUnitConverter>()
-    );
+    serviceCollection.AddSingleton<
+      IHostToSpeckleUnitConverter<DPN.UnitDefinition>,
+      MicroStationToSpeckleUnitConverter
+    >();
 
     // Conversion settings factory + per-scope store
     serviceCollection.AddSingleton<IMicroStationConversionSettingsFactory, MicroStationConversionSettingsFactory>();

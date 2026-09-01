@@ -17,10 +17,12 @@
   <SubKeyinTables>
     <KeyinTable ID="Commands">
       <Keyword CommandWord="show" />
+      <Keyword CommandWord="probe" />
     </KeyinTable>
   </SubKeyinTables>
 
   <KeyinHandlers>
     <KeyinHandler Keyin="Speckle show" Function="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn.ShowPanel" />
+    <KeyinHandler Keyin="Speckle probe" Function="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn.Probe" />
   </KeyinHandlers>
 </KeyinTree>

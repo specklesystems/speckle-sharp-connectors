@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
@@ -27,7 +28,7 @@ public static class MicroStationConnectorServiceRegistration
     serviceCollection.AddDUI<DefaultThreadContext, MicroStationDocumentModelStore>();
     serviceCollection.AddDUIView();
 
-    // Register the MicroStation COM Application object so converter services can receive it via DI
+    // Register the MicroStation COM Application object so selection/idle code can receive it via DI
     serviceCollection.AddSingleton<Application>(_ => MsApp.Instance);
 
     // Standard bindings
@@ -47,12 +48,19 @@ public static class MicroStationConnectorServiceRegistration
     // Operation progress
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
-    // Send pipeline — flows the managed Bentley.DgnPlatformNET Element through binding /
-    // builder / dispatcher (debugger-typed, not opaque __ComObject). Per-element bridge to
-    // COM happens inside MicroStationRootToSpeckleConverter for the legacy COM converters.
-    serviceCollection.AddScoped<IRootObjectBuilder<MgdElement>, MicroStationRootObjectBuilder>();
-    serviceCollection.AddScoped<SendOperation<MgdElement>>();
+    // Send pipeline — occurrence-tagged managed elements flow through gatherer → unpacker →
+    // builder → the converter's DisplayValueExtractor.
+    serviceCollection.AddSingleton<MicroStationElementGatherer>();
+    serviceCollection.AddScoped<IRootObjectBuilder<MicroStationRootObject>, MicroStationRootObjectBuilder>();
+    serviceCollection.AddScoped<SendOperation<MicroStationRootObject>>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
+
+    // Shared-cell instancing (the AutoCAD block pattern)
+    serviceCollection.AddScoped<IInstanceUnpacker<MicroStationRootObject>, MicroStationInstanceUnpacker>();
+    serviceCollection.AddScoped<
+      IInstanceObjectsManager<MicroStationRootObject, List<MicroStationRootObject>>,
+      InstanceObjectsManager<MicroStationRootObject, List<MicroStationRootObject>>
+    >();
 
     // Send filters
     serviceCollection.AddScoped<ISendFilter, MicroStationEverythingFilter>();

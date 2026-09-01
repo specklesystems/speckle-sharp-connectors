@@ -71,9 +71,18 @@
       <HintPath>$(MicroStation2026Dir)ustation.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <!-- DgnPlatformNET is a mixed-mode DLL; not used directly by the connector — keep excluded from output. -->
+    <!-- DgnPlatformNET is a mixed-mode DLL provided by the host at runtime. -->
     <Reference Include="Bentley.DgnPlatformNET">
       <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- GeometryNET types (DTransform3d) flow through occurrence/instance plumbing. -->
+    <Reference Include="Bentley.GeometryNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET.Structs">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.Structs.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <!-- COM interop wrapper — copy to output so it's available in the deploy directory. -->

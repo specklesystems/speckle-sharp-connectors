@@ -40,6 +40,22 @@ public class SpeckleAddIn : AddIn
   }
 
   /// <summary>
+  /// Keyin handler (`Speckle probe`) — writes the offline-verification report to
+  /// %TEMP%\speckle-msprobe.log. See <see cref="ProbeCommand"/>.
+  /// </summary>
+  public static void Probe(string _)
+  {
+    try
+    {
+      ProbeCommand.Run();
+    }
+    catch (Exception ex)
+    {
+      MessageBox.Show($"Speckle probe failed:\n\n{ex.Message}", "Speckle", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+  }
+
+  /// <summary>
   /// Keyin handler — referenced by Function attribute in CommandTable.xml.
   /// Opens the Speckle panel, or brings it to front if already open.
   /// </summary>

@@ -1,4 +1,4 @@
-using System.IO;
+using Bentley.MstnPlatformNET;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
@@ -8,41 +8,26 @@ using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.MicroStation.Operations.Send;
 using Speckle.Connectors.MicroStation.Operations.Send.Filters;
-using Speckle.Connectors.MicroStation.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Converters.MicroStation.Settings;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.MicroStation.Bindings;
 
-public class MicroStationSendBinding : ISendBinding
+public class MicroStationSendBinding(
+  IBrowserBridge parent,
+  ICancellationManager cancellationManager,
+  IMicroStationConversionSettingsFactory conversionSettingsFactory,
+  IThreadContext threadContext,
+  ISendOperationManagerFactory sendOperationManagerFactory,
+  MicroStationElementGatherer elementGatherer
+) : ISendBinding
 {
   public string Name => "sendBinding";
-  public IBrowserBridge Parent { get; }
-  public SendBindingUICommands Commands { get; }
-
-  private readonly ICancellationManager _cancellationManager;
-  private readonly IMicroStationConversionSettingsFactory _conversionSettingsFactory;
-  private readonly IThreadContext _threadContext;
-  private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
-
-  public MicroStationSendBinding(
-    IBrowserBridge parent,
-    ICancellationManager cancellationManager,
-    IMicroStationConversionSettingsFactory conversionSettingsFactory,
-    IThreadContext threadContext,
-    ISendOperationManagerFactory sendOperationManagerFactory
-  )
-  {
-    Parent = parent;
-    Commands = new SendBindingUICommands(parent);
-    _cancellationManager = cancellationManager;
-    _conversionSettingsFactory = conversionSettingsFactory;
-    _threadContext = threadContext;
-    _sendOperationManagerFactory = sendOperationManagerFactory;
-  }
+  public IBrowserBridge Parent { get; } = parent;
+  public SendBindingUICommands Commands { get; } = new(parent);
 
   public List<ISendFilter> GetSendFilters() =>
     [
@@ -51,103 +36,75 @@ public class MicroStationSendBinding : ISendBinding
       new MicroStationLevelFilter(),
     ];
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() => [new SendIncludeReferencesSetting()];
 
   public async Task Send(string modelCardId) =>
-    await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
+    await threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
 
   private async Task SendInternal(string modelCardId)
   {
-    using var manager = _sendOperationManagerFactory.Create();
+    using var manager = sendOperationManagerFactory.Create();
     var (fileName, fileSizeBytes) = GetFileInfo();
-    await manager.Process(
-      Commands,
-      modelCardId,
-      InitializeConverterSettings,
-      GetMicroStationElements,
-      fileName,
-      fileSizeBytes
-    );
+    await manager.Process(Commands, modelCardId, InitializeConverterSettings, GatherElements, fileName, fileSizeBytes);
   }
 
-  private (string? fileName, long? fileSizeBytes) GetFileInfo()
+  private static (string? fileName, long? fileSizeBytes) GetFileInfo()
   {
-    var app = MsApp.TryGetInstance();
-    if (app?.HasActiveDesignFile != true)
+    try
     {
-      return (null, null);
+      string? path = Session.Instance?.GetActiveDgnFile()?.GetFileName();
+      if (path != null && System.IO.File.Exists(path))
+      {
+        var info = new System.IO.FileInfo(path);
+        return (info.Name, info.Length);
+      }
     }
-
-    var path = app.ActiveDesignFile.FullName;
-    if (!File.Exists(path))
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
-      return (null, null);
+      // best-effort telemetry only
     }
-
-    var info = new FileInfo(path);
-    return (info.Name, info.Length);
+    return (null, null);
   }
 
-  private void InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) =>
+  private void InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard)
+  {
+    DPN.DgnModel activeModel =
+      Session.Instance?.GetActiveDgnModel() ?? throw new InvalidOperationException("No active MicroStation model.");
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<MicroStationConversionSettings>>()
-      .Initialize(_conversionSettingsFactory.Create());
+      .Initialize(
+        conversionSettingsFactory.Create(activeModel, MicroStationSendSettings.GetIncludeReferences(modelCard))
+      );
+  }
 
-  /// <summary>
-  /// Returns the user-selected elements as <see cref="MgdElement"/> (managed
-  /// <c>Bentley.DgnPlatformNET.Elements.Element</c>) so the rest of the Send pipeline operates
-  /// on real typed objects (LineElement, MeshHeaderElement, CellHeaderElement, …) instead of
-  /// the opaque <c>System.__ComObject</c> RCWs that the COM cache hands out.
-  /// <para>
-  /// Implementation: walk the COM <see cref="ModelReference.GraphicalElementCache"/> (still the
-  /// proven path for <c>IsHighlighted</c>-style queries and ID matching), then bridge each
-  /// matched COM <see cref="Element"/> to its managed counterpart via
-  /// <c>MgdElement.GetFromElementRef(MdlElementRef)</c>. Both surfaces address the same
-  /// underlying C++ MSElementRefP, so this is a near-zero-cost wrapper swap.
-  /// </para>
-  /// </summary>
-  private async Task<IReadOnlyList<MgdElement>> GetMicroStationElements(
+  private Task<IReadOnlyList<MicroStationRootObject>> GatherElements(
     SenderModelCard modelCard,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<Speckle.Sdk.Pipelines.Progress.CardProgress> onOperationProgressed
   )
   {
-    var selectedIds = modelCard.SendFilter.NotNull().RefreshObjectIds();
-    if (selectedIds.Count == 0)
+    List<string> selectedIds = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    bool includeReferences = MicroStationSendSettings.GetIncludeReferences(modelCard);
+    if (selectedIds.Count == 0 && !includeReferences)
     {
       throw new SpeckleSendFilterException("No objects found to convert. Please update your publish filter.");
     }
 
-    onOperationProgressed.Report(new CardProgress("Getting elements...", null));
+    onOperationProgressed.Report(new Speckle.Sdk.Pipelines.Progress.CardProgress("Getting elements...", null));
 
-    var model = MsApp.ActiveModel ?? throw new InvalidOperationException("No active MicroStation model.");
-    var idSet = new HashSet<string>(selectedIds);
-    var elements = new List<MgdElement>(idSet.Count);
+    DPN.DgnModel activeModel =
+      Session.Instance?.GetActiveDgnModel() ?? throw new InvalidOperationException("No active MicroStation model.");
 
-    var enumerator = model.GraphicalElementCache.Scan(new MSIDGN.ElementScanCriteriaClass());
-    while (enumerator.MoveNext())
+    // References ride along only on whole-model sends — a selection/level publish means exactly
+    // what the user picked in the active model.
+    bool walkReferences = includeReferences && modelCard.SendFilter is MicroStationEverythingFilter;
+    IReadOnlyList<MicroStationRootObject> elements = elementGatherer.Gather(activeModel, selectedIds, walkReferences);
+
+    if (elements.Count == 0)
     {
-      var comElement = enumerator.Current;
-      if (comElement == null || !idSet.Contains(comElement.ID.ToString()))
-      {
-        continue;
-      }
-
-      var refValue = comElement.MdlElementRef();
-      if (refValue == 0)
-      {
-        continue;
-      }
-
-      var mgd = MgdElement.GetFromElementRef(new IntPtr(refValue));
-      if (mgd != null)
-      {
-        elements.Add(mgd);
-      }
+      throw new SpeckleSendFilterException("No objects found to convert. Please update your publish filter.");
     }
-
-    await Task.CompletedTask;
-    return elements;
+    return Task.FromResult(elements);
   }
 
-  public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
+  public void CancelSend(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
 }
