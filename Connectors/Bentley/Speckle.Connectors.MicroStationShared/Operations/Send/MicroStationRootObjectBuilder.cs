@@ -124,7 +124,7 @@ public class MicroStationRootObjectBuilder(
             ? geometryMapper.PushDefinitionFrame()
             : null;
 
-          extracted = displayValueExtractor.Extract(obj.Element);
+          extracted = displayValueExtractor.Extract(obj.Element).DisplayValue;
           if (extracted.Count == 0)
           {
             // Invisible / construction-class / empty elements convert to nothing by design.

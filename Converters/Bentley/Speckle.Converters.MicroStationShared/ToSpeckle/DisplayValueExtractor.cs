@@ -48,6 +48,7 @@ public class DisplayValueExtractor(
   CurvePrimitiveConverter curvePrimitiveConverter,
   AppearanceResolver appearance,
   TextConverter textConverter,
+  SharedCellInstanceSink instanceSink,
   ILogger<DisplayValueExtractor> logger
 )
 {
@@ -57,14 +58,15 @@ public class DisplayValueExtractor(
   // Bake-path cycle guard: shared-cell definition ids currently being baked through.
   private readonly HashSet<string> _activeBakes = [];
 
-  public List<ExtractedGeometry> Extract(MgdElement element)
+  public ExtractionResult Extract(MgdElement element)
   {
     var output = new List<ExtractedGeometry>();
-    ExtractInto(element, output);
-    return output;
+    var instances = new List<InstanceUse>();
+    ExtractInto(element, output, instances);
+    return new ExtractionResult(output, instances);
   }
 
-  private void ExtractInto(MgdElement element, List<ExtractedGeometry> output)
+  private void ExtractInto(MgdElement element, List<ExtractedGeometry> output, List<InstanceUse> instances)
   {
     if (_depth > MAX_DEPTH || !element.IsGraphics)
     {
@@ -73,7 +75,7 @@ public class DisplayValueExtractor(
     _depth++;
     try
     {
-      ExtractCore(element, output);
+      ExtractCore(element, output, instances);
     }
     catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
@@ -86,7 +88,7 @@ public class DisplayValueExtractor(
     }
   }
 
-  private void ExtractCore(MgdElement element, List<ExtractedGeometry> output)
+  private void ExtractCore(MgdElement element, List<ExtractedGeometry> output, List<InstanceUse> instances)
   {
     if (element.IsInvisible || IsConstructionClass(element))
     {
@@ -107,11 +109,20 @@ public class DisplayValueExtractor(
       return;
     }
 
-    // 2. Shared cells inside a recursion (cells/definitions) — bake the definition geometry
-    //    through the instance placement. Top-level instancing lives in the connector unpacker.
+    // 2. Shared cells met during recursion. Bundle sends instance them (dgnextract Option B:
+    //    definition built once in its local frame, every reference an INSTANCE placement) — except
+    //    inside a definition build, where nested references BAKE (single-slot rule). The classic
+    //    v3 pipeline leaves the sink disabled and bakes everything (it cannot express placements).
     if (element is MgdElements.SharedCellElement sharedCell)
     {
-      BakeSharedCell(sharedCell, output);
+      if (instanceSink.Enabled && !mapper.InDefinitionFrame)
+      {
+        InstanceSharedCell(sharedCell, instances);
+      }
+      else
+      {
+        BakeSharedCell(sharedCell, output, instances);
+      }
       return;
     }
 
@@ -123,7 +134,7 @@ public class DisplayValueExtractor(
     }
     if (element is MgdElements.CellHeaderElement or MgdElements.Type2Element)
     {
-      RecurseChildren(element, output);
+      RecurseChildren(element, output, instances);
       return;
     }
 
@@ -163,8 +174,9 @@ public class DisplayValueExtractor(
         return;
       }
       int before = output.Count; // output is the shared accumulator — compare against THIS element's yield
-      RecurseChildren(element, output);
-      if (output.Count == before)
+      int beforeInstances = instances.Count;
+      RecurseChildren(element, output, instances);
+      if (output.Count == before && instances.Count == beforeInstances)
       {
         AddBoundingBoxFallback(element, output);
       }
@@ -229,7 +241,65 @@ public class DisplayValueExtractor(
     }
   }
 
-  private void BakeSharedCell(MgdElements.SharedCellElement sharedCell, List<ExtractedGeometry> output)
+  /// <summary>Instances a shared-cell reference: registers the definition once (children extracted
+  /// in the LOCAL frame) and emits the master-frame placement (GetSharedPlacement composed with the
+  /// ambient stack — dgnextract's Placement::multiply(occ.xform, placement)).</summary>
+  private void InstanceSharedCell(MgdElements.SharedCellElement sharedCell, List<InstanceUse> instances)
+  {
+    MgdElement? definition = SharedCellPlacement.FindDefinition(sharedCell);
+    if (definition == null)
+    {
+      logger.LogWarning("Shared cell '{Name}' has no definition; skipped.", sharedCell.CellName);
+      return;
+    }
+    string defId = ((ulong)definition.ElementId).ToString();
+    if (_activeBakes.Contains(defId))
+    {
+      logger.LogWarning("Cyclic shared cell definition {DefId}; branch stopped.", defId);
+      return;
+    }
+    if (!SharedCellPlacement.TryCompute(sharedCell, definition, out BG.DTransform3d placement))
+    {
+      logger.LogWarning("Shared cell '{Name}' placement unavailable; skipped.", sharedCell.CellName);
+      return;
+    }
+    string name = string.IsNullOrEmpty(sharedCell.CellName) ? defId : sharedCell.CellName;
+
+    if (!instanceSink.HasDefinition(defId))
+    {
+      _activeBakes.Add(defId);
+      try
+      {
+        using IDisposable definitionFrame = mapper.PushDefinitionFrame();
+        var members = new List<ExtractedGeometry>();
+        var nestedInstances = new List<InstanceUse>(); // stays empty: definition frames bake
+        MgdElements.ChildElementCollection? children = definition.GetChildren();
+        if (children != null)
+        {
+          foreach (MgdElement? child in children)
+          {
+            if (child != null)
+            {
+              ExtractInto(child, members, nestedInstances);
+            }
+          }
+        }
+        instanceSink.AddDefinition(defId, name, members);
+      }
+      finally
+      {
+        _activeBakes.Remove(defId);
+      }
+    }
+
+    instances.Add(new InstanceUse(defId, name, mapper.ToSpeckleMatrix(placement), mapper.Units));
+  }
+
+  private void BakeSharedCell(
+    MgdElements.SharedCellElement sharedCell,
+    List<ExtractedGeometry> output,
+    List<InstanceUse> instances
+  )
   {
     MgdElement? definition = SharedCellPlacement.FindDefinition(sharedCell);
     if (definition == null)
@@ -258,7 +328,7 @@ public class DisplayValueExtractor(
         {
           if (child != null)
           {
-            ExtractInto(child, output);
+            ExtractInto(child, output, instances);
           }
         }
       }
@@ -269,7 +339,7 @@ public class DisplayValueExtractor(
     }
   }
 
-  private void RecurseChildren(MgdElement cell, List<ExtractedGeometry> output)
+  private void RecurseChildren(MgdElement cell, List<ExtractedGeometry> output, List<InstanceUse> instances)
   {
     // ByCell colour context: children with ByCell colour resolve against the header.
     using IDisposable colorScope = appearance.PushParentColor(appearance.ResolveColorArgb(cell));
@@ -282,8 +352,9 @@ public class DisplayValueExtractor(
         if (child != null)
         {
           int before = output.Count;
-          ExtractInto(child, output);
-          any |= output.Count > before;
+          int beforeInstances = instances.Count;
+          ExtractInto(child, output, instances);
+          any |= output.Count > before || instances.Count > beforeInstances;
         }
       }
     }

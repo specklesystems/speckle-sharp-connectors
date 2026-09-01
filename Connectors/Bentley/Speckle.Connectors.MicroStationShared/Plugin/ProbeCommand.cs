@@ -74,6 +74,7 @@ internal static class ProbeCommand
     var primitives = new CurvePrimitiveConverter(mapper);
     var capture = new GraphicsCaptureExtractor(mapper, polyface, primitives);
     var text = new TextConverter(mapper);
+    var instanceSink = new SharedCellInstanceSink { Enabled = true };
     var extractor = new DisplayValueExtractor(
       mapper,
       capture,
@@ -81,11 +82,16 @@ internal static class ProbeCommand
       primitives,
       appearance,
       text,
+      instanceSink,
       NullLogger<DisplayValueExtractor>.Instance
     );
     var properties = new PropertiesExtractor(NullLogger<PropertiesExtractor>.Instance);
 
-    var perType = new Dictionary<string, (int elements, int geoms, int matGeoms, int empty, int errors, int ecProps)>();
+    var perType =
+      new Dictionary<
+        string,
+        (int elements, int geoms, int matGeoms, int instances, int empty, int errors, int ecProps)
+      >();
     int scanned = 0;
     foreach (MgdElement? element in model.GetGraphicElements())
     {
@@ -104,10 +110,12 @@ internal static class ProbeCommand
       entry.elements++;
       try
       {
-        var extracted = extractor.Extract(element);
+        var extraction = extractor.Extract(element);
+        var extracted = extraction.DisplayValue;
         entry.geoms += extracted.Count;
         entry.matGeoms += extracted.Count(g => g.Material != null);
-        if (extracted.Count == 0)
+        entry.instances += extraction.Instances.Count;
+        if (extracted.Count == 0 && extraction.Instances.Count == 0)
         {
           entry.empty++;
         }
@@ -124,12 +132,14 @@ internal static class ProbeCommand
       perType[type] = entry;
     }
 
-    log.AppendLine($"scanned: {scanned}");
-    log.AppendLine("type | elements | geoms | matGeoms | empty | errors | ecPropKeys");
+    log.AppendLine($"scanned: {scanned}  nestedDefinitions: {instanceSink.Definitions.Count}");
+    log.AppendLine("type | elements | geoms | matGeoms | instances | empty | errors | ecPropKeys");
     foreach (var kv in perType.OrderByDescending(kv => kv.Value.elements))
     {
       var v = kv.Value;
-      log.AppendLine($"{kv.Key} | {v.elements} | {v.geoms} | {v.matGeoms} | {v.empty} | {v.errors} | {v.ecProps}");
+      log.AppendLine(
+        $"{kv.Key} | {v.elements} | {v.geoms} | {v.matGeoms} | {v.instances} | {v.empty} | {v.errors} | {v.ecProps}"
+      );
     }
 
     DumpLevelDiagnostics(log, model);

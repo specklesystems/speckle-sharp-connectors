@@ -44,6 +44,7 @@ public class MicroStationBundleBuilder(
   DisplayValueExtractor displayValueExtractor,
   PropertiesExtractor propertiesExtractor,
   GeometryMapper geometryMapper,
+  SharedCellInstanceSink instanceSink,
   IInstanceUnpacker<MicroStationRootObject> instanceUnpacker,
   IConverterSettingsStore<MicroStationConversionSettings> converterSettings,
   IThreadContext threadContext,
@@ -87,6 +88,9 @@ public class MicroStationBundleBuilder(
   )
   {
     string units = converterSettings.Current.SpeckleUnits;
+
+    // Bundle sends instance nested shared cells (dgnextract Option B) — enable the dispatcher sink.
+    instanceSink.Enabled = true;
 
     UnpackResult<MicroStationRootObject> unpack = instanceUnpacker.UnpackSelection(rootObjects);
 
@@ -136,7 +140,22 @@ public class MicroStationBundleBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    return new CollectedModel(units, collectedObjects, levels, occurrences, unpack.InstanceDefinitionProxies, results);
+    // Nested shared-cell definitions registered by the dispatcher during conversion.
+    var nestedDefinitions = instanceSink.Definitions.ToDictionary(
+      kv => kv.Key,
+      kv => (kv.Value.Name, kv.Value.Members),
+      StringComparer.Ordinal
+    );
+
+    return new CollectedModel(
+      units,
+      collectedObjects,
+      levels,
+      occurrences,
+      unpack.InstanceDefinitionProxies,
+      nestedDefinitions,
+      results
+    );
   }
 
   private CollectedObject CollectObject(
@@ -160,7 +179,8 @@ public class MicroStationBundleBuilder(
         obj.OccurrenceTag,
         instanceProps.Properties,
         Proxy: instanceProxy,
-        Geometry: null
+        Geometry: null,
+        Instances: null
       );
     }
 
@@ -171,7 +191,8 @@ public class MicroStationBundleBuilder(
       ? geometryMapper.PushDefinitionFrame()
       : null;
 
-    List<ExtractedGeometry> extracted = displayValueExtractor.Extract(obj.Element);
+    ExtractionResult extraction = displayValueExtractor.Extract(obj.Element);
+    List<ExtractedGeometry> extracted = extraction.DisplayValue;
     for (int i = 0; i < extracted.Count; i++)
     {
       extracted[i].Geometry.applicationId ??= $"{appId}-g{i}";
@@ -191,7 +212,8 @@ public class MicroStationBundleBuilder(
       obj.OccurrenceTag,
       props.Properties,
       Proxy: null,
-      Geometry: extracted
+      Geometry: extracted,
+      Instances: extraction.Instances
     );
   }
 
@@ -247,6 +269,10 @@ public class MicroStationBundleBuilder(
       string defId = defProxy.applicationId ?? throw new SpeckleException("definition proxy without id");
       definitions[defId] = bundle.GetOrAddDefinition(defId, defProxy.name);
     }
+
+    var materials = new Dictionary<string, BundleMaterial>(StringComparer.Ordinal);
+    EmitNestedDefinitions(bundle, model, definitions, materials);
+
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
     // Layer tier: flat CONTAINER("Layer") nodes, parentless (ENG-8965/ENG-9131).
@@ -278,7 +304,6 @@ public class MicroStationBundleBuilder(
       );
     }
 
-    var materials = new Dictionary<string, BundleMaterial>(StringComparer.Ordinal);
     var results = model.Results.ToList();
     var resultIndexByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
     for (int i = 0; i < results.Count; i++)
@@ -333,6 +358,24 @@ public class MicroStationBundleBuilder(
         }
       }
 
+      // Nested shared-cell placements ride the object alongside its own geometry — dgnextract's
+      // DISPLAY + DISPLAY_INSTANCE pairing.
+      if (co.Instances is { Count: > 0 } uses)
+      {
+        int instanceN = 0;
+        foreach (InstanceUse use in uses)
+        {
+          BundleDefinition def = definitions.TryGetValue(use.DefinitionId, out BundleDefinition? d)
+            ? d
+            : bundle.GetOrAddDefinition(use.DefinitionId, use.DefinitionName);
+          obj.Place(def, use.Transform, use.Units, key: $"{co.ApplicationId}-i{instanceN++}");
+        }
+        if (dropReason != null)
+        {
+          dropReason = null; // placements landed — the object is not empty
+        }
+      }
+
       if (dropReason != null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
       {
         results[ri] = new(Status.ERROR, co.ApplicationId, co.SourceType, null, new SpeckleException(dropReason));
@@ -340,6 +383,20 @@ public class MicroStationBundleBuilder(
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
+    EmitUnpackerDefinitionMembers(bundle, model, definitions, memberGeometry, memberPlacements, materials);
+
+    return results;
+  }
+
+  private void EmitUnpackerDefinitionMembers(
+    BundleBuilder bundle,
+    CollectedModel model,
+    Dictionary<string, BundleDefinition> definitions,
+    Dictionary<string, List<ExtractedGeometry>> memberGeometry,
+    Dictionary<string, InstanceProxy> memberPlacements,
+    Dictionary<string, BundleMaterial> materials
+  )
+  {
     // Definition members: geometry rides DEFINES on the member's ordinal; nested placements
     // ride DEFINES_INSTANCE + PLACES (mirrors dgnextract's definition/member envelope).
     foreach (InstanceDefinitionProxy defProxy in model.Definitions)
@@ -380,8 +437,48 @@ public class MicroStationBundleBuilder(
         }
       }
     }
+  }
 
-    return results;
+  private void EmitNestedDefinitions(
+    BundleBuilder bundle,
+    CollectedModel model,
+    Dictionary<string, BundleDefinition> definitions,
+    Dictionary<string, BundleMaterial> materials
+  )
+  {
+    // Nested shared-cell definitions (dispatcher sink): geometry-only DEFINES rows — dgnextract's
+    // exact shape. Ids already covered by an unpacker definition keep the member-object variant.
+    foreach (var nested in model.NestedDefinitions)
+    {
+      if (definitions.ContainsKey(nested.Key))
+      {
+        continue;
+      }
+      BundleDefinition def = bundle.GetOrAddDefinition(nested.Key, nested.Value.Name);
+      definitions[nested.Key] = def;
+      var emitted = new List<BundleGeometry>(nested.Value.Members.Count);
+      var sources = new List<ExtractedGeometry>(nested.Value.Members.Count);
+      int memberN = 0;
+      foreach (ExtractedGeometry member in nested.Value.Members)
+      {
+        try
+        {
+          emitted.Add(def.AddGeometry(member.Geometry, $"{nested.Key}-m{memberN}", memberN));
+          sources.Add(member);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogWarning(
+            ex,
+            "Skipped unsupported definition member geometry {Type} on {DefId}",
+            member.Geometry.speckle_type,
+            nested.Key
+          );
+        }
+        memberN++;
+      }
+      ApplyAppearance(bundle, emitted, sources, materials);
+    }
   }
 
   /// <summary>Standalone object display geometry, with dgnextract's geometry-plane appearance:
@@ -461,7 +558,8 @@ public class MicroStationBundleBuilder(
     string OccurrenceTag,
     Dictionary<string, object?> Properties,
     InstanceProxy? Proxy,
-    List<ExtractedGeometry>? Geometry
+    List<ExtractedGeometry>? Geometry,
+    List<InstanceUse>? Instances
   );
 
   private sealed record CollectedModel(
@@ -470,6 +568,7 @@ public class MicroStationBundleBuilder(
     IReadOnlyDictionary<string, string> Levels,
     IReadOnlyDictionary<string, string> Occurrences,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
+    IReadOnlyDictionary<string, (string Name, List<ExtractedGeometry> Members)> NestedDefinitions,
     IReadOnlyList<SendConversionResult> Results
   );
 }

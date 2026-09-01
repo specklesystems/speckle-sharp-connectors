@@ -18,6 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettingsFactory.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Appearance\AppearanceResolver.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\DisplayValueExtractor.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\SharedCellInstanceSink.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\MeshExtraction\GraphicsCapture.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CivilPropertiesSource.cs"/>

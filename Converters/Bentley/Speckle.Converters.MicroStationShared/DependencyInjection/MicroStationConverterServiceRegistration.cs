@@ -30,6 +30,7 @@ public static class MicroStationConverterServiceRegistration
     serviceCollection.AddScoped<GraphicsCaptureExtractor>();
     serviceCollection.AddScoped<TextConverter>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<SharedCellInstanceSink>();
     serviceCollection.AddScoped<PropertiesExtractor>();
 
     // Unit converter
