@@ -26,7 +26,7 @@
 
   <Target Name="DeployToTsdExtensions" AfterTargets="Build" Condition="'$(GITHUB_ACTIONS)' != 'true'">
     <PropertyGroup>
-      <TsdExtensionsDir>$(LOCALAPPDATA)\Trimble\Tekla Structural Designer\Extensions\</TsdExtensionsDir>
+      <TsdExtensionsDir>$(LOCALAPPDATA)\Trimble\Tekla Structural Designer\Extensions\$(AssemblyName)\</TsdExtensionsDir>
     </PropertyGroup>
     <ItemGroup>
       <TsdDeployFiles Include="$(OutDir)**\*.*" />
