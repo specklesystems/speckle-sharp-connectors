@@ -84,7 +84,7 @@ jobs:
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
-          ref: main
+          ref: bjorn/tsd-extension-path-changes # TEMPORARY: revert to main before merging
           wait-for-completion: true
           sync-status: true
         timeout-minutes: 15
