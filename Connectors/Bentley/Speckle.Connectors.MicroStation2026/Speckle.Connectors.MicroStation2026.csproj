@@ -1,0 +1,104 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <!-- No RuntimeIdentifier: the zip target expects output directly under bin/Release/net48
+         (RID would nest it in win-x64/). PlatformTarget x64 is what actually matters in-process. -->
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWpf>true</UseWpf>
+    <FileAlignment>512</FileAlignment>
+
+    <BentleyProductFolder>MicroStation</BentleyProductFolder>
+    <BentleyProductVersion>2026</BentleyProductVersion>
+    <BentleyPrefsVersion>26.0.0</BentleyPrefsVersion>
+    <DefineConstants>$(DefineConstants);TRACE;MICROSTATION;MICROSTATION_2026</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+
+    <OutputType>Library</OutputType>
+    <!-- CA1031: broad catch in keyin handler is intentional for user-facing error dialogs.
+         IDE0051: SpeckleAddIn's private ctor is invoked by MicroStation via reflection — not dead code. -->
+    <NoWarn>$(NoWarn);CA1031;IDE0051</NoWarn>
+    <Description>Speckle Connector for Bentley MicroStation 2026</Description>
+    <AssemblyName>Speckle.Connectors.MicroStation2026</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Default MicroStation 2026 installation path; override via environment variable or user.props -->
+  <PropertyGroup>
+    <MicroStation2026Dir Condition="'$(MicroStation2026Dir)' == ''"
+      >$(ProgramFiles)\Bentley\MicroStation 2026\MicroStation\</MicroStation2026Dir
+    >
+  </PropertyGroup>
+
+  <Import
+    Project="..\Speckle.Connectors.MicroStationShared\Speckle.Connectors.MicroStationShared.projitems"
+    Label="Shared"
+  />
+
+  <!-- net48: co-deploy IronCompress's native nironcompress.dll for Parquet.Net Zstd (bundle sends). -->
+  <Import Project="..\Speckle.Connectors.MicroStationShared\Net48.IronCompress.props" />
+
+  <ItemGroup>
+    <!--
+      Plugin\SpeckleAddInIdentity.cs is auto-included by SDK globbing (it's a regular .cs file
+      under the project root). It supplies the per-product identity values consumed by the
+      source-shared SpeckleAddIn class.
+    -->
+    <!--
+      CommandTable.xml is the keyin tree definition. MicroStation discovers it as an embedded
+      resource named "CommandTable.xml" when loading the managed add-in DLL.
+    -->
+    <EmbeddedResource Include="Plugin\CommandTable.xml">
+      <LogicalName>CommandTable.xml</LogicalName>
+    </EmbeddedResource>
+    <!-- Speckle.addin is the managed add-in manifest read by MicroStation when probing MS_ADDINPATH. -->
+    <Content Include="Plugin\Speckle.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <!-- SpeckleAddIn.cfg is registered into %LOCALAPPDATA%\Bentley\MicroStation\26.0.0\prefs\ by Directory.Build.targets. -->
+    <Content Include="Plugin\SpeckleAddIn.cfg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      MicroStation 2026 managed API DLLs.
+      ExcludeAssets="runtime" — provided by MicroStation installation at runtime.
+      Private="False" ensures they are NOT copied to the output folder.
+    -->
+    <!--
+      ustation.dll is the MicroStation executable itself — it hosts the Bentley.MstnPlatformNET
+      managed types (AddIn base class, CommandMethod attribute, keyin infrastructure).
+      Must be Private=False (not copied to output; loaded from MicroStation's install dir).
+    -->
+    <Reference Include="ustation">
+      <HintPath>$(MicroStation2026Dir)ustation.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- DgnPlatformNET is a mixed-mode DLL provided by the host at runtime. -->
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- GeometryNET types (DTransform3d) flow through occurrence/instance plumbing. -->
+    <Reference Include="Bentley.GeometryNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET.Structs">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.Structs.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- COM interop wrapper — copy to output so it's available in the deploy directory. -->
+    <Reference Include="Bentley.Interop.MicroStationDGN">
+      <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <PackageReference Include="Microsoft.Web.WebView2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Bentley\Speckle.Converters.MicroStation2026\Speckle.Converters.MicroStation2026.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+  </ItemGroup>
+</Project>
