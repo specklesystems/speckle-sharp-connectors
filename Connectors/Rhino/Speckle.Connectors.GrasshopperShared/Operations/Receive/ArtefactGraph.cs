@@ -105,19 +105,12 @@ internal static class ArtefactGraphCache
     ns is not null && ns.IndexOf(GEOMETRY_NS, StringComparison.OrdinalIgnoreCase) >= 0;
 
   /// <summary>
-  /// The exceptions to <see cref="IsGeometryNamespace"/>: geometry relations receive does NOT resolve onto the canvas,
-  /// so Explore is the only route to them and dropping them would strand the geometry in the bundle.
+  /// The exception to <see cref="IsGeometryNamespace"/>: a geometry relation receive does NOT bake, so Explore is
+  /// its only route out. CENTERLINE is the whole membership — the rule above holds for the others precisely
+  /// because receive consumes them. Kept a positive test, so a new geometry relation stays hidden until someone
+  /// decides what it should look like on the canvas.
   /// </summary>
-  /// <remarks>
-  /// CENTERLINE is the whole membership today. The rule above holds for every other geometry relation precisely
-  /// because receive consumes it; a duct's axis is deliberately never baked (it would draw a line through the duct),
-  /// which is what puts it here instead. Kept as an explicit set rather than an inverted rule so a geometry relation
-  /// added to the spec stays hidden until someone decides what it should look like on the canvas.
-  /// </remarks>
-  private static readonly HashSet<byte> s_surfacedGeometryRels = [RelKind.Centerline];
-
-  /// <summary>Whether <paramref name="rel"/> is a geometry relation Explore surfaces as decoded native geometry.</summary>
-  public static bool IsSurfacedGeometryRel(byte rel) => s_surfacedGeometryRels.Contains(rel);
+  private static bool IsSurfacedGeometryRel(byte rel) => rel == RelKind.Centerline;
 
   public static bool IsNodeNamespace(string? ns) =>
     ns is not null && ns.IndexOf(NODE_NS, StringComparison.OrdinalIgnoreCase) >= 0;

@@ -751,21 +751,12 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
-  // Emits an element's centerline as CENTERLINE geometry [ENG-9510] — the axis, kept apart from the shell that
-  // DISPLAY carries. Two shapes, in precedence order:
-  //
-  //   1. AUTHORED LOCATION CURVE, for anything Revit placed along a curve. Costs no Revit API call: the converter
-  //      already produced it (RevitObject.location) through the SAME scaling + reference-point conversion as the
-  //      display meshes, inside the caller's converterSettings push, so the axis lands aligned with its own
-  //      geometry even for a linked model placed away from the host origin. Emitted for EVERY such element, not
-  //      only MEP: a duct/pipe/conduit IS its centerline, and a framing member's axis is the same datum and the
-  //      same ask. What lands is the element's LOCATION curve faithfully — for a wall that follows the Location
-  //      Line type parameter and may be a core or finish face rather than the centre.
-  //   2. CONNECTOR BRANCHES, for a point-placed MEP fitting (see EmitFittingCenterline), which has no location
-  //      curve at all and so left a gap in every run.
-  //
-  // Precedence, not union: an element with a location curve already has its axis, and its connectors would only
-  // restate the ends of it.
+  // Emits an element's centerline as CENTERLINE geometry [ENG-9510] — the axis, kept apart from the shell
+  // DISPLAY carries. Precedence, not union: the authored location curve where there is one (free — the converter
+  // already produced it as RevitObject.location, through the same scaling + reference-point path as the meshes),
+  // else a point-placed MEP fitting's connector branches (see MepCenterlineExtractor). Emitted for EVERY
+  // curve-located element, not only MEP; what lands is the LOCATION curve faithfully, so for a wall it follows
+  // the Location Line type parameter and may be a face rather than the centre.
   private void EmitCenterline(
     ObjectsArtifactPipeline pipeline,
     int objK,
@@ -803,9 +794,8 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
-  // A point-placed MEP fitting has no location curve, so its centerline is derived from its connectors instead
-  // — see MepCenterlineExtractor for what that means and why it is one segment per connector. The ord is the
-  // branch index, so a tee's three branches stay distinguishable and ordered.
+  // Connector-derived branches for a fitting, ord = branch index so a tee's three stay ordered. See
+  // MepCenterlineExtractor for why it is one segment per connector.
   private void EmitFittingCenterline(ObjectsArtifactPipeline pipeline, int objK, string appId, Element revitElement)
   {
     IReadOnlyList<SOG.Line> branches;
@@ -872,8 +862,7 @@ public class RevitArtifactRootObjectBuilder(
     pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
 
     EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
-    // Children are curtain panels, mullions, top rails and stacked-wall members — never MEP
-    // fittings, so the connector fallback has nothing to offer and the element is not threaded down here.
+    // Children are panels, mullions and rails — never MEP fittings, so no element is threaded down.
     EmitCenterline(pipeline, childK, childAppId, null, child);
 
     int grandOrd = 0;

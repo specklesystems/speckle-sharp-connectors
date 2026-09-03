@@ -13,13 +13,11 @@ using SOG = Speckle.Objects.Geometry;
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 /// <summary>
-/// Turns one geometry index of an artefact <see cref="ArtefactBundle"/> into Rhino geometry, in the active document's
-/// units.
+/// Turns one geometry index of an artefact bundle into Rhino geometry, in the active document's units.
 /// </summary>
 /// <remarks>
-/// Extracted from <see cref="GrasshopperArtefactObjectBuilder"/> so the Explore component can decode the geometry the
-/// receive deliberately does NOT bake onto the canvas - a <c>CENTERLINE</c> curve - through the exact same path the
-/// receive uses for display geometry, rather than a second half-equivalent copy of it.
+/// Shared with <see cref="GrasshopperArtefactObjectBuilder"/> so Explore decodes the geometry receive does NOT
+/// bake — a CENTERLINE curve — through the same path, not a second half-equivalent copy of it.
 /// </remarks>
 internal static class ArtefactGeometryDecoder
 {

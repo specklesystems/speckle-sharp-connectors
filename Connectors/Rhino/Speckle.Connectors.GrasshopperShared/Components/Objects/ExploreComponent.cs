@@ -219,9 +219,8 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     // supplies the name and which namespace each end lives in, so a relation added to the spec appears by itself.
     foreach (var type in graph.RelationTypes)
     {
-      // A relation pointing AT geometry comes out as the geometry itself - a centerline is a curve you plug into
-      // Curve components, not an id you look up. Only the relations receive leaves unbaked reach here at all
-      // (ArtefactGraphCache.IsSurfacedGeometryRel), and Describe could only render their targets as bare indices.
+      // A relation pointing AT geometry comes out as the geometry itself — a centerline is a curve you plug
+      // into Curve components, not an id. Describe could only render its targets as bare indices.
       if (ArtefactGraphCache.IsGeometryNamespace(type.TargetNamespace))
       {
         Add(values, Humanise(type.Name), Decode(graph, type.Rel, objK));
@@ -340,16 +339,9 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     : bundle.ObjectAppIds.TryGetValue(k, out var appId) ? appId
     : null;
 
-  /// <summary>
-  /// The geometry a relation points at, decoded into the active document's units - the same decode path the receive
-  /// itself uses, so a centerline lands exactly on the object it belongs to.
-  /// </summary>
-  /// <remarks>
-  /// Failures are swallowed rather than surfaced: an unreadable blob means one empty branch, and Explore is a
-  /// read-only inspection component - failing the solve over it would be worse than showing nothing. The decoder
-  /// already absorbs SGEO problems into its warning list; the catch covers the raw-blob path, which no relation
-  /// surfaced today reaches but a future one could.
-  /// </remarks>
+  /// <summary>The geometry a relation points at, on the same decode path receive uses — so a centerline lands
+  /// exactly on the object it belongs to. Failures give one empty branch: Explore is read-only inspection, and
+  /// failing the solve over an unreadable blob would be worse than showing nothing.</summary>
   private static List<RG.GeometryBase> Decode(ArtefactGraph graph, byte rel, int objK)
   {
     var warnings = new List<string>();

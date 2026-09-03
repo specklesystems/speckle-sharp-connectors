@@ -10,16 +10,10 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// Derives the centerline of a point-placed MEP fitting from its connectors [ENG-9510].
 /// </summary>
 /// <remarks>
-/// <para>A duct or pipe IS its location curve, so its centerline is free. A fitting — elbow, tee, cross, transition —
-/// is placed at a point and has no location curve at all, which left a gap in every run downstream. The geometry that
-/// closes the gap is still authored, just not as a curve: each connector reports where the run enters or leaves the
-/// fitting, and the fitting's insertion point is the node those branches meet at.</para>
-/// <para><b>One segment per connector</b>, rather than one curve across the fitting. That is what a single-line
-/// drawing draws, and it is the only shape that stays correct for a tee or a cross — no single curve can express a
-/// branch. Consumers weld duct and fitting segments into continuous runs (Join Curves in Grasshopper).</para>
-/// <para>Its own class rather than another method on the send builder: this is a self-contained host-API read, it is
-/// the same shape as <see cref="ElementUnpacker"/> and friends, and folding the connector vocabulary into the builder
-/// pushed that class past its class-coupling budget.</para>
+/// A duct IS its location curve, so its centerline is free. A fitting is placed at a point and has none, which left a
+/// gap in every run. Each connector says where the run meets the fitting, so the fitting ships ONE SEGMENT PER
+/// CONNECTOR to its insertion point — what a single-line drawing draws, and the only shape that survives a tee, where
+/// no single curve can express the branch.
 /// </remarks>
 public class MepCenterlineExtractor(
   ITypedConverter<XYZ, SOG.Point> pointConverter,
@@ -27,13 +21,12 @@ public class MepCenterlineExtractor(
 )
 {
   /// <summary>
-  /// The fitting's centerline branches, one per flow connector, ordered as Revit reports them. Empty for anything
-  /// that is not a connector-bearing family instance, and for a fitting whose connectors cannot be read.
+  /// The fitting's centerline branches, one per end connector, in Revit's order. Empty for anything that is not a
+  /// connector-bearing family instance.
   /// </summary>
   /// <remarks>
-  /// Points go through the same <see cref="ITypedConverter{XYZ, Point}"/> the location curves use, so scaling and the
-  /// reference-point transform match the display meshes by construction — including in a linked model, provided the
-  /// caller is inside that document's converter-settings push.
+  /// Points go through the same converter the location curves use, so scaling and the reference-point transform match
+  /// the display meshes by construction — provided the caller is inside the owning document's settings push.
   /// </remarks>
   public IReadOnlyList<SOG.Line> GetCenterlineBranches(Element element)
   {
@@ -45,15 +38,15 @@ public class MepCenterlineExtractor(
     var origins = new List<XYZ>();
     foreach (Connector connector in connectorManager.Connectors)
     {
-      // A logical connector carries no geometry at all (CoordinateSystem throws on one), and a non-flow domain
-      // (electrical, structural analytical) is not a run whose centerline anyone asked for.
-      if (connector.ConnectorType == ConnectorType.Logical || !IsFlowDomain(connector.Domain))
+      // End is the atomic type a run's endpoint reports; this enum's composite members (Physical = End|Curve|Surface,
+      // …) are query masks no connector ever equals. Testing for it positively also excludes the logical connectors
+      // whose CoordinateSystem throws.
+      if (connector.ConnectorType == ConnectorType.End && IsFlowDomain(connector.Domain))
       {
-        continue;
+        // CoordinateSystem.Origin, not Connector.Origin: the latter is documented to throw for a connector belonging
+        // to a family instance, i.e. every fitting. Both name the same point.
+        origins.Add(connector.CoordinateSystem.Origin);
       }
-      // CoordinateSystem.Origin, NOT Connector.Origin: the latter is documented to throw for a connector that is
-      // part of a family instance, which is every fitting. Both name the same point.
-      origins.Add(connector.CoordinateSystem.Origin);
     }
 
     if (origins.Count == 0)
@@ -61,9 +54,8 @@ public class MepCenterlineExtractor(
       return [];
     }
 
-    // The node the branches meet at. A placed fitting's insertion point IS that node; averaging the connector
-    // origins is the last resort for a family that reports no location, and degrades to the chord rather than to
-    // nothing.
+    // A placed fitting's insertion point IS the node its branches meet at; averaging the origins is the last resort
+    // for a family reporting no location, and degrades to the chord rather than to nothing.
     XYZ node = element.Location is LocationPoint locationPoint
       ? locationPoint.Point
       : origins.Aggregate(XYZ.Zero, (sum, origin) => sum.Add(origin)).Divide(origins.Count);
@@ -79,8 +71,7 @@ public class MepCenterlineExtractor(
         end = nodePoint,
         units = units,
       };
-      // A connector sitting on the node contributes no branch — emitting it would put a degenerate, zero-length
-      // curve on the port for every consumer to filter out.
+      // A connector sitting on the node would only put a degenerate curve on the port.
       if (branch.length > BRANCH_TOLERANCE)
       {
         branches.Add(branch);
@@ -90,12 +81,10 @@ public class MepCenterlineExtractor(
     return branches;
   }
 
-  // The domains where a connector marks a flow run. Electrical and structural-analytical connectors are a different
-  // kind of statement and carry no run geometry.
+  /// <summary>Domains where a connector marks a flow run; electrical and analytical ones carry no run geometry.</summary>
   private static bool IsFlowDomain(Domain domain) =>
     domain is Domain.DomainHvac or Domain.DomainPiping or Domain.DomainCableTrayConduit;
 
-  // The shortest branch worth shipping, in the send's own units — small enough that a real fitting branch never trips
-  // it, large enough to drop a connector that coincides with the insertion point.
+  // Shortest branch worth shipping, in the send's own units.
   private const double BRANCH_TOLERANCE = 1e-6;
 }
