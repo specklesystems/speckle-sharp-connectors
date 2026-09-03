@@ -415,18 +415,38 @@ graph LR
   AX[geo · axis curve]:::geo
   DU -->|DISPLAY| SH
   DU -->|CENTERLINE| AX
+  EL([obj · Elbow fitting]):::obj
+  B0[geo · branch 0]:::geo
+  B1[geo · branch 1]:::geo
+  EL -->|CENTERLINE ord 0| B0
+  EL -->|CENTERLINE ord 1| B1
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
 ```
 
-Every element whose `Location` is a `LocationCurve` ships that curve alongside its display geometry — a duct, pipe,
-conduit or tray IS its centerline, and a framing member's axis is the same datum. Free: the converter already
-produced the curve as `RevitObject.location`, through the same scaling + reference-point path as the meshes and inside
-the same settings push, so the axis lands aligned with its own shell in a linked model too. Point-located elements
-(duct fittings, furniture) emit nothing — a point is not a centerline. **Not a render edge**: no receiver bakes it, so
-Grasshopper's Explore component is the route to it (it is the one geometry rel `ArtefactGraphCache` deliberately does
-not drop). Caveat: it is the element's LOCATION curve, so for a wall it follows the Location Line type parameter and
-may be a face rather than the centre.
+Two shapes, one rel, because a consumer asking "where is the axis" does not care which.
+
+**(a) The authored location curve**, for every element whose `Location` is a `LocationCurve` — a duct,
+pipe, conduit or tray IS its centerline, and a framing member’s axis is the same datum. Free: the converter
+already produced the curve as `RevitObject.location`, through the same scaling + reference-point path as the
+meshes and inside the same settings push, so the axis lands aligned with its own shell in a linked model too.
+*Caveat*: it is the element’s LOCATION curve, so for a wall it follows the Location Line type parameter and may
+be a face rather than the centre.
+
+**(b) Connector branches**, for a point-placed MEP fitting — elbow, tee, cross, transition — which has no
+location curve at all and so left a gap in every run. Each connector reports where the run enters or leaves the
+fitting and the insertion point is the node they meet at, so the fitting ships **one segment per connector**
+(`MepCenterlineExtractor`), `ord` = branch index. That is what a single-line drawing draws, and the only shape
+that survives a branch — no single curve can express a tee. Consumers weld duct and fitting segments into
+continuous runs (Join Curves). Origins come from `Connector.CoordinateSystem.Origin`, **not** `Connector.Origin`,
+which is documented to throw for a connector belonging to a family instance — i.e. every fitting. Also fires
+for connector-bearing equipment and air terminals: a stub per connector to the unit’s insertion point.
+
+Elements placed by a point with no flow connectors (furniture, isolated foundations, vertical structural columns)
+emit nothing — a point is not a centerline.
+
+**Not a render edge**: no receiver bakes it, so Grasshopper’s Explore component is the route to it (it is the one
+geometry rel `ArtefactGraphCache` deliberately does not drop).
 
 - **Nodes:** CONTAINER `"Model"` (per source doc) · CONTAINER `"Group"` (per placed model group) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)
