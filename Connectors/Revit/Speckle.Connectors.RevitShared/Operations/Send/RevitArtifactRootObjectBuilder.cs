@@ -18,6 +18,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
+using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -452,7 +453,8 @@ public class RevitArtifactRootObjectBuilder(
   }
 
   // Emits one atomic object: its eav labels + IN_MODEL edge + per-fragment DISPLAY (→ geometry) /
-  // DISPLAY_INSTANCE (→ INSTANCE node). Instance definitions + materials + levels are wired post-loop.
+  // DISPLAY_INSTANCE (→ INSTANCE node) + its location curve as CENTERLINE (→ geometry). Instance definitions +
+  // materials + levels are wired post-loop.
   // Returns the interned object K so the caller can wire per-document topology (groups) to this exact placement.
   private int EmitObject(
     ObjectsArtifactPipeline pipeline,
@@ -487,6 +489,7 @@ public class RevitArtifactRootObjectBuilder(
     );
 
     EmitDisplayValue(pipeline, objK, applicationId, dataObject.displayValue);
+    EmitCenterline(pipeline, objK, applicationId, revitObject);
 
     // Recurse into hosted/nested children (RevitObject.elements) — curtain wall → mullions/panels, railing → top
     // rail, stacked wall → members. RemoveKnownChildElementsWhenParentPresent strips these from the atomic list when
@@ -742,6 +745,41 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
+  // Emits the element's authored location curve as CENTERLINE geometry [ENG-9510] — the axis, kept apart from the
+  // shell that DISPLAY carries. Costs no Revit API call: the converter already produced this curve
+  // (RevitObject.location) through the SAME scaling + reference-point conversion as the display meshes, and both run
+  // inside the caller's converterSettings push, so the axis lands aligned with its own geometry even for a linked
+  // model placed away from the host origin.
+  //
+  // Emitted for EVERY element whose location is a curve, not only MEP: a duct/pipe/conduit IS its centerline, and a
+  // framing member's axis is the same datum and the same ask. Point-located elements — duct fittings, furniture,
+  // most family instances — emit nothing, because a point is not a centerline and deriving a fitting's axis from its
+  // connectors is a separate job. What lands is the element's LOCATION curve faithfully: for a wall that follows the
+  // Location Line type parameter and may be a core or finish face rather than the centre, which is why the rel is
+  // named for what it is used for and documented for what it holds.
+  private void EmitCenterline(ObjectsArtifactPipeline pipeline, int objK, string appId, RevitObject? revitObject)
+  {
+    // A point location — duct fittings, furniture, most family instances — is not a centerline.
+    if (revitObject?.location is not { } location || location is not ICurve)
+    {
+      return;
+    }
+
+    try
+    {
+      // Deterministic key, not location.applicationId: the converter never stamps one, and a key shared with a
+      // display fragment would collapse the two edges onto one blob.
+      int geometryK = pipeline.AddGeometry($"{appId}:cl", location);
+      pipeline.Centerline(objK, geometryK, 0);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      // A curve the SGEO encoder doesn't cover is skipped without failing the object — its display geometry,
+      // properties and topology still land (same tolerance as EmitDisplayValue's curve path).
+      logger.LogWarning(ex, "Skipped unsupported centerline geometry {Type} on {AppId}", location.speckle_type, appId);
+    }
+  }
+
   // A hosted/nested child RevitObject: its own interned object (geometry + properties), a SUBELEMENT edge to its
   // owner, and recursion into its own children. Children are NOT in the atomic loop (stripped when the parent is
   // present), so they get no separate ON_LEVEL/type-key resolution here — geometry + hierarchy + materials suffice.
@@ -786,6 +824,7 @@ public class RevitArtifactRootObjectBuilder(
     pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
 
     EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
+    EmitCenterline(pipeline, childK, childAppId, child);
 
     int grandOrd = 0;
     foreach (RevitObject grandChild in child.elements)

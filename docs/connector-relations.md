@@ -2,7 +2,7 @@
 
 _Speckle 4.0 artifact bundle · schema_version 5 · verified against connector send builders on `big-truck` + the SketchUp Ruby producer._
 
-The [bundle spec](https://github.com/specklesystems/speckle-bundle-spec) defines **17 live relations**, but no connector emits all of them. Each host maps its own concepts (layers, levels, blocks, systems, results) onto the subset that fits. This doc pins down, with diagrams and code evidence, exactly what **every connector** produces and consumes.
+The [bundle spec](https://github.com/specklesystems/speckle-bundle-spec) defines the live relations, but no connector emits all of them. Each host maps its own concepts (layers, levels, blocks, systems, results) onto the subset that fits. This doc pins down, with diagrams and code evidence, exactly what **every connector** produces and consumes.
 
 > Companion: [the artifact object model field guide](./artifact-object-model.md) — worked examples of each relation in the abstract.
 
@@ -18,7 +18,10 @@ A bundle is a graph of flat parquet rows across **three ID spaces**. A bare numb
 | **geometry** | `geometries` · `geometryIndex` | one blob — display mesh (SGEO) or lossless raw body (3dm / SAT) |
 | **node** | `envelope.nodes` · `id` | a synthetic value — material, color, level, definition, instance, container |
 
-### The 17 live relations
+### The live relations
+
+> This table lags the spec: rels 18 and 24-29 landed after it was written and are not listed. `docs/reference.md`
+> in speckle-bundle-spec is generated from the spec itself and is always current.
 
 | id | relation | src → dst | meaning |
 |---:|---|---|---|
@@ -39,6 +42,7 @@ A bundle is a graph of flat parquet rows across **three ID spaces**. A bare numb
 | 21 | `CONNECTS_TO` | object → object | directed connectivity (frame→joint, pipe→structure, room adjacency) |
 | 22 | `HOSTED_ON` | object → object | hosted element **placed on** host (door→wall) · distinct from ownership |
 | 23 | `BOUNDS` | object → object | bounding wall → room |
+| 30 | `CENTERLINE` | object → geometry | element's authored location curve (duct/pipe axis) · **not** a render edge |
 
 Plus four **value / sidecar files** outside the relation graph: `camera_views` (named viewpoints), `structural_results` (analysis rows), `reference_point` (meta columns), and the Civil3D **property-set definitions carrier**.
 
@@ -69,6 +73,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **21 CONNECTS_TO** | · | · | · | · | ● | · | ● | · | ● | · |
 | **22 HOSTED_ON** | · | · | · | · | · | · | ● | · | · | · |
 | **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
+| **30 CENTERLINE** | · | · | · | · | · | · | ● | · | · | · |
 | _camera_views_ | ● | · | · | · | · | ● | ● | · | · | · |
 | _structural_results_ | · | · | · | · | · | · | · | · | ● | ● |
 | _reference_point (meta)_ | · | · | · | · | · | · | ● | · | · | · |
@@ -183,6 +188,9 @@ graph LR
 Every GH branch maps to one CONTAINER; the exact path array rides a sidecar eav object (`__collection_topology_{k}`) so receivers rebuild the tree with no schema change. GH reuses Rhino's geometry/material/color/block packers verbatim — no layer or level concept.
 
 - **Nodes:** CONTAINER `"Collection"` (nested, one per branch) · DEFINITION/INSTANCE · MATERIAL · COLOR
+- **Consumes:** the Explore component reads the envelope graph catalog, so every relation surfaces without a code
+  change — as application ids for object/node ends, and as native geometry for `CENTERLINE` (the one geometry rel it
+  keeps, because receive never bakes it; see the Revit section)
 - **Receive:** send-only (data connector)
 
 ---
@@ -317,7 +325,7 @@ A SketchUp group emits DISPLAY_INSTANCE like a component — so **IN_GROUP is ne
 
 ---
 
-### Revit — BIM · emits 11
+### Revit — BIM · emits 12
 
 The richest BIM producer: display geometry + instances/materials/levels, per-document model containers for federation, and a best-effort host-API topology layer (sub-elements, rooms, room-adjacency, model groups).
 
@@ -397,6 +405,28 @@ graph LR
 ```
 
 `ElementUnpacker` explodes every placed group into its members before conversion, so the group instance is never an object — membership is recovered from each member's `Element.GroupId`, and because that unpacking recurses, `GroupId` always names the **innermost** group (one `IN_GROUP` edge per element). Nesting is the CONTAINER parent chain (`def_ref`), walked from each group's own `GroupId`. Containers are keyed per model container, so a linked file placed twice gets one group tier per placement. Attached detail groups are excluded (annotation, not model topology). The container name is the group TYPE name — the same string that ships as the `groupName` property.
+
+**Centerlines** — `CENTERLINE` (ENG-9510)
+
+```mermaid
+graph LR
+  DU([obj · Duct]):::obj
+  SH[geo · tube mesh]:::geo
+  AX[geo · axis curve]:::geo
+  DU -->|DISPLAY| SH
+  DU -->|CENTERLINE| AX
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
+```
+
+Every element whose `Location` is a `LocationCurve` ships that curve alongside its display geometry — a duct, pipe,
+conduit or tray IS its centerline, and a framing member's axis is the same datum. Free: the converter already
+produced the curve as `RevitObject.location`, through the same scaling + reference-point path as the meshes and inside
+the same settings push, so the axis lands aligned with its own shell in a linked model too. Point-located elements
+(duct fittings, furniture) emit nothing — a point is not a centerline. **Not a render edge**: no receiver bakes it, so
+Grasshopper's Explore component is the route to it (it is the one geometry rel `ArtefactGraphCache` deliberately does
+not drop). Caveat: it is the element's LOCATION curve, so for a wall it follows the Location Line type parameter and
+may be a face rather than the centre.
 
 - **Nodes:** CONTAINER `"Model"` (per source doc) · CONTAINER `"Group"` (per placed model group) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)

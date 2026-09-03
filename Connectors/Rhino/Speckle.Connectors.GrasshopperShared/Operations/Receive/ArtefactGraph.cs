@@ -1,3 +1,4 @@
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -103,6 +104,21 @@ internal static class ArtefactGraphCache
   public static bool IsGeometryNamespace(string? ns) =>
     ns is not null && ns.IndexOf(GEOMETRY_NS, StringComparison.OrdinalIgnoreCase) >= 0;
 
+  /// <summary>
+  /// The exceptions to <see cref="IsGeometryNamespace"/>: geometry relations receive does NOT resolve onto the canvas,
+  /// so Explore is the only route to them and dropping them would strand the geometry in the bundle.
+  /// </summary>
+  /// <remarks>
+  /// CENTERLINE is the whole membership today. The rule above holds for every other geometry relation precisely
+  /// because receive consumes it; a duct's axis is deliberately never baked (it would draw a line through the duct),
+  /// which is what puts it here instead. Kept as an explicit set rather than an inverted rule so a geometry relation
+  /// added to the spec stays hidden until someone decides what it should look like on the canvas.
+  /// </remarks>
+  private static readonly HashSet<byte> s_surfacedGeometryRels = [RelKind.Centerline];
+
+  /// <summary>Whether <paramref name="rel"/> is a geometry relation Explore surfaces as decoded native geometry.</summary>
+  public static bool IsSurfacedGeometryRel(byte rel) => s_surfacedGeometryRels.Contains(rel);
+
   public static bool IsNodeNamespace(string? ns) =>
     ns is not null && ns.IndexOf(NODE_NS, StringComparison.OrdinalIgnoreCase) >= 0;
 
@@ -204,7 +220,7 @@ internal static class ArtefactGraphCache
       {
         continue;
       }
-      if (IsGeometryNamespace(srcNs[i]) || IsGeometryNamespace(dstNs[i]))
+      if ((IsGeometryNamespace(srcNs[i]) || IsGeometryNamespace(dstNs[i])) && !IsSurfacedGeometryRel((byte)rel[i]))
       {
         continue;
       }
