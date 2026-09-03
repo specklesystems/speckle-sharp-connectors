@@ -158,6 +158,11 @@ public class Polyline2dToSpeckleConverter
       }
     }
 
+    foreach (ADB.DBObject obj in exploded)
+    {
+      obj.Dispose();
+    }
+
     // for splines, convert the spline curve and display value and add to the segments list
     if (isSpline)
     {
