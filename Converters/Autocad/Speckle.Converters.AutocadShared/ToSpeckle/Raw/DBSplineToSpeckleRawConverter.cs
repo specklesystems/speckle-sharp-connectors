@@ -37,7 +37,8 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     bool periodicClosed = false;
     double length = 0;
     SOP.Interval domain = SOP.Interval.UnitInterval;
-    if (target.GetGeCurve() is NurbCurve3d nurbs)
+    using AG.Curve3d curve3d = target.GetGeCurve();
+    if (curve3d is NurbCurve3d nurbs)
     {
       length = nurbs.GetLength(nurbs.StartParameter, nurbs.EndParameter, 0.001);
       domain = _intervalConverter.Convert(nurbs.GetInterval());
@@ -124,7 +125,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
   // POC: we might have DisplayValue converter/mapper?
   private SOG.Polyline GetDisplayValue(ADB.Spline spline)
   {
-    ADB.Curve polySpline = spline.ToPolylineWithPrecision(10, false, false);
+    using ADB.Curve polySpline = spline.ToPolylineWithPrecision(10, false, false);
     List<double> verticesList = new();
     switch (polySpline)
     {
