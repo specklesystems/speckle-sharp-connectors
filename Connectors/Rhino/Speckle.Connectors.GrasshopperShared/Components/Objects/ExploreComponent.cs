@@ -219,6 +219,14 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     // supplies the name and which namespace each end lives in, so a relation added to the spec appears by itself.
     foreach (var type in graph.RelationTypes)
     {
+      // A relation pointing AT geometry comes out as the geometry itself — a centerline is a curve you plug
+      // into Curve components, not an id. Describe could only render its targets as bare indices.
+      if (ArtefactGraphCache.IsGeometryNamespace(type.TargetNamespace))
+      {
+        Add(values, Humanise(type.Name), Decode(graph, type.Rel, objK));
+        continue;
+      }
+
       if (ArtefactGraphCache.IsObjectNamespace(type.SourceNamespace))
       {
         Add(values, Humanise(type.Name), Describe(graph.Targets(type.Rel, objK), type.TargetNamespace, bundle));
@@ -330,6 +338,29 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     bundle.Nodes.TryGetValue(k, out var node) && node.Name is { Length: > 0 } name ? name
     : bundle.ObjectAppIds.TryGetValue(k, out var appId) ? appId
     : null;
+
+  /// <summary>The geometry a relation points at, on the same decode path receive uses — so a centerline lands
+  /// exactly on the object it belongs to. Failures give one empty branch: Explore is read-only inspection, and
+  /// failing the solve over an unreadable blob would be worse than showing nothing.</summary>
+  private static List<RG.GeometryBase> Decode(ArtefactGraph graph, byte rel, int objK)
+  {
+    var warnings = new List<string>();
+    var result = new List<RG.GeometryBase>();
+    foreach (int geomK in graph.Targets(rel, objK))
+    {
+      try
+      {
+        result.AddRange(
+          ArtefactGeometryDecoder.DecodeGeometryIndex(geomK, graph.Bundle, graph.Bundle.Units, null, warnings)
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // one unreadable fragment, not the whole port
+      }
+    }
+    return result;
+  }
 
   /// <summary>
   /// Turns dense ids into something readable, using the namespace the catalog declared for that end. Object and node

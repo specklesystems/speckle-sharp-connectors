@@ -18,6 +18,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
+using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -47,6 +48,11 @@ namespace Speckle.Connectors.Revit.Operations.Send;
 /// every object emits an <c>IN_MODEL</c> relation to its owning model; a federated (&gt;1 document) send
 /// prepends the <c>IN_MODEL</c> tier to the default scene view.</para>
 /// </remarks>
+[SuppressMessage(
+  "Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "Top-level artefact send orchestrator; coupling to converters, unpackers, host API and the pipeline façade is inherent."
+)]
 public class RevitArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -58,6 +64,7 @@ public class RevitArtifactRootObjectBuilder(
   IArtifactPipelineFactory artifactPipelineFactory,
   IScalingServiceToSpeckle scalingService,
   IReferencePointConverter referencePointConverter,
+  MepCenterlineExtractor mepCenterlineExtractor,
   ISpeckleApplication speckleApplication,
   ILogger<RevitArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<DocumentToConvert>
@@ -452,7 +459,8 @@ public class RevitArtifactRootObjectBuilder(
   }
 
   // Emits one atomic object: its eav labels + IN_MODEL edge + per-fragment DISPLAY (→ geometry) /
-  // DISPLAY_INSTANCE (→ INSTANCE node). Instance definitions + materials + levels are wired post-loop.
+  // DISPLAY_INSTANCE (→ INSTANCE node) + its location curve as CENTERLINE (→ geometry). Instance definitions +
+  // materials + levels are wired post-loop.
   // Returns the interned object K so the caller can wire per-document topology (groups) to this exact placement.
   private int EmitObject(
     ObjectsArtifactPipeline pipeline,
@@ -487,6 +495,7 @@ public class RevitArtifactRootObjectBuilder(
     );
 
     EmitDisplayValue(pipeline, objK, applicationId, dataObject.displayValue);
+    EmitCenterline(pipeline, objK, applicationId, revitElement, revitObject);
 
     // Recurse into hosted/nested children (RevitObject.elements) — curtain wall → mullions/panels, railing → top
     // rail, stacked wall → members. RemoveKnownChildElementsWhenParentPresent strips these from the atomic list when
@@ -742,6 +751,73 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
+  // Emits an element's centerline as CENTERLINE geometry [ENG-9510] — the axis, kept apart from the shell
+  // DISPLAY carries. Precedence, not union: the authored location curve where there is one (free — the converter
+  // already produced it as RevitObject.location, through the same scaling + reference-point path as the meshes),
+  // else a point-placed MEP fitting's connector branches (see MepCenterlineExtractor). Emitted for EVERY
+  // curve-located element, not only MEP; what lands is the LOCATION curve faithfully, so for a wall it follows
+  // the Location Line type parameter and may be a face rather than the centre.
+  private void EmitCenterline(
+    ObjectsArtifactPipeline pipeline,
+    int objK,
+    string appId,
+    Element? revitElement,
+    RevitObject? revitObject
+  )
+  {
+    if (revitObject?.location is { } location && location is ICurve)
+    {
+      try
+      {
+        // Deterministic key, not location.applicationId: the converter never stamps one, and a key shared with a
+        // display fragment would collapse the two edges onto one blob.
+        int geometryK = pipeline.AddGeometry($"{appId}:cl", location);
+        pipeline.Centerline(objK, geometryK, 0);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // A curve the SGEO encoder doesn't cover is skipped without failing the object — its display geometry,
+        // properties and topology still land (same tolerance as EmitDisplayValue's curve path).
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported centerline geometry {Type} on {AppId}",
+          location.speckle_type,
+          appId
+        );
+      }
+      return;
+    }
+
+    if (revitElement is not null)
+    {
+      EmitFittingCenterline(pipeline, objK, appId, revitElement);
+    }
+  }
+
+  // Connector-derived branches for a fitting, ord = branch index so a tee's three stay ordered. See
+  // MepCenterlineExtractor for why it is one segment per connector.
+  private void EmitFittingCenterline(ObjectsArtifactPipeline pipeline, int objK, string appId, Element revitElement)
+  {
+    IReadOnlyList<SOG.Line> branches;
+    try
+    {
+      branches = mepCenterlineExtractor.GetCenterlineBranches(revitElement);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      // An unreadable connector set costs this fitting its centerline and nothing else — geometry, properties
+      // and topology still land (same tolerance as the rest of this builder's host-API reads).
+      logger.LogWarning(ex, "Could not read MEP connectors on {AppId}", appId);
+      return;
+    }
+
+    for (int ord = 0; ord < branches.Count; ord++)
+    {
+      int geometryK = pipeline.AddGeometry($"{appId}:cl{ord}", branches[ord]);
+      pipeline.Centerline(objK, geometryK, ord);
+    }
+  }
+
   // A hosted/nested child RevitObject: its own interned object (geometry + properties), a SUBELEMENT edge to its
   // owner, and recursion into its own children. Children are NOT in the atomic loop (stripped when the parent is
   // present), so they get no separate ON_LEVEL/type-key resolution here — geometry + hierarchy + materials suffice.
@@ -786,6 +862,8 @@ public class RevitArtifactRootObjectBuilder(
     pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
 
     EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
+    // Children are panels, mullions and rails — never MEP fittings, so no element is threaded down.
+    EmitCenterline(pipeline, childK, childAppId, null, child);
 
     int grandOrd = 0;
     foreach (RevitObject grandChild in child.elements)
