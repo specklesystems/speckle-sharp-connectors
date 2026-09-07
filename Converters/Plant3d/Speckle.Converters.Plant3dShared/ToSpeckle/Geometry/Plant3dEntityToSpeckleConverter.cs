@@ -132,9 +132,12 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       entity.Explode(exploded);
       foreach (ADB.DBObject obj in exploded)
       {
-        if (obj is ADB.Entity subEntity)
+        using (obj)
         {
-          CollectDisplayObjects(subEntity, results, depth + 1);
+          if (obj is ADB.Entity subEntity)
+          {
+            CollectDisplayObjects(subEntity, results, depth + 1);
+          }
         }
       }
     }
