@@ -21,6 +21,8 @@
     <Reference Include="WindowsFormsIntegration" />
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2025.0.0" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Web.WebView2" VersionOverride="1.0.2045.28" />
+    <!--to match ADSK.DaluxNavisworksBIM.bundle-->
+    <PackageReference Include="System.Text.Json" VersionOverride="8.0.0" NoWarn="NU1903" />
   </ItemGroup>
 
   <ItemGroup>

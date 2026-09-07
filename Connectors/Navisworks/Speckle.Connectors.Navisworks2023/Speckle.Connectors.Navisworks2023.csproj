@@ -20,6 +20,8 @@
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration" />
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2023.0.0" ExcludeAssets="runtime" />
+    <!--to match ADSK.DaluxNavisworksBIM.bundle-->
+    <PackageReference Include="System.Text.Json" VersionOverride="8.0.0" NoWarn="NU1903" />
   </ItemGroup>
 
   <ItemGroup>
