@@ -79,6 +79,7 @@
     <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <Project Path="Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
+    <Project Path="Sdk\Speckle.Common.SectionGeometry\Speckle.Common.SectionGeometry.csproj" />
     <Project Path="Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj" />
     <Project Path="Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
     <Project Path="Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />
