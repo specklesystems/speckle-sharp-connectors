@@ -752,21 +752,28 @@ public class RevitArtifactRootObjectBuilder(
   }
 
   // Emits an element's centerline as CENTERLINE geometry [ENG-9510] — the axis, kept apart from the shell
-  // DISPLAY carries. Precedence, not union: the authored location curve where there is one (free — the converter
-  // already produced it as RevitObject.location, through the same scaling + reference-point path as the meshes),
-  // else a point-placed MEP fitting's connector branches (see MepCenterlineExtractor). Emitted for EVERY
-  // curve-located element, not only MEP; what lands is the LOCATION curve faithfully, so for a wall it follows
-  // the Location Line type parameter and may be a face rather than the centre.
+  // DISPLAY carries. Two sources: the authored location curve of an in-scope element, else a point-placed MEP
+  // fitting's connector branches. An element with a location curve never needs the fitting path — its connectors
+  // would only restate the ends of a curve it already has.
+  //
+  // The curve itself is free (the converter already produced it as RevitObject.location, through the same scaling +
+  // reference-point path as the display meshes), but each one still costs a geometry blob and a relation row on
+  // EVERY Revit send — hence CenterlineScope rather than "anything with a location curve".
   private void EmitCenterline(
     ObjectsArtifactPipeline pipeline,
     int objK,
     string appId,
-    Element? revitElement,
+    Element revitElement,
     RevitObject? revitObject
   )
   {
     if (revitObject?.location is { } location && location is ICurve)
     {
+      if (!CenterlineScope.Includes(revitElement))
+      {
+        return;
+      }
+
       try
       {
         // Deterministic key, not location.applicationId: the converter never stamps one, and a key shared with a
@@ -788,10 +795,7 @@ public class RevitArtifactRootObjectBuilder(
       return;
     }
 
-    if (revitElement is not null)
-    {
-      EmitFittingCenterline(pipeline, objK, appId, revitElement);
-    }
+    EmitFittingCenterline(pipeline, objK, appId, revitElement);
   }
 
   // Connector-derived branches for a fitting, ord = branch index so a tee's three stay ordered. See
@@ -862,8 +866,6 @@ public class RevitArtifactRootObjectBuilder(
     pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
 
     EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
-    // Children are panels, mullions and rails — never MEP fittings, so no element is threaded down.
-    EmitCenterline(pipeline, childK, childAppId, null, child);
 
     int grandOrd = 0;
     foreach (RevitObject grandChild in child.elements)

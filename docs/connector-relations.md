@@ -426,12 +426,15 @@ graph LR
 
 Two shapes, one rel, because a consumer asking "where is the axis" does not care which.
 
-**(a) The authored location curve**, for every element whose `Location` is a `LocationCurve` — a duct,
-pipe, conduit or tray IS its centerline, and a framing member’s axis is the same datum. Free: the converter
-already produced the curve as `RevitObject.location`, through the same scaling + reference-point path as the
-meshes and inside the same settings push, so the axis lands aligned with its own shell in a linked model too.
-*Caveat*: it is the element’s LOCATION curve, so for a wall it follows the Location Line type parameter and may
-be a face rather than the centre.
+**(a) The authored location curve**, for elements in a **curated scope** (`CenterlineScope`) — MEP curves
+(ducts, pipes, conduits, cable trays, incl. flex and placeholders) and structural framing (beams, braces,
+girders). Free: the converter already produced the curve as `RevitObject.location`, through the same scaling +
+reference-point path as the meshes and inside the same settings push, so the axis lands aligned with its own
+shell in a linked model too. **Deliberately not "anything with a location curve"**: every qualifying element adds
+a geometry blob and a relation row to *every* Revit send, so the set is opened on request rather than by default.
+Walls are therefore excluded, which also sidesteps their location line being a core or finish face rather than
+the centre. Gated on type and `BuiltInCategory`, **never on category name** — those are localised, so a
+name-based list matches nothing on a German or French model.
 
 **(b) Connector branches**, for a point-placed MEP fitting — elbow, tee, cross, transition — which has no
 location curve at all and so left a gap in every run. Each connector reports where the run enters or leaves the
@@ -439,11 +442,11 @@ fitting and the insertion point is the node they meet at, so the fitting ships *
 (`MepCenterlineExtractor`), `ord` = branch index. That is what a single-line drawing draws, and the only shape
 that survives a branch — no single curve can express a tee. Consumers weld duct and fitting segments into
 continuous runs (Join Curves). Origins come from `Connector.CoordinateSystem.Origin`, **not** `Connector.Origin`,
-which is documented to throw for a connector belonging to a family instance — i.e. every fitting. Also fires
-for connector-bearing equipment and air terminals: a stub per connector to the unit’s insertion point.
+which is documented to throw for a connector belonging to a family instance — i.e. every fitting. Scoped by
+connector **domain** (HVAC, piping, cable tray); electrical and structural-analytical connectors are excluded.
 
-Elements placed by a point with no flow connectors (furniture, isolated foundations, vertical structural columns)
-emit nothing — a point is not a centerline.
+Everything else emits nothing — walls, floors, railings, nested mullions and panels, furniture, and any
+point-placed element with no flow connectors.
 
 **Not a render edge**: no receiver bakes it, so Grasshopper’s Explore component is the route to it (it is the one
 geometry rel `ArtefactGraphCache` deliberately does not drop).
