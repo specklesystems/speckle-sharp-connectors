@@ -427,8 +427,9 @@ graph LR
 Two shapes, one rel, because a consumer asking "where is the axis" does not care which.
 
 **(a) The authored location curve**, for elements in a **curated scope** (`CenterlineScope`) — MEP curves
-(ducts, pipes, conduits, cable trays, incl. flex and placeholders) and structural framing (beams, braces,
-girders). Free: the converter already produced the curve as `RevitObject.location`, through the same scaling +
+(ducts, pipes, conduits, cable trays, incl. flex and placeholders) and the structural frame (framing, columns,
+trusses, foundations). Free: the converter already produced the curve as `RevitObject.location`, through the
+same scaling +
 reference-point path as the meshes and inside the same settings push, so the axis lands aligned with its own
 shell in a linked model too. **Deliberately not "anything with a location curve"**: every qualifying element adds
 a geometry blob and a relation row to *every* Revit send, so the set is opened on request rather than by default.
