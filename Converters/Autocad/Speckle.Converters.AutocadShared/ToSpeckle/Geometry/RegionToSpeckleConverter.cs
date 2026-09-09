@@ -115,22 +115,11 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     switch (segment)
     {
       case AG.CircularArc3d arc: // expected to be closed
-        return arc.StartPoint == arc.EndPoint
-          ? _circleConverter.Convert(new ADB.Circle(arc.Center, arc.Normal, arc.Radius))
-          : _arcConverter.Convert(arc);
+        return arc.StartPoint == arc.EndPoint ? ConvertCircle(arc) : _arcConverter.Convert(arc);
       case AG.EllipticalArc3d ellipse:
-        return _ellipseConverter.Convert(
-          new ADB.Ellipse(
-            ellipse.Center,
-            ellipse.Normal,
-            ellipse.MajorRadius * ellipse.MajorAxis,
-            ellipse.MinorRadius / ellipse.MajorRadius,
-            ellipse.StartAngle,
-            ellipse.EndAngle
-          )
-        );
+        return ConvertEllipse(ellipse);
       case AG.NurbCurve3d nurbs:
-        return _nurbConverter.Convert(ADB.Curve.CreateFromGeCurve(nurbs));
+        return ConvertCurve(nurbs);
       default:
         throw new ConversionException($"Unsupported curve type for Region conversion: {segment}");
     }
@@ -146,13 +135,39 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     };
   }
 
+  private ICurve ConvertCurve(AG.NurbCurve3d nurb)
+  {
+    using var curve = ADB.Curve.CreateFromGeCurve(nurb);
+    return _nurbConverter.Convert(curve);
+  }
+
+  private SOG.Circle ConvertCircle(AG.CircularArc3d arc)
+  {
+    using var circle = new ADB.Circle(arc.Center, arc.Normal, arc.Radius);
+    return _circleConverter.Convert(circle);
+  }
+
+  private SOG.Ellipse ConvertEllipse(AG.EllipticalArc3d arc)
+  {
+    using var ellipse = new ADB.Ellipse(
+      arc.Center,
+      arc.Normal,
+      arc.MajorRadius * arc.MajorAxis,
+      arc.MinorRadius / arc.MajorRadius,
+      arc.StartAngle,
+      arc.EndAngle
+    );
+    return _ellipseConverter.Convert(ellipse);
+  }
+
   private ICurve ConvertSegment(AG.Curve3d curve)
   {
     return curve switch
     {
       AG.LineSegment3d line => _lineConverter.Convert(line),
       AG.CircularArc3d arc => _arcConverter.Convert(arc),
-      AG.NurbCurve3d nurb => _nurbConverter.Convert(ADB.Curve.CreateFromGeCurve(nurb)),
+      AG.NurbCurve3d nurb => ConvertCurve(nurb),
+      AG.EllipticalArc3d ellipse => ConvertEllipse(ellipse),
       _ => throw new ConversionException($"Unsupported curve type for Region conversion: {curve}"),
     };
   }
