@@ -8,7 +8,7 @@ using Speckle.Sdk.Common;
 using System.Runtime.Versioning;
 #endif
 
-namespace Speckle.Connectors.DUI.Settings;
+namespace Speckle.Connectors.Common.Settings;
 
 [GenerateAutoInterface]
 public class GlobalConfigResolver(ILogger<IGlobalConfigResolver> logger) : IGlobalConfigResolver

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Speckle.Connectors.Common.Settings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Logging;

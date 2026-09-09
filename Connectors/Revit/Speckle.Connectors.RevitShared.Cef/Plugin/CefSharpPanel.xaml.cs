@@ -2,8 +2,8 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Autodesk.Revit.UI;
 using CefSharp;
+using Speckle.Connectors.Common.Settings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
