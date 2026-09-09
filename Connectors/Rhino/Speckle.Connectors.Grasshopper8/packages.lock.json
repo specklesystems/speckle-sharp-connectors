@@ -390,6 +390,12 @@
           "Speckle.Sdk": "[2026.9.0-beta.4, )"
         }
       },
+      "speckle.connectors.dui": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Connectors.Common": "[1.0.0, )"
+        }
+      },
       "speckle.connectors.logging": {
         "type": "Project"
       },
