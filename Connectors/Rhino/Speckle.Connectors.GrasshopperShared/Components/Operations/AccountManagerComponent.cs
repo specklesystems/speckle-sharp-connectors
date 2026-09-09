@@ -1,7 +1,7 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
-using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Common.Settings;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;

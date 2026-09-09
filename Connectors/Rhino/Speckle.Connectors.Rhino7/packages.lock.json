@@ -358,7 +358,6 @@
         "dependencies": {
           "GrasshopperAsyncComponent": "[2.0.3, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Connectors.DUI": "[1.0.0, )",
           "Speckle.Converters.Rhino7": "[1.0.0, )",
           "System.Resources.Extensions": "[9.0.4, )"
         }

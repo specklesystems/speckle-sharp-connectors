@@ -8,7 +8,6 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -55,9 +54,6 @@ public class PriorityLoader : GH_AssemblyPriority
       services.Initialize(HostApplications.Grasshopper, GetVersion());
       services.AddRhinoConverters();
       services.AddConnectors();
-
-      // sign in: resolves the default server url the same way the DUI connectors do (registry/env overridable)
-      services.AddTransient<IGlobalConfigResolver, GlobalConfigResolver>();
 
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
