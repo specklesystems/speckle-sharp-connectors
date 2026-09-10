@@ -1,24 +1,29 @@
-using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
+using Speckle.Connectors.Common.Settings;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
-using Timer = System.Timers.Timer;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
 public class AccountManagerComponent : GH_Component, IDisposable
 {
+  // matches the DUI connectors, see AccountBinding.AuthenticateAccount
+  private static readonly TimeSpan s_authTimeout = TimeSpan.FromMinutes(5);
+
   private bool _disposed;
-  private bool _isAddingAccount;
-  private Timer _timeoutTimer;
-  private Timer? _accountCheckerTimer;
+
+  // written by the auth task, read on the UI thread
+  private volatile bool _isAddingAccount;
+  private CancellationTokenSource? _authCancellation;
 
   private List<Account>? Accounts { get; set; }
   private string? CustomUrlInput { get; set; }
   private readonly IAccountManager _accountManager;
+  private readonly IGlobalConfigResolver _globalConfigResolver;
   public override Guid ComponentGuid => new("c8ede281-acdf-49bf-8611-e9579be1bd41");
 
   protected override Bitmap Icon => Resources.speckle_operations_account;
@@ -37,6 +42,7 @@ public class AccountManagerComponent : GH_Component, IDisposable
     )
   {
     _accountManager = PriorityLoader.Container.GetRequiredService<IAccountManager>();
+    _globalConfigResolver = PriorityLoader.Container.GetRequiredService<IGlobalConfigResolver>();
     Accounts = _accountManager.GetAccounts().ToList();
 
     SignInButton = new GhContextMenuButton("Sign In", "Sign In", "Click to sign into Speckle account.", AuthFlow);
@@ -46,85 +52,72 @@ public class AccountManagerComponent : GH_Component, IDisposable
 
   private bool AuthFlow(ToolStripDropDown menu)
   {
-    _isAddingAccount = true;
-    ResumeAccountChecker();
-
-    string url = string.IsNullOrEmpty(CustomUrlInput)
-      ? "http://localhost:29364/auth/add-account"
-      : $"http://localhost:29364/auth/add-account?serverUrl={new Uri(CustomUrlInput).GetLeftPart(UriPartial.Authority)}";
-
-    // Open the auth URL in the default browser
-    try
+    if (_isAddingAccount)
     {
-      Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Sign in failed: {ex.Message}");
-      _isAddingAccount = false;
       return false;
     }
 
-    _timeoutTimer = new Timer(30_000);
-    _timeoutTimer.Elapsed += (s, e) =>
+    Uri serverUrl;
+    try
     {
-      _timeoutTimer.Stop();
-      if (_isAddingAccount)
-      {
-        _isAddingAccount = false;
-        PauseAccountChecker();
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          "Sign in timed out. This may have happened because you tried adding an existing account."
-        );
-      }
-    };
+      serverUrl = string.IsNullOrEmpty(CustomUrlInput)
+        ? _globalConfigResolver.GetDefaultSpeckleServerUrl()
+        : new Uri(new Uri(CustomUrlInput).GetLeftPart(UriPartial.Authority), UriKind.Absolute);
+    }
+    catch (UriFormatException)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"'{CustomUrlInput}' is not a valid server url.");
+      return false;
+    }
 
-    _timeoutTimer.Start();
+    _isAddingAccount = true;
+    _authCancellation?.Cancel();
+    _authCancellation?.Dispose();
+    _authCancellation = new CancellationTokenSource();
+    var cancellationToken = _authCancellation.Token;
+
+    // NOTE: fire and forget. AuthenticateAccount opens the browser and blocks until the user is done with it, so
+    // awaiting on the UI thread would freeze the canvas for as long as the sign in takes. Task.Run keeps the whole
+    // flow (and its continuations) off the UI thread; Complete marshals back.
+    _ = Task.Run(() => Authenticate(serverUrl, cancellationToken));
     return true;
   }
 
-  private bool CheckIfAccountAdded()
+  private async Task Authenticate(Uri serverUrl, CancellationToken cancellationToken)
   {
-    var previousAccountCount = Accounts?.Count ?? 0;
-    Accounts = _accountManager.GetAccounts().ToList();
-    return previousAccountCount < Accounts.Count;
-  }
-
-  private void PauseAccountChecker()
-  {
-    _accountCheckerTimer?.Stop();
-    _accountCheckerTimer?.Dispose();
-    _accountCheckerTimer = null;
-  }
-
-  private void ResumeAccountChecker()
-  {
-    _accountCheckerTimer?.Dispose();
-
-    _accountCheckerTimer = new Timer(1000); // check every 1 second
-    _accountCheckerTimer.Elapsed += (s, e) =>
+    try
     {
-      bool accountAdded = CheckIfAccountAdded();
-      if (accountAdded)
-      {
-        _accountCheckerTimer.Stop();
-        _isAddingAccount = false;
-        // Optionally cancel timeout timer
-        _timeoutTimer?.Stop();
+      await _accountManager.AuthenticateAccount(serverUrl, s_authTimeout, cancellationToken).ConfigureAwait(false);
+      Complete(GH_RuntimeMessageLevel.Remark, "Account added successfully!");
+    }
+    catch (OperationCanceledException)
+    {
+      // superseded by another sign in, or the component went away
+      _isAddingAccount = false;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      Complete(GH_RuntimeMessageLevel.Warning, $"Sign in to {serverUrl} failed: {ex.Message}");
+    }
+  }
 
-        OnPingDocument()
-          ?.ScheduleSolution(
-            100,
-            doc =>
-            {
-              ExpireSolution(true);
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Account added successfully!");
-            }
-          );
-      }
-    };
-    _accountCheckerTimer.Start();
+  private void Complete(GH_RuntimeMessageLevel level, string message)
+  {
+    _isAddingAccount = false;
+    Accounts = _accountManager.GetAccounts().ToList();
+
+    RhinoApp.InvokeOnUiThread(() =>
+    {
+      OnPingDocument()
+        ?.ScheduleSolution(
+          100,
+          _ =>
+          {
+            ExpireSolution(true);
+            AddRuntimeMessage(level, message);
+          }
+        );
+    });
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -161,6 +154,14 @@ public class AccountManagerComponent : GH_Component, IDisposable
     }
   }
 
+  public override void RemovedFromDocument(GH_Document document)
+  {
+    // NOTE: GH doesn't call Dispose on delete, so without this an abandoned sign in keeps the SDK's callback
+    // listener bound until the timeout. Not disposed, the component can come back on undo.
+    _authCancellation?.Cancel();
+    base.RemovedFromDocument(document);
+  }
+
   public override void ExpirePreview(bool redraw)
   {
     SignInButton.ExpirePreview(redraw);
@@ -173,9 +174,9 @@ public class AccountManagerComponent : GH_Component, IDisposable
     {
       if (disposing)
       {
-        _timeoutTimer?.Dispose();
+        _authCancellation?.Cancel();
+        _authCancellation?.Dispose();
         _accountManager.Dispose();
-        _accountCheckerTimer?.Dispose();
       }
       _disposed = true;
     }
