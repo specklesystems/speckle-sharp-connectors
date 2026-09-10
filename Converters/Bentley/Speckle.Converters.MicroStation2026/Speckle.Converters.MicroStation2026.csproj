@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <FileAlignment>512</FileAlignment>
+    <AssemblyName>Speckle.Converters.MicroStation2026</AssemblyName>
+
+    <MicroStationVersion>2026</MicroStationVersion>
+    <DefineConstants>$(DefineConstants);MICROSTATION;MICROSTATION_2026</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+
+    <Description>Speckle Converter for Bentley MicroStation 2026</Description>
+  </PropertyGroup>
+
+  <Import
+    Project="..\Speckle.Converters.MicroStationShared\Speckle.Converters.MicroStationShared.projitems"
+    Label="Shared"
+  />
+
+  <PropertyGroup>
+    <!-- Path to the MicroStation 2026 installation directory -->
+    <MicroStation2026Dir Condition="'$(MicroStation2026Dir)' == ''"
+      >$(ProgramFiles)\Bentley\MicroStation 2026\MicroStation\</MicroStation2026Dir
+    >
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MicroStation 2026 managed host base class (ManagedHost, DgnPlatformNET) -->
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!--
+      Bentley.GeometryNET (+ Structs) re-enabled to unlock MeshHeaderElement.GetMeshData() →
+      PolyfaceHeader read in the managed-API converter. This is a pure data-read path; it does
+      NOT call into the rendering engine (BrowseTriangleMesh / ElementGraphicsOutput) which was
+      what produced the Corrupted State Exceptions in the earlier attempt. If a CSE shows up
+      anyway, narrow the scope by reverting just this comment block and removing the entries
+      from MicroStationConverterServiceRegistration / the special-case in the root dispatcher.
+      TerrainModelNET stays excluded until terrain TIN handling is needed.
+    -->
+    <Reference Include="Bentley.GeometryNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET.Structs">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.Structs.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- MicroStation 2026 COM automation interop (Application, Element, ModelReference, etc.) -->
+    <Reference Include="Bentley.Interop.MicroStationDGN">
+      <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- Managed ECObjects (IECInstance/IECPropertyValue) — Item Types property extraction. -->
+    <Reference Include="Bentley.ECObjects3">
+      <HintPath>$(MicroStation2026Dir)Assemblies\ECFramework\Bentley.ECObjects3.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- Base platform interfaces (IExtendable) that IECInstance derives from. -->
+    <Reference Include="Bentley.Platform">
+      <HintPath>$(MicroStation2026Dir)Assemblies\ECFramework\Bentley.Platform.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+</Project>

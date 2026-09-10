@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  KeyinTree definition for the Speckle MicroStation add-in.
+  Format mirrors Bentley's own add-ins (e.g. Bentley.ComponentsCenter.Client.PowerPlatformAddin):
+    - RootKeyinTable defines the top-level keyword (here: "Speckle"), pointing at a subtable.
+    - SubKeyinTables defines the children (here: "show").
+    - KeyinHandlers maps the resolved keyin string to a static .NET method.
+  Open the panel by typing in the Key-in dialog:  Speckle show
+-->
+<KeyinTree xmlns="http://www.bentley.com/schemas/1.0/MicroStation/AddIn/KeyinTree.xsd">
+  <RootKeyinTable ID="root">
+    <Keyword SubtableRef="Commands" CommandClass="MacroCommand" CommandWord="Speckle">
+      <Options Required="true" />
+    </Keyword>
+  </RootKeyinTable>
+
+  <SubKeyinTables>
+    <KeyinTable ID="Commands">
+      <Keyword CommandWord="show" />
+      <Keyword CommandWord="probe" />
+    </KeyinTable>
+  </SubKeyinTables>
+
+  <KeyinHandlers>
+    <KeyinHandler Keyin="Speckle show" Function="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn.ShowPanel" />
+    <KeyinHandler Keyin="Speckle probe" Function="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn.Probe" />
+  </KeyinHandlers>
+</KeyinTree>
