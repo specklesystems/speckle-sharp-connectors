@@ -64,27 +64,24 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     // applicable". Mirrors ExpandSpeckleProperties.
     if (da.Iteration == 0)
     {
-      // Gate on there being input at all, not on it resolving. With no input the data simply hasn't arrived yet (file
-      // load) and dropping ports would break wires - but input that resolves to nothing SHOULD clear them, otherwise
-      // swapping to an object the graph doesn't know leaves the previous object's ports sitting there.
-      if (Params.Input[0].VolatileData.DataCount > 0)
+      var resolved = Params
+        .Input[0]
+        .VolatileData.AllData(true)
+        .Select(Resolve)
+        .Where(r => r is not null)
+        .Cast<Dictionary<string, object?>>()
+        .ToList();
+
+      // NOTE: ports come from what resolved, never from nothing resolving - a graph that can't be read yet would
+      // otherwise unwire a reopened script
+      if (resolved.Count == 0)
       {
-        var resolved = Params
-          .Input[0]
-          .VolatileData.AllData(true)
-          .Select(Resolve)
-          .Where(r => r is not null)
-          .Cast<Dictionary<string, object?>>()
-          .ToList();
-
-        if (resolved.Count == 0)
-        {
-          // input arrived but none of it resolved - name what turned up, so an unhandled type is obvious rather
-          // than looking like the component is broken
-          var types = Params.Input[0].VolatileData.AllData(true).Select(g => g.GetType().Name).Distinct().ToList();
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Nothing resolved from: {string.Join(", ", types)}.");
-        }
-
+        // name what turned up, so an unhandled type is obvious rather than looking like the component is broken
+        var types = Params.Input[0].VolatileData.AllData(true).Select(g => g.GetType().Name).Distinct().ToList();
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Nothing resolved from: {string.Join(", ", types)}.");
+      }
+      else
+      {
         var names = new List<string>();
         foreach (var name in resolved.SelectMany(r => r.Keys))
         {
@@ -196,7 +193,8 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     if (values is { Count: 0 })
     {
-      return Explain("Nothing is recorded against this object.");
+      // empty, not absent - the caller clears ports on this, but not on null
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Nothing is recorded against this object.");
     }
 
     return values;
