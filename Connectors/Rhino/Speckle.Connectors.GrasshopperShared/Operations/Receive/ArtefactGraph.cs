@@ -1,3 +1,4 @@
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -103,6 +104,14 @@ internal static class ArtefactGraphCache
   public static bool IsGeometryNamespace(string? ns) =>
     ns is not null && ns.IndexOf(GEOMETRY_NS, StringComparison.OrdinalIgnoreCase) >= 0;
 
+  /// <summary>
+  /// The exception to <see cref="IsGeometryNamespace"/>: a geometry relation receive does NOT bake, so Explore is
+  /// its only route out. CENTERLINE is the whole membership — the rule above holds for the others precisely
+  /// because receive consumes them. Kept a positive test, so a new geometry relation stays hidden until someone
+  /// decides what it should look like on the canvas.
+  /// </summary>
+  private static bool IsSurfacedGeometryRel(byte rel) => rel == RelKind.Centerline;
+
   public static bool IsNodeNamespace(string? ns) =>
     ns is not null && ns.IndexOf(NODE_NS, StringComparison.OrdinalIgnoreCase) >= 0;
 
@@ -204,7 +213,7 @@ internal static class ArtefactGraphCache
       {
         continue;
       }
-      if (IsGeometryNamespace(srcNs[i]) || IsGeometryNamespace(dstNs[i]))
+      if ((IsGeometryNamespace(srcNs[i]) || IsGeometryNamespace(dstNs[i])) && !IsSurfacedGeometryRel((byte)rel[i]))
       {
         continue;
       }

@@ -64,27 +64,24 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     // applicable". Mirrors ExpandSpeckleProperties.
     if (da.Iteration == 0)
     {
-      // Gate on there being input at all, not on it resolving. With no input the data simply hasn't arrived yet (file
-      // load) and dropping ports would break wires - but input that resolves to nothing SHOULD clear them, otherwise
-      // swapping to an object the graph doesn't know leaves the previous object's ports sitting there.
-      if (Params.Input[0].VolatileData.DataCount > 0)
+      var resolved = Params
+        .Input[0]
+        .VolatileData.AllData(true)
+        .Select(Resolve)
+        .Where(r => r is not null)
+        .Cast<Dictionary<string, object?>>()
+        .ToList();
+
+      // NOTE: ports come from what resolved, never from nothing resolving - a graph that can't be read yet would
+      // otherwise unwire a reopened script
+      if (resolved.Count == 0)
       {
-        var resolved = Params
-          .Input[0]
-          .VolatileData.AllData(true)
-          .Select(Resolve)
-          .Where(r => r is not null)
-          .Cast<Dictionary<string, object?>>()
-          .ToList();
-
-        if (resolved.Count == 0)
-        {
-          // input arrived but none of it resolved - name what turned up, so an unhandled type is obvious rather
-          // than looking like the component is broken
-          var types = Params.Input[0].VolatileData.AllData(true).Select(g => g.GetType().Name).Distinct().ToList();
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Nothing resolved from: {string.Join(", ", types)}.");
-        }
-
+        // name what turned up, so an unhandled type is obvious rather than looking like the component is broken
+        var types = Params.Input[0].VolatileData.AllData(true).Select(g => g.GetType().Name).Distinct().ToList();
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Nothing resolved from: {string.Join(", ", types)}.");
+      }
+      else
+      {
         var names = new List<string>();
         foreach (var name in resolved.SelectMany(r => r.Keys))
         {
@@ -196,7 +193,8 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     if (values is { Count: 0 })
     {
-      return Explain("Nothing is recorded against this object.");
+      // empty, not absent - the caller clears ports on this, but not on null
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Nothing is recorded against this object.");
     }
 
     return values;
@@ -219,6 +217,14 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     // supplies the name and which namespace each end lives in, so a relation added to the spec appears by itself.
     foreach (var type in graph.RelationTypes)
     {
+      // A relation pointing AT geometry comes out as the geometry itself — a centerline is a curve you plug
+      // into Curve components, not an id. Describe could only render its targets as bare indices.
+      if (ArtefactGraphCache.IsGeometryNamespace(type.TargetNamespace))
+      {
+        Add(values, Humanise(type.Name), Decode(graph, type.Rel, objK));
+        continue;
+      }
+
       if (ArtefactGraphCache.IsObjectNamespace(type.SourceNamespace))
       {
         Add(values, Humanise(type.Name), Describe(graph.Targets(type.Rel, objK), type.TargetNamespace, bundle));
@@ -330,6 +336,29 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     bundle.Nodes.TryGetValue(k, out var node) && node.Name is { Length: > 0 } name ? name
     : bundle.ObjectAppIds.TryGetValue(k, out var appId) ? appId
     : null;
+
+  /// <summary>The geometry a relation points at, on the same decode path receive uses — so a centerline lands
+  /// exactly on the object it belongs to. Failures give one empty branch: Explore is read-only inspection, and
+  /// failing the solve over an unreadable blob would be worse than showing nothing.</summary>
+  private static List<RG.GeometryBase> Decode(ArtefactGraph graph, byte rel, int objK)
+  {
+    var warnings = new List<string>();
+    var result = new List<RG.GeometryBase>();
+    foreach (int geomK in graph.Targets(rel, objK))
+    {
+      try
+      {
+        result.AddRange(
+          ArtefactGeometryDecoder.DecodeGeometryIndex(geomK, graph.Bundle, graph.Bundle.Units, null, warnings)
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // one unreadable fragment, not the whole port
+      }
+    }
+    return result;
+  }
 
   /// <summary>
   /// Turns dense ids into something readable, using the namespace the catalog declared for that end. Object and node
