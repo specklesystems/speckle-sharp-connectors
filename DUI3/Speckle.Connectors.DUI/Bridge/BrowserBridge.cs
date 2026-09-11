@@ -7,8 +7,11 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Logging;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.DUI.Bridge;
@@ -23,6 +26,8 @@ namespace Speckle.Connectors.DUI.Bridge;
 [ComVisible(true)]
 public sealed class BrowserBridge : IBrowserBridge
 {
+  private const string OTEL_TRACE_CONTEXT_CAPABILITY = "otelTraceContext";
+
   /// <summary>
   /// The name under which we expect the frontend to hoist this bindings class to the global scope.
   /// e.g., `receiveBindings` should be available as `window.receiveBindings`.
@@ -30,6 +35,7 @@ public sealed class BrowserBridge : IBrowserBridge
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
 
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
@@ -62,7 +68,8 @@ public sealed class BrowserBridge : IBrowserBridge
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    ISdkActivityFactory activityFactory
   )
   {
     _threadContext = threadContext;
@@ -70,6 +77,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _logger = logger;
     _browserScriptExecutor = browserScriptExecutor;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _activityFactory = activityFactory;
   }
 
   public void AssociateWithBinding(IBinding binding)
@@ -102,17 +110,44 @@ public sealed class BrowserBridge : IBrowserBridge
     return bindingNames;
   }
 
-  //don't wait for browser runs on purpose
+  /// <summary>
+  /// Optional bridge features the frontend may use. Connectors predating a feature simply
+  /// omit it, so the frontend can degrade instead of guessing from a version number.
+  /// </summary>
+  public string[] GetBridgeCapabilities() => [OTEL_TRACE_CONTEXT_CAPABILITY];
+
+  /// <summary>
+  /// Kept at three arguments forever: the frontend is served as a single hosted bundle to
+  /// every installed connector, and older bundles only know this signature.
+  /// </summary>
+  [Obsolete("Replaced by RunMethodTraced")]
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
+    RunMethodTraced(methodName, requestId, methodArgs, null);
+
+  //don't wait for browser runs on purpose
+  public void RunMethodTraced(string methodName, string requestId, string methodArgs, string? otelTraceContext) =>
     _threadContext
       .RunOnWorkerAsync(async () =>
       {
         var task = await _topLevelExceptionHandler
           .CatchUnhandledAsync(async () =>
           {
-            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-            string resultJson = _jsonSerializer.Serialize(result);
-            NotifyUIMethodCallResultReady(requestId, resultJson);
+            using ISdkActivity? activity = StartRunMethodActivity(methodName, requestId, otelTraceContext);
+
+            try
+            {
+              object? result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+              string resultJson = _jsonSerializer.Serialize(result);
+              NotifyUIMethodCallResultReady(requestId, resultJson);
+            }
+            catch (Exception ex) when (!ex.IsFatal())
+            {
+              // Recorded here because the activity is disposed before the top level handler
+              // sees this, which would otherwise leave the span looking successful.
+              activity?.RecordException(ex);
+              activity?.SetStatus(SdkActivityStatusCode.Error);
+              throw;
+            }
           })
           .ConfigureAwait(false);
         if (task.Exception is not null)
@@ -122,6 +157,49 @@ public sealed class BrowserBridge : IBrowserBridge
         }
       })
       .FireAndForget();
+
+  /// <summary>
+  /// Never throws. This runs before <see cref="ExecuteMethod"/>, so letting a malformed trace
+  /// context from a mismatched frontend escape would fail the user's action rather than a span.
+  /// </summary>
+  private ISdkActivity? StartRunMethodActivity(string methodName, string requestId, string? otelTraceContext)
+  {
+    // methodArgs is deliberately not tagged as methodArgs can carry auth tokens and emails.
+    var tags = new Dictionary<string, object?> { { "methodName", methodName }, { "requestId", requestId } };
+
+    try
+    {
+      OtelTraceContext? traceContext = string.IsNullOrWhiteSpace(otelTraceContext)
+        ? null
+        : _jsonSerializer.Deserialize<OtelTraceContext>(otelTraceContext!);
+
+      return _activityFactory.StartRemote(
+        traceContext?.TraceParent,
+        traceContext?.TraceState,
+        SdkActivityKind.Server,
+        nameof(RunMethod),
+        tags
+      );
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Discarding unusable otel trace context from the frontend");
+      return _activityFactory.Start(nameof(RunMethod), SdkActivityKind.Server, tags);
+    }
+  }
+
+  /// <summary>
+  /// The W3C carrier as the frontend sends it. Property names are pinned explicitly because
+  /// <see cref="IJsonSerializer"/> camel-cases by convention, which would not match these.
+  /// </summary>
+  private sealed class OtelTraceContext
+  {
+    [JsonProperty("traceparent")]
+    public string? TraceParent { get; init; }
+
+    [JsonProperty("tracestate")]
+    public string? TraceState { get; init; }
+  }
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
