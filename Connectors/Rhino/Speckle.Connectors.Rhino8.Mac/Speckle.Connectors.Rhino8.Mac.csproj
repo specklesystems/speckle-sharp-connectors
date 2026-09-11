@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Rhino 8 macOS head. Rhino 8 Mac loads only .NET Core (AnyCPU) plug-ins and has no WPF/WebView2/RhinoWindows, so
+       the three shared files that bind to those are excluded from this head and replaced by Eto equivalents in this
+       project; everything else in RhinoShared compiles unchanged (rhino-mac-connector spec, tickets 04/07). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <RhinoVersion>8</RhinoVersion>
+    <DefineConstants>$(DefineConstants);RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
+    <TargetExt>.rhp</TargetExt>
+    <RootNamespace>Speckle.Connectors.Rhino</RootNamespace>
+    <!-- Emits runtimes/ + deps.json so the osx natives (e_sqlite3, nironcompress) ship next to the .rhp -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    <!-- System.Drawing.Color etc. live in System.Drawing.Primitives; the WPF heads got this using from UseWindowsForms -->
+    <!-- CA2255: module initializer is deliberate — see MacNativeLibraryResolver -->
+    <NoWarn>$(NoWarn);CA2255</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.Drawing" />
+    <Using Remove="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="IronCompress" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.EtoWebView\Speckle.Connectors.DUI.EtoWebView.csproj" />
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\Speckle.Connectors.Rhino8\EmbeddedResources\**\*" Link="EmbeddedResources\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
+
+  <!-- Windows-bound shared files (WpfElementHost, WebView2 view registration, .ico panel icon) — Eto versions live here -->
+  <ItemGroup>
+    <Compile Remove="..\Speckle.Connectors.RhinoShared\HostApp\SpeckleRhinoPanelHost.cs" />
+    <Compile Remove="..\Speckle.Connectors.RhinoShared\Plugin\Speckle.Connectors.RhinoCommand.cs" />
+    <Compile Remove="..\Speckle.Connectors.RhinoShared\Registration\ServiceRegistration.cs" />
+  </ItemGroup>
+</Project>
