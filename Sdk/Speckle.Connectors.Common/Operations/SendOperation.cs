@@ -138,7 +138,13 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        new(
+          speckleApplication.Slug,
+          speckleApplication.HostApplicationVersion,
+          fileName,
+          fileSizeBytes,
+          connectorVersion: speckleApplication.SpeckleVersion
+        ),
         600
       ),
       cancellationToken
@@ -274,7 +280,13 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        new(
+          speckleApplication.Slug,
+          speckleApplication.HostApplicationVersion,
+          fileName,
+          fileSizeBytes,
+          connectorVersion: speckleApplication.SpeckleVersion
+        ),
         600
       ),
       cancellationToken
@@ -354,7 +366,13 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        new(
+          speckleApplication.Slug,
+          speckleApplication.HostApplicationVersion,
+          fileName,
+          fileSizeBytes,
+          connectorVersion: speckleApplication.SpeckleVersion
+        ),
         600
       ),
       cancellationToken
