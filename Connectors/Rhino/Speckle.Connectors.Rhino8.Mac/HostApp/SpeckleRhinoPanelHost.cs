@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using Eto.Forms;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino.UI;
 using Speckle.Connectors.DUI.EtoWebView;
 using Speckle.Connectors.Rhino.Plugin;
 
