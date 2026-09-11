@@ -139,6 +139,8 @@ public sealed class BrowserBridge : IBrowserBridge
               object? result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
               string resultJson = _jsonSerializer.Serialize(result);
               NotifyUIMethodCallResultReady(requestId, resultJson);
+
+              activity?.SetStatus(SdkActivityStatusCode.Ok);
             }
             catch (Exception ex) when (!ex.IsFatal())
             {
@@ -188,10 +190,6 @@ public sealed class BrowserBridge : IBrowserBridge
     }
   }
 
-  /// <summary>
-  /// The W3C carrier as the frontend sends it. Property names are pinned explicitly because
-  /// <see cref="IJsonSerializer"/> camel-cases by convention, which would not match these.
-  /// </summary>
   private sealed class OtelTraceContext
   {
     [JsonProperty("traceparent")]
