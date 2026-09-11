@@ -70,7 +70,8 @@ public static class ZstdNativeLoader
     {
       var dir = Path.GetDirectoryName(typeof(ZstdNativeLoader).Assembly.Location) ?? string.Empty;
       var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-      var (os, file) = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? ("osx", "libnironcompress.dylib")
+      var (os, file) =
+        RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? ("osx", "libnironcompress.dylib")
         : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ("linux", "libnironcompress.so")
         : ("win", "nironcompress.dll");
       var native = Path.Combine(dir, "runtimes", $"{os}-{arch}", "native", file);

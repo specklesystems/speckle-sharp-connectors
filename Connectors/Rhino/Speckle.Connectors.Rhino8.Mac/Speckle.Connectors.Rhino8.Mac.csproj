@@ -33,7 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\Speckle.Connectors.Rhino8\EmbeddedResources\**\*" Link="EmbeddedResources\%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource
+      Include="..\Speckle.Connectors.Rhino8\EmbeddedResources\**\*"
+      Link="EmbeddedResources\%(RecursiveDir)%(Filename)%(Extension)"
+    />
   </ItemGroup>
 
   <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />

@@ -1,10 +1,10 @@
 using Eto.Forms;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Newtonsoft.Json;
 using Rhino;
 using Speckle.Connectors.Common.Settings;
-using IBinding = Speckle.Connectors.DUI.Bindings.IBinding;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Newtonsoft.Json;
+using IBinding = Speckle.Connectors.DUI.Bindings.IBinding;
 
 namespace Speckle.Connectors.DUI.EtoWebView;
 
