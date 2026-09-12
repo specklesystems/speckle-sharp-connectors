@@ -1,10 +1,15 @@
 # Rhino / Grasshopper on macOS — build it yourself
 
+> **Alpha.** This is a working prototype, not a supported release: no official
+> distribution, no signing/notarization, no test coverage beyond manual smoke checks,
+> and no compatibility guarantee across Rhino point releases. Expect rough edges, and
+> expect things to change under you without notice.
+
 There is no official macOS distribution for the Rhino and Grasshopper connectors yet
 (no Yak package, no signed installer). What's here works end to end — sign-in, publish,
-load — and is genuinely usable today; it just isn't packaged for you. Build it from source
-and install it locally, in the same spirit as any other open-source tool without a binary
-release yet.
+load — and is genuinely usable today; it just isn't packaged for you, and it hasn't had
+the hardening a real release gets. Build it from source and install it locally, in the
+same spirit as any other open-source tool without a binary release yet.
 
 This is **not** the same connector head as Windows. Rhino 8 on macOS only loads .NET
 Core plug-ins, so `Speckle.Connectors.Rhino8.Mac` and `Speckle.Connectors.Grasshopper8.Mac`
@@ -96,3 +101,6 @@ older transport needs. If you see a docked panel with nothing rendered in it:
   account, native library signing for the two bundled dylibs). This self-build path exists
   because that work doesn't need to block you from using the connector today.
 - Rhino 7 for Mac is out of scope (Mono runtime; Rhino 8 Mac is .NET Core only).
+- Alpha means alpha: this hasn't been through the review, testing, and hardening a
+  Speckle release normally gets. Treat it as a prototype you're trying, not something to
+  build a production workflow on yet.
