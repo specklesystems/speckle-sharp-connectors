@@ -17,6 +17,13 @@
     <NoWarn>$(NoWarn);CA2255</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Shown in Rhino's own plug-in listing — the "(Alpha)" tag needs to survive there, not just in docs. The
+         Windows head sets no Title/Description; this is Mac-only metadata, so it doesn't touch the shared build. -->
+    <Title>Speckle.Connectors.Rhino8.Mac (Alpha)</Title>
+    <Description>Speckle connector for Rhino 8 on macOS — Alpha, self-built, no official distribution</Description>
+  </PropertyGroup>
+
   <ItemGroup>
     <Using Include="System.Drawing" />
     <Using Remove="System.IO" />
