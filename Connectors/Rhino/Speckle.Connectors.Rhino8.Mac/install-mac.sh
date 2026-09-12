@@ -3,6 +3,9 @@
 # See ../README-mac.md for prerequisites and the one-time load step (Rhino Mac has no Install UI).
 set -euo pipefail
 
+echo "── Speckle for Rhino (macOS) — ALPHA build, no official distribution — see ../README-mac.md ──"
+echo
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$SCRIPT_DIR/Speckle.Connectors.Rhino8.Mac.csproj"
 DEST="$HOME/Library/Application Support/McNeel/Rhinoceros/8.0/Plug-ins/Speckle.Connectors.Rhino8.Mac"
