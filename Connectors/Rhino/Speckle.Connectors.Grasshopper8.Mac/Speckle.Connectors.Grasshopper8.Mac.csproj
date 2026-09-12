@@ -27,8 +27,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Title>Speckle.Connectors.Grasshopper8.Mac</Title>
-    <Description>Speckle Grasshopper connector for Rhino 8 on macOS</Description>
+    <!-- Shown in Rhino/Grasshopper's own plug-in listing — the "(Alpha)" tag needs to survive there, not just in docs -->
+    <Title>Speckle.Connectors.Grasshopper8.Mac (Alpha)</Title>
+    <Description>Speckle Grasshopper connector for Rhino 8 on macOS — Alpha, self-built, no official distribution</Description>
   </PropertyGroup>
 
   <ItemGroup>
