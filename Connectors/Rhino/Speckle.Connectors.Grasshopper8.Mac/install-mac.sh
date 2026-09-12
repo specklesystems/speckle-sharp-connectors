@@ -3,6 +3,9 @@
 # See ../README-mac.md for prerequisites.
 set -euo pipefail
 
+echo "── Speckle for Grasshopper (macOS) — ALPHA build, no official distribution — see ../README-mac.md ──"
+echo
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$SCRIPT_DIR/Speckle.Connectors.Grasshopper8.Mac.csproj"
 # b45a29b1-4343-4035-989e-044e8580d9cf is Grasshopper's own plug-in id, not user- or install-specific —
