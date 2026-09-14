@@ -65,6 +65,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ElementUnpacker>();
     serviceCollection.AddScoped<LevelUnpacker>();
     serviceCollection.AddScoped<ViewUnpacker>();
+    serviceCollection.AddScoped<MepCenterlineExtractor>();
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddScoped<IRootContinuousTraversalBuilder<DocumentToConvert>, RevitContinuousTraversalBuilder>();
