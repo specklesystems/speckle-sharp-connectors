@@ -56,6 +56,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\LocalToGlobalMapHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ArtefactGraph.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ArtefactGeometryDecoder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperArtefactObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperCollectionRebuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponentBase.cs" />
