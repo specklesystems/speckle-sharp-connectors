@@ -19,6 +19,8 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using TSD.API.Remoting.Common;
 using Path = System.IO.Path;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecStructuralResult = Speckle.Bundle.Spec.StructuralResult;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
 
@@ -362,13 +364,17 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     {
       pipeline.AddStructuralResult(
         r.ObjectAppId,
-        r.Location,
-        r.ResultType,
-        r.LoadCase,
-        r.Component,
-        r.Station,
-        r.Step,
-        r.Value
+        new SpecStructuralResult(
+          ObjectIndex: null,
+          ElementName: null,
+          Location: r.Location,
+          ResultType: r.ResultType,
+          LoadCase: r.LoadCase,
+          Component: r.Component,
+          Station: r.Station,
+          Step: r.Step,
+          Value: r.Value
+        )
       );
     }
 
@@ -442,7 +448,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     {
       return existing;
     }
-    int collK = pipeline.AddCollection(key, key, null, "Collection");
+    int collK = pipeline.AddCollection(key, new SpecContainer(key, null, "Collection", null));
     cache[key] = collK;
     return collK;
   }
