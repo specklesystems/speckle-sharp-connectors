@@ -20,6 +20,8 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using DataObject = Speckle.Objects.Data.DataObject; // disambiguate from System.Windows.Forms.DataObject
 using Path = System.IO.Path;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecMaterial = Speckle.Bundle.Spec.Material;
 
 namespace Speckle.Connectors.TeklaShared.Operations.Send;
 
@@ -271,13 +273,15 @@ public class TeklaArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
-        value.name,
-        value.diffuse,
-        value.opacity,
-        value.metalness,
-        value.roughness,
-        value.emissive,
-        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        new SpecMaterial(
+          value.name,
+          value.diffuse,
+          value.opacity,
+          value.metalness,
+          value.roughness,
+          value.emissive,
+          value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        )
       );
       foreach (var objectId in materialProxy.objects)
       {
@@ -298,7 +302,7 @@ public class TeklaArtifactRootObjectBuilder(
     {
       return existing;
     }
-    int collK = pipeline.AddCollection(name, name, null, "Collection");
+    int collK = pipeline.AddCollection(name, new SpecContainer(name, null, "Collection", null));
     cache[name] = collK;
     return collK;
   }
