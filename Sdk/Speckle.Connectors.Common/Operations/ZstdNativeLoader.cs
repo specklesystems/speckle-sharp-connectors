@@ -1,8 +1,6 @@
-using Microsoft.Extensions.Logging;
-#if NETFRAMEWORK
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Sdk;
-#endif
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -56,7 +54,40 @@ public static class ZstdNativeLoader
     }
   }
 #else
-  // net8+ resolves the native (nironcompress.dll) via its RID-specific deployment — nothing to pre-load.
-  public static void Ensure(ILogger? logger = null) => _ = logger;
+  // net8+ normally resolves the native via its RID-specific runtimes/ deployment, but inside Rhino 8 Mac
+  // RuntimeInformation.RuntimeIdentifier is "unknown", so IronCompress's own probe finds nothing. Pick the RID from
+  // OS + architecture and load the file ourselves (rhino-mac-connector spec, ticket 08). Missing file = warning only,
+  // which keeps Windows net8 heads (no runtimes/ folder) on their previous no-op behaviour.
+  private static int s_preloaded;
+
+  public static void Ensure(ILogger? logger = null)
+  {
+    if (Interlocked.Exchange(ref s_preloaded, 1) == 1)
+    {
+      return;
+    }
+    try
+    {
+      var dir = Path.GetDirectoryName(typeof(ZstdNativeLoader).Assembly.Location) ?? string.Empty;
+      var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
+      var (os, file) =
+        RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? ("osx", "libnironcompress.dylib")
+        : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ("linux", "libnironcompress.so")
+        : ("win", "nironcompress.dll");
+      var native = Path.Combine(dir, "runtimes", $"{os}-{arch}", "native", file);
+      if (!File.Exists(native))
+      {
+        return;
+      }
+      if (!NativeLibrary.TryLoad(native, out _))
+      {
+        logger?.LogWarning("Failed to pre-load native {Native} (parquet Zstd compression may fail)", native);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger?.LogWarning(ex, "Could not pre-load the IronCompress native for parquet Zstd compression");
+    }
+  }
 #endif
 }
