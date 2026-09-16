@@ -44,6 +44,13 @@ public sealed class SendOperation<T>(
   IBundleSender? bundleSender = null
 ) : ISendOperation<T>
 {
+  /// <param name="versionMessage">
+  /// Only reaches the server on the two rails where the client creates the version itself (<c>SendViaVersionCreate</c>
+  /// and the legacy <c>SendViaIngestion</c>). The packfile / artefact / bundle rails hand the version over to the
+  /// server, which mints it after we've returned and has nowhere to put a message - so it is dropped there. A
+  /// connector that exposes a version message (today only Grasshopper) has to write it once the ingestion completes
+  /// and the version exists; see <c>IngestionTracker.SetVersionMessage</c>.
+  /// </param>
   /// <param name="useArtifacts">
   /// Grasshopper-only escape hatch, don't use elsewhere. False skips the 4.0 artefact path and falls through to the
   /// v3 routes below. GH's deprecated Publish components pass false because a saved .gh file outlives the connector
@@ -120,6 +127,7 @@ public sealed class SendOperation<T>(
     SendInfo sendInfo,
     string? fileName,
     long? fileSizeBytes,
+    // unused: the server creates the version here, not us - see the versionMessage param docs on Send
 #pragma warning disable IDE0060
     string? versionMessage,
 #pragma warning restore IDE0060

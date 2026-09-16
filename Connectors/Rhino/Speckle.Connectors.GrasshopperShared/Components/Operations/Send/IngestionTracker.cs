@@ -6,8 +6,9 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
 /// <summary>
-/// Polls ingestion status via the SDK's GraphQL query API
-/// and blocks until the ingestion reaches a terminal state (success/failed/cancelled).
+/// The server-side half of a Publish: polls ingestion status via the SDK's GraphQL query API and blocks until the
+/// ingestion reaches a terminal state (success/failed/cancelled), then stamps the version message the server had no
+/// way of knowing about.
 /// </summary>
 /// <remarks>
 /// We use polling instead of subscriptions because GH components call WaitForIngestionCompletion
@@ -52,5 +53,32 @@ public class IngestionTracker
 
       await Task.Delay(s_pollInterval, cancellationToken).ConfigureAwait(false);
     }
+  }
+
+  /// <summary>
+  /// Writes <paramref name="versionMessage"/> onto a version the server minted from an ingestion. No-op when the
+  /// user left the input empty.
+  /// </summary>
+  /// <remarks>
+  /// NOTE: the version message can only be set after the fact on these rails. The packfile / artefact / bundle sends
+  /// create the version server-side once ingestion finishes, and neither the ingestion nor the upload carries a
+  /// message - only the legacy <c>completeWithVersion</c> rail takes one from the client, and that one is the
+  /// fallback we no longer hit. So <c>SendOperation</c>'s versionMessage is silently dropped there, and the caller
+  /// has to stamp it once the version exists (ENG-9835).
+  /// </remarks>
+  public async Task SetVersionMessage(
+    IClient client,
+    string projectId,
+    string versionId,
+    string? versionMessage,
+    CancellationToken cancellationToken
+  )
+  {
+    if (string.IsNullOrWhiteSpace(versionMessage))
+    {
+      return;
+    }
+
+    await client.Version.Update(new(versionId, projectId, versionMessage), cancellationToken).ConfigureAwait(false);
   }
 }
