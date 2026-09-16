@@ -558,6 +558,10 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponentBase>
           CancellationToken
         )
         .ConfigureAwait(false);
+
+      await ingestionTracker
+        .SetVersionMessage(Parent.ApiClient, sendInfo.ProjectId, versionId, Parent.VersionMessage, CancellationToken)
+        .ConfigureAwait(false);
     }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components

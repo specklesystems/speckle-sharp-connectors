@@ -21,6 +21,12 @@ public interface IBrowserBridge
   public string[] GetBindingsMethodNames();
 
   /// <summary>
+  /// This method is called by the Frontend bridge to discover optional bridge features, so that it can
+  /// degrade gracefully when running against a connector that predates them.
+  /// </summary>
+  public string[] GetBridgeCapabilities();
+
+  /// <summary>
   /// This method is called by the Frontend bridge when invoking any of the wrapped binding's methods.
   /// </summary>
   /// <param name="methodName"></param>
@@ -28,6 +34,10 @@ public interface IBrowserBridge
   /// <param name="args"></param>
   /// <returns></returns>
   public void RunMethod(string methodName, string requestId, string args);
+
+  /// <inheritdoc cref="RunMethod(string, string, string)"/>
+  /// <param name="otelTraceContext">W3C trace context as <c>{"traceparent":..,"tracestate":..}</c>, or null.</param>
+  public void RunMethodTraced(string methodName, string requestId, string args, string? otelTraceContext);
 
   /// <param name="eventName"></param>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
