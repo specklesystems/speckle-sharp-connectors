@@ -81,11 +81,14 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
     {
       try
       {
-        var converter = _converterManager.ResolveConverter(entity.GetType(), false);
-
-        var converted = converter.Convert(entity);
-        results.Add(converted);
-        return;
+        var converter = _converterManager.ResolveConverter(entity.GetType());
+        // Guard against infinite recursion and fall through to the explode path instead.
+        if (converter is not Plant3dEntityToSpeckleConverter)
+        {
+          var converted = converter.Convert(entity);
+          results.Add(converted);
+          return;
+        }
       }
       catch (System.Exception)
       {
@@ -132,9 +135,12 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       entity.Explode(exploded);
       foreach (ADB.DBObject obj in exploded)
       {
-        if (obj is ADB.Entity subEntity)
+        using (obj)
         {
-          CollectDisplayObjects(subEntity, results, depth + 1);
+          if (obj is ADB.Entity subEntity)
+          {
+            CollectDisplayObjects(subEntity, results, depth + 1);
+          }
         }
       }
     }

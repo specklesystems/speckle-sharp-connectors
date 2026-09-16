@@ -44,6 +44,10 @@ public sealed class SendOperation<T>(
   IBundleSender? bundleSender = null
 ) : ISendOperation<T>
 {
+  /// <param name="versionMessage">
+  /// Only used where we create the version ourselves. The packfile / artefact / bundle rails leave that to the server,
+  /// which has no message to work with - those callers must set it once the ingestion completes (ENG-9835).
+  /// </param>
   /// <param name="useArtifacts">
   /// Grasshopper-only escape hatch, don't use elsewhere. False skips the 4.0 artefact path and falls through to the
   /// v3 routes below. GH's deprecated Publish components pass false because a saved .gh file outlives the connector
@@ -120,6 +124,7 @@ public sealed class SendOperation<T>(
     SendInfo sendInfo,
     string? fileName,
     long? fileSizeBytes,
+    // unused: the server creates the version here, not us - see the param docs on Send
 #pragma warning disable IDE0060
     string? versionMessage,
 #pragma warning restore IDE0060
@@ -138,7 +143,13 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        new(
+          speckleApplication.Slug,
+          speckleApplication.HostApplicationVersion,
+          fileName,
+          fileSizeBytes,
+          connectorVersion: speckleApplication.SpeckleVersion
+        ),
         600
       ),
       cancellationToken
@@ -274,7 +285,13 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        new(
+          speckleApplication.Slug,
+          speckleApplication.HostApplicationVersion,
+          fileName,
+          fileSizeBytes,
+          connectorVersion: speckleApplication.SpeckleVersion
+        ),
         600
       ),
       cancellationToken
@@ -354,7 +371,13 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        new(
+          speckleApplication.Slug,
+          speckleApplication.HostApplicationVersion,
+          fileName,
+          fileSizeBytes,
+          connectorVersion: speckleApplication.SpeckleVersion
+        ),
         600
       ),
       cancellationToken

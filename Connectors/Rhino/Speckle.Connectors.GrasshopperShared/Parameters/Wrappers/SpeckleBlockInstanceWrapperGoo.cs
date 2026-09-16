@@ -106,8 +106,47 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         target = (T)(object)Value.Transform;
         return true;
       default:
-        return CastToModelObject(ref target);
+        if (CastToModelObject(ref target))
+        {
+          return true;
+        }
+
+        // Instances have no native geometry of their own (their GeometryBase is a placeholder
+        // InstanceReferenceGeometry - see GrasshopperBlockUnpacker). Standard downstream components
+        // (Mesh, Brep, Curve, ...) can't consume that, so wiring an instance straight into one used to
+        // silently produce nothing (FEA-694). Fall back to the single defining object's geometry,
+        // transformed into world space, and let SpeckleGeometryWrapperGoo's existing GH_Convert-based
+        // casts take it from there. Ambiguous for multi-object or nested-instance definitions - those
+        // still need to go through the Speckle Block Instance / Block Definition components.
+        return TryGetSingleTransformedGeometryGoo() is SpeckleGeometryWrapperGoo geometryGoo
+          && geometryGoo.CastTo(ref target);
     }
+  }
+
+  /// <summary>
+  /// Resolves this instance to its single defining geometry object, transformed into world space.
+  /// </summary>
+  /// <returns>
+  /// Null when the definition is missing or empty, has more than one object, or its sole object is
+  /// itself a nested instance or has no geometry - all ambiguous cases where the caller should use the
+  /// Speckle Block Instance / Block Definition components to deconstruct explicitly instead.
+  /// </returns>
+  private SpeckleGeometryWrapperGoo? TryGetSingleTransformedGeometryGoo()
+  {
+    if (Value?.Definition?.Objects is not { Count: 1 } objects || objects[0] is SpeckleBlockInstanceWrapper)
+    {
+      return null;
+    }
+
+    SpeckleGeometryWrapper singleObject = objects[0];
+    if (singleObject.GeometryBase == null)
+    {
+      return null;
+    }
+
+    SpeckleGeometryWrapper transformed = singleObject.DeepCopy();
+    transformed.GeometryBase!.Transform(Value.Transform);
+    return new SpeckleGeometryWrapperGoo(transformed);
   }
 
 #if !RHINO8_OR_GREATER

@@ -75,6 +75,8 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
           }
         }
       }
+
+      polyline.ForEach(curve => curve.Dispose());
     }
 
     if (regionToConvert == null)
@@ -89,6 +91,8 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
     // convert and store Regions
     SOG.Region convertedRegion = _regionConverter.Convert(regionToConvert);
     convertedRegion.hasHatchPattern = true;
+
+    regionToConvert.Dispose();
 
     return convertedRegion;
   }
