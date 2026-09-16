@@ -53,4 +53,27 @@ public class IngestionTracker
       await Task.Delay(s_pollInterval, cancellationToken).ConfigureAwait(false);
     }
   }
+
+  /// <summary>
+  /// Sets the version message, once the ingestion has created the version. No-op when the input was left empty.
+  /// </summary>
+  /// <remarks>
+  /// NOTE: it has to happen here. The ingestion carries no message, so the server mints the version without one -
+  /// <c>SendOperation</c>'s versionMessage is dropped on those rails (ENG-9835).
+  /// </remarks>
+  public async Task SetVersionMessage(
+    IClient client,
+    string projectId,
+    string versionId,
+    string? versionMessage,
+    CancellationToken cancellationToken
+  )
+  {
+    if (string.IsNullOrWhiteSpace(versionMessage))
+    {
+      return;
+    }
+
+    await client.Version.Update(new(versionId, projectId, versionMessage), cancellationToken).ConfigureAwait(false);
+  }
 }
