@@ -32,7 +32,9 @@
   </Folder>
   <Folder Name="/Connectors/Rhino/8/">
     <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8.Mac\Speckle.Connectors.Grasshopper8.Mac.csproj" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8.Mac\Speckle.Connectors.Rhino8.Mac.csproj" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
   </Folder>
@@ -54,6 +56,7 @@
   </Folder>
   <Folder Name="/Sdk/">
     <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI.EtoWebView\Speckle.Connectors.DUI.EtoWebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <Project Path="Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
