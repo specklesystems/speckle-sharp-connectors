@@ -140,13 +140,13 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "2026.9.0-beta.5",
-        "contentHash": "yM8ZPViRCYZyVoyB2aRXAnQ8HuLA7E9pAjQSk01Rys5EUSBHHQCVMOeOY/maZRUeXVVfqu+/DyV8ST4kjZyYBg=="
+        "resolved": "2026.9.0-beta.6",
+        "contentHash": "zP56FEtqSgvETMO010rlOAybvBGFOSg67xgv0jTnJvxf3l1vJiLePetgtXWtVDN+ZFerLzckDAj7+zA/Aenc1A=="
       },
       "Speckle.Sdk.Parquet": {
         "type": "Transitive",
-        "resolved": "2026.9.0-beta.5",
-        "contentHash": "XpO62cnn84vGZUubF1CJ4GrsxUujwwdrv26T9uqsLLhzSWnxujNclrunZXcmJGGykufUWNT5SaDhd3UiMH17hw=="
+        "resolved": "2026.9.0-beta.6",
+        "contentHash": "3VyauTGO8jh6gjSo/HELFLxY+a2DnddnYIwp7iRfkCqlQaEgnbsDBJpmzLgSQf92pYThX9UXK76ZySUMtN2eEw=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -192,7 +192,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[2026.9.0-beta.5, )"
+          "Speckle.Sdk": "[2026.9.0-beta.6, )"
         }
       },
       "speckle.connectors.dui": {
@@ -245,8 +245,8 @@
       "Speckle.Sdk": {
         "type": "CentralTransitive",
         "requested": "[2026.9.0-beta.5, )",
-        "resolved": "2026.9.0-beta.5",
-        "contentHash": "24tOTnFe3D8q0SWVCRGdhmDSuvZSicPK0RhzzjQBuT2MfR8goQxsKFcT7ogLWxFGsim5CTqKRidKhf13Wx+vjg==",
+        "resolved": "2026.9.0-beta.6",
+        "contentHash": "YEU7WoUtQJ05sPpcX4PuhWLlThrwI8YXZGnzJxVzBvyiKq2RAZKvxpqjkhnyyNEut2vt28O/0oZcRDVrjW+QHQ==",
         "dependencies": {
           "GraphQL.Client": "6.1.0",
           "Microsoft.Data.Sqlite": "10.0.0",
@@ -254,8 +254,8 @@
           "Microsoft.Extensions.ObjectPool": "10.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "2026.9.0-beta.5",
-          "Speckle.Sdk.Parquet": "2026.9.0-beta.5"
+          "Speckle.Sdk.Dependencies": "2026.9.0-beta.6",
+          "Speckle.Sdk.Parquet": "2026.9.0-beta.6"
         }
       }
     },

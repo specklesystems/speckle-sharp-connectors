@@ -229,7 +229,7 @@
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[2026.9.0-beta.5, )",
+        "requested": "[2026.9.0-beta.6, )",
         "resolved": "2026.9.0-beta.5",
         "contentHash": "24tOTnFe3D8q0SWVCRGdhmDSuvZSicPK0RhzzjQBuT2MfR8goQxsKFcT7ogLWxFGsim5CTqKRidKhf13Wx+vjg==",
         "dependencies": {
