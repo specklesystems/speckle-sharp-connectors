@@ -6,9 +6,8 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
 /// <summary>
-/// The server-side half of a Publish: polls ingestion status via the SDK's GraphQL query API and blocks until the
-/// ingestion reaches a terminal state (success/failed/cancelled), then stamps the version message the server had no
-/// way of knowing about.
+/// Polls ingestion status via the SDK's GraphQL query API
+/// and blocks until the ingestion reaches a terminal state (success/failed/cancelled).
 /// </summary>
 /// <remarks>
 /// We use polling instead of subscriptions because GH components call WaitForIngestionCompletion
@@ -56,15 +55,11 @@ public class IngestionTracker
   }
 
   /// <summary>
-  /// Writes <paramref name="versionMessage"/> onto a version the server minted from an ingestion. No-op when the
-  /// user left the input empty.
+  /// Sets the version message, once the ingestion has created the version. No-op when the input was left empty.
   /// </summary>
   /// <remarks>
-  /// NOTE: the version message can only be set after the fact on these rails. The packfile / artefact / bundle sends
-  /// create the version server-side once ingestion finishes, and neither the ingestion nor the upload carries a
-  /// message - only the legacy <c>completeWithVersion</c> rail takes one from the client, and that one is the
-  /// fallback we no longer hit. So <c>SendOperation</c>'s versionMessage is silently dropped there, and the caller
-  /// has to stamp it once the version exists (ENG-9835).
+  /// NOTE: it has to happen here. The ingestion carries no message, so the server mints the version without one -
+  /// <c>SendOperation</c>'s versionMessage is dropped on those rails (ENG-9835).
   /// </remarks>
   public async Task SetVersionMessage(
     IClient client,
