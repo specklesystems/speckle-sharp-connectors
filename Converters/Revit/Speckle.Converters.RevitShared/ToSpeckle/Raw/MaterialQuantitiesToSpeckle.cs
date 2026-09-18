@@ -49,19 +49,21 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     Dictionary<string, object> quantities = new();
     switch (target)
     {
+      // Rails carry no material on their category, so HasMaterialQuantities is false and ProcessMaterialsByCategory
+      // finds nothing — the material is a TYPE parameter and the length an INSTANCE parameter, so they need the
+      // by-element-type path instead [ENG-7793]. Each rail reports only ITS OWN length: a railing publishes its top
+      // rail and handrails as separate child objects, so summing theirs into the parent as well would double-count
+      // every railing in a takeoff [ENG-9358].
       case DBA.Railing railing:
-        // railings can have sub-elements including top rails, handrails, and balusters.
-        // they also do *not* have any materials associated with their category.
-        // TopRail is now a separate child element with its own material quantities (see CNX-2806)
-        List<DB.ElementId> railingElementIds = [railing.GetTypeId(), .. railing.GetHandRails()];
-        ProcessMaterialsByElementTypes(railingElementIds, quantities);
+        ProcessMaterialsByElementTypes([railing], quantities);
         break;
 
       case DBA.TopRail topRail:
-        // TopRail/HandRail doesn't expose materials via HasMaterialQuantities
-        // must extract materials from the type parameters instead
-        List<DB.ElementId> railElementIds = [topRail.GetTypeId()];
-        ProcessMaterialsByElementTypes(railElementIds, quantities);
+        ProcessMaterialsByElementTypes([topRail], quantities);
+        break;
+
+      case DBA.HandRail handRail:
+        ProcessMaterialsByElementTypes([handRail], quantities);
         break;
 
       case DBA.Stairs stairs:
@@ -207,50 +209,98 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     }
   }
 
-  private void ProcessMaterialsByElementTypes(List<DB.ElementId> elementIds, Dictionary<string, object> quantities)
+  /// <summary>
+  /// The material a type points at. Prefers the declared <c>Reference.Material</c> spec, then falls back to any
+  /// ElementId parameter that actually resolves to a <see cref="DB.Material"/> — rail types were reported not to
+  /// match on the spec alone, and the fallback removes the need to know which [ENG-9358].
+  /// </summary>
+  private DB.ElementId FindMaterialParameterValue(DB.ElementType elementType)
+  {
+    DB.ElementId fallback = DB.ElementId.InvalidElementId;
+    foreach (DB.Parameter param in elementType.Parameters)
+    {
+      if (param.StorageType != DB.StorageType.ElementId)
+      {
+        continue;
+      }
+      if (param.Definition.GetDataType() == DB.SpecTypeId.Reference.Material)
+      {
+        return param.AsElementId();
+      }
+      if (
+        fallback == DB.ElementId.InvalidElementId
+        && _converterSettings.Current.Document.GetElement(param.AsElementId()) is DB.Material
+      )
+      {
+        fallback = param.AsElementId();
+      }
+    }
+    return fallback;
+  }
+
+  /// <summary>
+  /// An element's own length. The curve-driven built-in parameter first — that is the "Length" a rail reports and the
+  /// value a takeoff expects — falling back to summing every length-spec parameter, which is what this path did
+  /// before and stays the behaviour for anything without a driving curve.
+  /// </summary>
+  private static double GetElementLength(DB.Element element)
+  {
+    if (element.get_Parameter(DB.BuiltInParameter.CURVE_ELEM_LENGTH) is DB.Parameter curveLength)
+    {
+      return curveLength.AsDouble();
+    }
+
+    double total = 0;
+    foreach (DB.Parameter param in element.Parameters)
+    {
+      if (param.Definition.GetDataType() == DB.SpecTypeId.Length)
+      {
+        total += param.AsDouble();
+      }
+    }
+    return total;
+  }
+
+  /// <summary>
+  /// Length-based quantities for elements whose material lives on their TYPE and whose length lives on the INSTANCE —
+  /// rails, which have no category material quantities at all.
+  /// </summary>
+  /// <remarks>
+  /// Takes INSTANCES. It used to take element ids and call <c>GetTypeId()</c> on whatever they resolved to, but the
+  /// callers passed TYPE ids: <c>ElementType.GetTypeId()</c> is <c>InvalidElementId</c>, so every entry was skipped
+  /// and this path emitted nothing on any file since it was written [ENG-9358]. A type id could not have worked
+  /// anyway — the length is an instance parameter.
+  /// </remarks>
+  private void ProcessMaterialsByElementTypes(IReadOnlyList<DB.Element> elements, Dictionary<string, object> quantities)
   {
     Dictionary<DB.ElementId, double> matLengths = new(); // stores mat id to total length found for mat
 
-    foreach (DB.ElementId elementId in elementIds)
+    foreach (DB.Element element in elements)
     {
-      if (
-        _converterSettings.Current.Document.GetElement(elementId) is DB.Element element
-        && _converterSettings.Current.Document.GetElement(element.GetTypeId()) is DB.ElementType elementType
-      )
+      if (_converterSettings.Current.Document.GetElement(element.GetTypeId()) is not DB.ElementType elementType)
       {
-        DB.ElementId elementMatId = DB.ElementId.InvalidElementId;
+        continue;
+      }
 
-        foreach (DB.Parameter param in elementType.Parameters)
-        {
-          DB.Definition def = param.Definition;
-          if (param.StorageType == DB.StorageType.ElementId && def.GetDataType() == DB.SpecTypeId.Reference.Material)
-          {
-            elementMatId = param.AsElementId();
-            break;
-          }
-        }
+      DB.ElementId elementMatId = FindMaterialParameterValue(elementType);
+      if (elementMatId == DB.ElementId.InvalidElementId)
+      {
+        continue;
+      }
 
-        if (elementMatId != DB.ElementId.InvalidElementId)
-        {
-          // try get the length from the element
-          foreach (DB.Parameter eParam in element.Parameters)
-          {
-            DB.Definition eParamDef = eParam.Definition;
-            var forgeTypeId = eParamDef.GetDataType();
-            if (forgeTypeId == DB.SpecTypeId.Length)
-            {
-              double length = eParam.AsDouble();
-              if (matLengths.TryGetValue(elementMatId, out double _))
-              {
-                matLengths[elementMatId] += length;
-              }
-              else
-              {
-                matLengths.Add(elementMatId, length);
-              }
-            }
-          }
-        }
+      double length = GetElementLength(element);
+      if (length == 0)
+      {
+        continue;
+      }
+
+      if (matLengths.TryGetValue(elementMatId, out double _))
+      {
+        matLengths[elementMatId] += length;
+      }
+      else
+      {
+        matLengths.Add(elementMatId, length);
       }
     }
 
