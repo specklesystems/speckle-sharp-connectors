@@ -11,8 +11,11 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
   public string ResultsKey => "frameForces";
   public ModelObjectType TargetObjectType => ModelObjectType.FRAME;
 
+  // Grouped by frame OBJECT (+ object-relative station): ETABS auto-meshes a frame into several line elements, whose
+  // names are unknown to the send selection and whose stations restart at 0 per element. Elm is kept as a level only
+  // so the two coincident rows at a mesh boundary stay distinct.
   public ResultsConfiguration Configuration { get; } =
-    new(["Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum"], ["P", "V2", "V3", "T", "M2", "M3"]);
+    new(["Obj", "Elm", "LoadCase", "Wrap:ObjSta", "Wrap:StepNum"], ["P", "V2", "V3", "T", "M2", "M3"]);
 
   public CsiFrameForceResultsExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
@@ -35,8 +38,9 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
     // Step 2: single dictionary to accumulate all results
     var allArrays = new Dictionary<string, List<object>>
     {
+      ["Obj"] = [],
+      ["ObjSta"] = [],
       ["Elm"] = [],
-      ["ElmSta"] = [],
       ["LoadCase"] = [],
       ["StepNum"] = [],
       ["P"] = [],
@@ -90,17 +94,22 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
         throw new InvalidOperationException($"Frame force extraction failed for frame {frameName}."); // shouldn't fail silently
       }
 
-      // accumulate results
-      allArrays["Elm"].AddRange(elm.Cast<object>());
-      allArrays["ElmSta"].AddRange(elmSta.Cast<object>());
-      allArrays["LoadCase"].AddRange(loadCase.Cast<object>());
-      allArrays["StepNum"].AddRange(stepNum.Cast<object>());
-      allArrays["P"].AddRange(p.Cast<object>());
-      allArrays["V2"].AddRange(v2.Cast<object>());
-      allArrays["V3"].AddRange(v3.Cast<object>());
-      allArrays["T"].AddRange(t.Cast<object>());
-      allArrays["M2"].AddRange(m2.Cast<object>());
-      allArrays["M3"].AddRange(m3.Cast<object>());
+      // accumulate results (bounded by numberResults - the API may hand back longer arrays than it filled)
+      for (int i = 0; i < numberResults; i++)
+      {
+        bool objectOwned = !string.IsNullOrEmpty(obj[i]);
+        allArrays["Obj"].Add(objectOwned ? obj[i] : elm[i]);
+        allArrays["ObjSta"].Add(objectOwned ? objSta[i] : elmSta[i]);
+        allArrays["Elm"].Add(elm[i]);
+        allArrays["LoadCase"].Add(loadCase[i]);
+        allArrays["StepNum"].Add(stepNum[i]);
+        allArrays["P"].Add(p[i]);
+        allArrays["V2"].Add(v2[i]);
+        allArrays["V3"].Add(v3[i]);
+        allArrays["T"].Add(t[i]);
+        allArrays["M2"].Add(m2[i]);
+        allArrays["M3"].Add(m3[i]);
+      }
     }
 
     // Step 5: organise arrays for dictionary processor

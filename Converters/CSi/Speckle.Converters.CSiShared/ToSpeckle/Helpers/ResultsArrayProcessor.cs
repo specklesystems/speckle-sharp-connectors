@@ -1,3 +1,4 @@
+using System.Globalization;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
@@ -84,7 +85,7 @@ public class ResultsArrayProcessor
 
     // Group indices by the current key's values
     var grouped = indices
-      .GroupBy(i => currentArray.GetValue(i)?.ToString() ?? string.Empty)
+      .GroupBy(i => FormatKey(currentArray.GetValue(i)))
       .ToDictionary(g => g.Key, g => (object)BuildHierarchy(g, rawArrays, groupingKeys, resultKeys, level + 1));
 
     // Wrap if needed
@@ -95,4 +96,14 @@ public class ResultsArrayProcessor
 
     return grouped;
   }
+
+  // Grouping keys are parsed back into numbers downstream (e.g. station), so never format them with the current
+  // culture - a comma decimal separator makes every non-integral key unparseable.
+  private static string FormatKey(object? value) =>
+    value switch
+    {
+      null => string.Empty,
+      IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+      _ => value.ToString() ?? string.Empty,
+    };
 }
