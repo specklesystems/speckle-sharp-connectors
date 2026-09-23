@@ -31,6 +31,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   private readonly TsdEntitySnapshotBuilder _snapshotBuilder;
   private readonly TsdAnalysisResultsExtractor _analysisResultsExtractor;
   private readonly TsdConversionSettings _conversionSettings;
+  private readonly TsdExtrusionFallbackTracker _extrusionFallbacks;
   private readonly IThreadContext _threadContext;
   private readonly IArtifactPipelineFactory _artifactPipelineFactory;
   private readonly ISpeckleApplication _speckleApplication;
@@ -41,6 +42,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     TsdEntitySnapshotBuilder snapshotBuilder,
     TsdAnalysisResultsExtractor analysisResultsExtractor,
     TsdConversionSettings conversionSettings,
+    TsdExtrusionFallbackTracker extrusionFallbacks,
     IThreadContext threadContext,
     IArtifactPipelineFactory artifactPipelineFactory,
     ISpeckleApplication speckleApplication,
@@ -51,6 +53,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     _snapshotBuilder = snapshotBuilder;
     _analysisResultsExtractor = analysisResultsExtractor;
     _conversionSettings = conversionSettings;
+    _extrusionFallbacks = extrusionFallbacks;
     _threadContext = threadContext;
     _artifactPipelineFactory = artifactPipelineFactory;
     _speckleApplication = speckleApplication;
@@ -157,6 +160,16 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     if (results.Count > 0 && results.All(x => x.Status == Status.ERROR))
     {
       throw new SpeckleException("Failed to convert all objects.");
+    }
+
+    if (_extrusionFallbacks.Total > 0)
+    {
+      _logger.LogWarning(
+        "Volumetric geometry kept the wireframe display value for {FallbackCount} element(s): {@FallbackCounts}",
+        _extrusionFallbacks.Total,
+        _extrusionFallbacks.Counts
+      );
+      session.SetStat("extrusionFallbacks", _extrusionFallbacks.Total);
     }
 
     await _snapshotBuilder.ApplyUnitsAsync(propertyTrees, modelUnits.Units).ConfigureAwait(false);

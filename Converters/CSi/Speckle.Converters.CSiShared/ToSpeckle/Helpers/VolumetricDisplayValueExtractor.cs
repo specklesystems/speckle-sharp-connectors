@@ -68,10 +68,16 @@ public sealed class VolumetricDisplayValueExtractor
       double angleDegrees = 0;
       bool advanced = false;
       _ = sapModel.FrameObj.GetLocalAxes(frame.Name, ref angleDegrees, ref advanced);
+      if (advanced)
+      {
+        return Fallback(ModelObjectType.FRAME, "advanced-axes");
+      }
 
-      // CSi default axes: local 2 lies in the vertical plane through the member, except for vertical members where
-      // it follows global +X; the local-axis angle then rotates 2 towards 3 about 1.
-      var reference = Math.Abs(direction.Z) / length > 1 - VERTICAL_TOLERANCE ? Vector3.UnitX : Vector3.UnitZ;
+      // CSi default axes: local 2 lies in the vertical plane through the member, except for vertical members (sine of
+      // the angle to global Z below 1e-3, CSi's own definition) where it follows global +X; the local-axis angle then
+      // rotates 2 towards 3 about 1.
+      double sineToVertical = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y) / length;
+      var reference = sineToVertical < VERTICAL_TOLERANCE ? Vector3.UnitX : Vector3.UnitZ;
       var localFrame = LocalFrame.TryCreate(direction, reference, angleDegrees * Math.PI / 180);
       if (localFrame is null)
       {
@@ -90,8 +96,16 @@ public sealed class VolumetricDisplayValueExtractor
   {
     try
     {
+      var areaObj = _settingsStore.Current.SapModel.AreaObj;
+      bool isOpening = false;
+      _ = areaObj.GetOpening(shell.Name, ref isOpening);
+      if (isOpening)
+      {
+        return Fallback(ModelObjectType.SHELL, "opening");
+      }
+
       string sectionName = string.Empty;
-      _ = _settingsStore.Current.SapModel.AreaObj.GetProperty(shell.Name, ref sectionName);
+      _ = areaObj.GetProperty(shell.Name, ref sectionName);
 
       double thickness = _thicknessResolver.GetThickness(sectionName);
       if (double.IsNaN(thickness) || thickness <= 0)

@@ -22,6 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdLoadingSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdResultTypeSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdSendVolumetricGeometrySetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\TsdElementCategory.cs" />

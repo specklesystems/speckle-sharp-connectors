@@ -62,7 +62,11 @@ public sealed class FrameSectionProfileResolver
     }
 
     double hostArea = GetHostArea(sectionName);
-    if (hostArea > 0 && Math.Abs(outline.Area - hostArea) / hostArea > AREA_TOLERANCE)
+    if (double.IsNaN(hostArea) || hostArea <= 0)
+    {
+      return new(null, $"{shape}/no-host-area");
+    }
+    if (Math.Abs(outline.Area - hostArea) / hostArea > AREA_TOLERANCE)
     {
       return new(null, $"{shape}/area-mismatch");
     }

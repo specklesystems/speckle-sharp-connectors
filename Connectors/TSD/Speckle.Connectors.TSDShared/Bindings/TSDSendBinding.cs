@@ -52,6 +52,7 @@ internal sealed class TSDSendBinding : ISendBinding
     }
 
     settings.Add(new TsdResultTypeSetting([]));
+    settings.Add(new TsdSendVolumetricGeometrySetting());
 
     return settings;
   }
@@ -67,6 +68,9 @@ internal sealed class TSDSendBinding : ISendBinding
         var settings = serviceProvider.GetRequiredService<TsdConversionSettings>();
         settings.SelectedLoadings = ReadArraySetting(card, "loadCasesAndCombinations");
         settings.SelectedResultTypes = ReadArraySetting(card, "resultTypes");
+        settings.SendVolumetricGeometry =
+          card.Settings?.FirstOrDefault(s => s.Id == TsdSendVolumetricGeometrySetting.SETTING_ID)?.Value as bool?
+          ?? TsdSendVolumetricGeometrySetting.DEFAULT_VALUE;
       },
       async card =>
         await _applicationService
