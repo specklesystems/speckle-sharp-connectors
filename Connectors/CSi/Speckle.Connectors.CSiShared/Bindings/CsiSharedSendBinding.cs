@@ -51,7 +51,11 @@ public sealed class CsiSharedSendBinding : ISendBinding
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
   public List<ICardSetting> GetSendSettings() =>
-    [new LoadCaseCombinationSetting([], _csiApplicationService.SapModel), new ResultTypeSetting([])];
+    [
+      new LoadCaseCombinationSetting([], _csiApplicationService.SapModel),
+      new ResultTypeSetting([]),
+      new SendVolumetricGeometrySetting(),
+    ];
 
   public async Task Send(string modelCardId)
   {
@@ -67,7 +71,8 @@ public sealed class CsiSharedSendBinding : ISendBinding
             _csiConversionSettingsFactory.Create(
               _csiApplicationService.SapModel,
               _toSpeckleSettingsManager.GetLoadCasesAndCombinations(card),
-              _toSpeckleSettingsManager.GetResultTypes(card)
+              _toSpeckleSettingsManager.GetResultTypes(card),
+              _toSpeckleSettingsManager.GetSendVolumetricGeometry(card)
             )
           );
       },

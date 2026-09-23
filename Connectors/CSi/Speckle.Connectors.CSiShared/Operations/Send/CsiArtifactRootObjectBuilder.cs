@@ -11,6 +11,7 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -51,6 +52,7 @@ public class CsiArtifactRootObjectBuilder(
   IConverterSettingsStore<CsiConversionSettings> converterSettings,
   CsiSendCollectionManager collectionManager,
   AnalysisResultsExtractor analysisResultsExtractor,
+  ExtrusionFallbackTracker extrusionFallbacks,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
@@ -166,6 +168,16 @@ public class CsiArtifactRootObjectBuilder(
     if (results.Count > 0 && results.All(x => x.Status == Status.ERROR))
     {
       throw new SpeckleException("Failed to convert all objects.");
+    }
+
+    if (extrusionFallbacks.Total > 0)
+    {
+      logger.LogWarning(
+        "Volumetric geometry kept the wireframe display value for {FallbackCount} element(s): {@FallbackCounts}",
+        extrusionFallbacks.Total,
+        extrusionFallbacks.Counts
+      );
+      session.SetStat("extrusionFallbacks", extrusionFallbacks.Total);
     }
 
     var resultRows = ExtractResultRows(objects, nameToAppId, session);

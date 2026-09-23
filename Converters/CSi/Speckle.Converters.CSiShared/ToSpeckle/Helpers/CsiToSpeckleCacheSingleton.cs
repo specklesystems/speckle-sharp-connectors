@@ -28,4 +28,9 @@ public class CsiToSpeckleCacheSingleton
   /// This eliminates redundant section resolution API calls.
   /// </summary>
   public Dictionary<string, Dictionary<string, object?>> ShellSectionPropertiesCache { get; set; } = [];
+
+  /// <summary>
+  /// Per-section unit prisms for volumetric display values, or the reason none could be built (ENG-9048).
+  /// </summary>
+  public Dictionary<string, FrameSectionPrism> FramePrismCache { get; set; } = [];
 }

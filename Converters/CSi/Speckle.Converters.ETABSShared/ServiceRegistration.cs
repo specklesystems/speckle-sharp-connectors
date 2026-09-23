@@ -21,6 +21,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IApplicationPropertiesExtractor, EtabsPropertiesExtractor>();
     serviceCollection.AddScoped<CsiObjectToSpeckleConverterBase, EtabsObjectToSpeckleConverter>();
     serviceCollection.AddScoped<EtabsShellSectionResolver>();
+    serviceCollection.AddScoped<IShellThicknessResolver, EtabsShellThicknessResolver>();
 
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
 

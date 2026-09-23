@@ -1,3 +1,4 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
@@ -9,16 +10,22 @@ public class DisplayValueExtractor
   private readonly ITypedConverter<CsiJointWrapper, Point> _jointConverter;
   private readonly ITypedConverter<CsiFrameWrapper, Line> _frameConverter;
   private readonly ITypedConverter<CsiShellWrapper, Mesh> _shellConverter;
+  private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly VolumetricDisplayValueExtractor _volumetricExtractor;
 
   public DisplayValueExtractor(
     ITypedConverter<CsiJointWrapper, Point> jointConverter,
     ITypedConverter<CsiFrameWrapper, Line> frameConverter,
-    ITypedConverter<CsiShellWrapper, Mesh> shellConverter
+    ITypedConverter<CsiShellWrapper, Mesh> shellConverter,
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    VolumetricDisplayValueExtractor volumetricExtractor
   )
   {
     _jointConverter = jointConverter;
     _frameConverter = frameConverter;
     _shellConverter = shellConverter;
+    _settingsStore = settingsStore;
+    _volumetricExtractor = volumetricExtractor;
   }
 
   public IEnumerable<Base> GetDisplayValue(ICsiWrapper wrapper)
@@ -39,11 +46,28 @@ public class DisplayValueExtractor
 
   private IEnumerable<Base> ExtractFrame(CsiFrameWrapper target)
   {
-    yield return _frameConverter.Convert(target);
+    var line = _frameConverter.Convert(target);
+    if (
+      _settingsStore.Current.SendVolumetricGeometry && _volumetricExtractor.TryExtrudeFrame(target, line) is { } solid
+    )
+    {
+      yield return solid;
+      yield break;
+    }
+    yield return line;
   }
 
   private IEnumerable<Base> ExtractShell(CsiShellWrapper target)
   {
-    yield return _shellConverter.Convert(target);
+    var outline = _shellConverter.Convert(target);
+    if (
+      _settingsStore.Current.SendVolumetricGeometry
+      && _volumetricExtractor.TryExtrudeShell(target, outline) is { } solid
+    )
+    {
+      yield return solid;
+      yield break;
+    }
+    yield return outline;
   }
 }

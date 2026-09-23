@@ -23,6 +23,9 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<DatabaseTableExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<SharedPropertiesExtractor>();
+    serviceCollection.AddScoped<ExtrusionFallbackTracker>();
+    serviceCollection.AddScoped<FrameSectionProfileResolver>();
+    serviceCollection.AddScoped<VolumetricDisplayValueExtractor>();
 
     // Register results extractors
     serviceCollection.AddScoped<CsiBaseReactResultsExtractor>();
