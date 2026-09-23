@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -11,7 +12,6 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
-using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -40,8 +40,9 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// Grouping reuses <see cref="CsiSendCollectionManager.GetCollectionSegments"/> (base: by type; ETABS: level→category)
 /// as nested CONTAINER nodes + IN_COLLECTION. Analysis results flatten into <c>structural_results</c> rows (all 8
 /// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
-/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. **Deferred this pass:**
-/// section/material <c>GroupProxy</c>s (CSi has no render materials/colors).</para>
+/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. Material display colours become
+/// MATERIAL nodes + HAS_MATERIAL edges only when volumetric geometry is requested (ENG-9048); section/material
+/// <c>GroupProxy</c>s remain deferred.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the CSi COM <c>SapModel</c> API is main-thread-affine, so phase 1
 /// (<see cref="CollectOnMain"/>) converts on the host thread → a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) builds the parquet bundle on a worker (the pipeline's sync-over-async IO deadlocks on a
@@ -199,8 +200,6 @@ public class CsiArtifactRootObjectBuilder(
     );
   }
 
-  private const string NO_MATERIAL_OVERWRITE = "None";
-
   private static string? GetMaterialName(Base converted)
   {
     if (
@@ -216,7 +215,7 @@ public class CsiArtifactRootObjectBuilder(
       assignments.TryGetValue(CommonObjectProperty.MATERIAL_OVERWRITE, out var overwrite)
       && overwrite is string overwriteName
       && overwriteName.Length > 0
-      && overwriteName != NO_MATERIAL_OVERWRITE
+      && overwriteName != CsiName.NONE
     )
     {
       return overwriteName;

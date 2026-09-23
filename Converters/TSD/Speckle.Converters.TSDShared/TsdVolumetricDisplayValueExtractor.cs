@@ -18,21 +18,21 @@ namespace Speckle.Converters.TSDShared;
 /// </summary>
 public sealed class TsdVolumetricDisplayValueExtractor
 {
-  public const string MEMBER = "Member";
-  public const string SLAB = "Slab";
-  public const string WALL = "Wall";
+  private const string MEMBER = "Member";
+  private const string SLAB = "Slab";
+  private const string WALL = "Wall";
 
   // Same vertical-member rule as the CSi adapter: sine of the angle to global Z below this.
   private const double VERTICAL_TOLERANCE = 1e-3;
 
   private readonly ITsdModelDataProvider _dataProvider;
   private readonly TsdSectionPrismResolver _prismResolver;
-  private readonly TsdExtrusionFallbackTracker _fallbacks;
+  private readonly ExtrusionFallbackTracker _fallbacks;
 
   public TsdVolumetricDisplayValueExtractor(
     ITsdModelDataProvider dataProvider,
     TsdSectionPrismResolver prismResolver,
-    TsdExtrusionFallbackTracker fallbacks
+    ExtrusionFallbackTracker fallbacks
   )
   {
     _dataProvider = dataProvider;

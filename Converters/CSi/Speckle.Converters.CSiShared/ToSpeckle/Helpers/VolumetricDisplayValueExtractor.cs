@@ -9,14 +9,15 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
 /// <summary>
 /// Inflates the analytical display value into a solid: the section prism placed on the frame's line, or the shell
-/// outline extruded half its thickness each way. Null means "keep the wireframe" and is always recorded (ENG-9048).
+/// outline extruded half its thickness each way. Null means "keep the wireframe"; it is recorded as a fallback
+/// unless the element has no solid to begin with (openings, null sections) (ENG-9048).
 /// </summary>
 public sealed class VolumetricDisplayValueExtractor
 {
+  // CSi's own definition of a vertical member: sine of the angle to global Z below this.
   private const double VERTICAL_TOLERANCE = 1e-3;
   private const int CARDINAL_POINT_CENTROID = 10;
   private const string LOCAL_COORDINATE_SYSTEM = "Local";
-  private const string NO_SECTION = "None";
 
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly FrameSectionProfileResolver _profileResolver;
@@ -40,16 +41,16 @@ public sealed class VolumetricDisplayValueExtractor
   {
     try
     {
-      var sapModel = _settingsStore.Current.SapModel;
+      var frameObj = _settingsStore.Current.SapModel.FrameObj;
       string sectionName = string.Empty,
         autoSelect = string.Empty;
-      if (
-        sapModel.FrameObj.GetSection(frame.Name, ref sectionName, ref autoSelect) != 0
-        || string.IsNullOrEmpty(sectionName)
-        || sectionName == NO_SECTION
-      )
+      if (frameObj.GetSection(frame.Name, ref sectionName, ref autoSelect) != 0)
       {
         return Fallback(ModelObjectType.FRAME, "no-section");
+      }
+      if (string.IsNullOrEmpty(sectionName) || sectionName == CsiName.NONE)
+      {
+        return null;
       }
 
       var section = _profileResolver.Resolve(sectionName);
@@ -69,15 +70,14 @@ public sealed class VolumetricDisplayValueExtractor
 
       double angleDegrees = 0;
       bool advanced = false;
-      _ = sapModel.FrameObj.GetLocalAxes(frame.Name, ref angleDegrees, ref advanced);
+      _ = frameObj.GetLocalAxes(frame.Name, ref angleDegrees, ref advanced);
       if (advanced)
       {
         return Fallback(ModelObjectType.FRAME, "advanced-axes");
       }
 
-      // CSi default axes: local 2 lies in the vertical plane through the member, except for vertical members (sine of
-      // the angle to global Z below 1e-3, CSi's own definition) where it follows global +X; the local-axis angle then
-      // rotates 2 towards 3 about 1.
+      // CSi default axes: local 2 lies in the vertical plane through the member, except for vertical members where it
+      // follows global +X; the local-axis angle then rotates 2 towards 3 about 1.
       double sineToVertical = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y) / length;
       var reference = sineToVertical < VERTICAL_TOLERANCE ? Vector3.UnitX : Vector3.UnitZ;
       var localFrame = LocalFrame.TryCreate(direction, reference, angleDegrees * Math.PI / 180);
@@ -86,30 +86,13 @@ public sealed class VolumetricDisplayValueExtractor
         return Fallback(ModelObjectType.FRAME, "degenerate-axes");
       }
 
-      int cardinalPoint = CARDINAL_POINT_CENTROID;
-      bool mirror2 = false,
-        stiffTransform = false;
-      double[] jointOffset1 = [],
-        jointOffset2 = [];
-      string offsetSystem = string.Empty;
-      _ = sapModel.FrameObj.GetInsertionPoint(
-        frame.Name,
-        ref cardinalPoint,
-        ref mirror2,
-        ref stiffTransform,
-        ref jointOffset1,
-        ref jointOffset2,
-        ref offsetSystem
-      );
-      if (mirror2)
+      var insertion = ReadInsertion(frameObj, frame.Name, section.Outline, localFrame.Value);
+      if (insertion is null)
       {
         return Fallback(ModelObjectType.FRAME, "mirrored-section");
       }
 
-      var cardinalShift = CardinalPointShift(section.Outline, cardinalPoint);
-      var startJoint = ToLocalOffset(jointOffset1, offsetSystem, localFrame.Value);
-      var endJoint = ToLocalOffset(jointOffset2, offsetSystem, localFrame.Value);
-      double physicalLength = length + endJoint.Z - startJoint.Z;
+      double physicalLength = length + insertion.EndAxial - insertion.StartAxial;
       if (physicalLength <= 0)
       {
         return Fallback(ModelObjectType.FRAME, "zero-length");
@@ -118,11 +101,11 @@ public sealed class VolumetricDisplayValueExtractor
       return ToMesh(
         PrismBuilder.Place(
           section.Template,
-          start + startJoint.Z * localFrame.Value.ZAxis,
+          start + insertion.StartAxial * localFrame.Value.ZAxis,
           localFrame.Value,
           physicalLength,
-          cardinalShift + new Vector2(startJoint.X, startJoint.Y),
-          cardinalShift + new Vector2(endJoint.X, endJoint.Y)
+          insertion.StartOffset,
+          insertion.EndOffset
         )
       );
     }
@@ -130,6 +113,82 @@ public sealed class VolumetricDisplayValueExtractor
     {
       return Fallback(ModelObjectType.FRAME, ex.GetType().Name);
     }
+  }
+
+  public Mesh? TryExtrudeShell(CsiShellWrapper shell, Mesh outline)
+  {
+    try
+    {
+      var areaObj = _settingsStore.Current.SapModel.AreaObj;
+      bool isOpening = false;
+      _ = areaObj.GetOpening(shell.Name, ref isOpening);
+      string sectionName = string.Empty;
+      _ = areaObj.GetProperty(shell.Name, ref sectionName);
+      if (isOpening || string.IsNullOrEmpty(sectionName) || sectionName == CsiName.NONE)
+      {
+        return null;
+      }
+
+      double thickness = _thicknessResolver.GetThickness(sectionName);
+      if (double.IsNaN(thickness) || thickness <= 0)
+      {
+        return Fallback(ModelObjectType.SHELL, "no-thickness");
+      }
+
+      var points = new List<Vector3>(outline.vertices.Count / 3);
+      for (int i = 0; i + 2 < outline.vertices.Count; i += 3)
+      {
+        points.Add(new Vector3(outline.vertices[i], outline.vertices[i + 1], outline.vertices[i + 2]));
+      }
+
+      var prism = PrismBuilder.TryExtrudeOutline(points, thickness);
+      return prism is null ? Fallback(ModelObjectType.SHELL, "degenerate-outline") : ToMesh(prism);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return Fallback(ModelObjectType.SHELL, ex.GetType().Name);
+    }
+  }
+
+  /// <summary>Profile shifts in the section plane and axial shifts per end, in the profile frame; null when mirrored.</summary>
+  private sealed record Insertion(Vector2 StartOffset, Vector2 EndOffset, double StartAxial, double EndAxial);
+
+  private static Insertion? ReadInsertion(
+    cFrameObj frameObj,
+    string frameName,
+    ProfileOutline outline,
+    LocalFrame frame
+  )
+  {
+    int cardinalPoint = CARDINAL_POINT_CENTROID;
+    bool mirror2 = false,
+      stiffTransform = false;
+    double[] jointOffset1 = [],
+      jointOffset2 = [];
+    string offsetSystem = string.Empty;
+    _ = frameObj.GetInsertionPoint(
+      frameName,
+      ref cardinalPoint,
+      ref mirror2,
+      ref stiffTransform,
+      ref jointOffset1,
+      ref jointOffset2,
+      ref offsetSystem
+    );
+    if (mirror2)
+    {
+      return null;
+    }
+
+    var cardinalShift = CardinalPointShift(outline, cardinalPoint);
+    var startJoint = ToLocalOffset(jointOffset1, offsetSystem, frame);
+    var endJoint = ToLocalOffset(jointOffset2, offsetSystem, frame);
+    return new Insertion(
+      cardinalShift + new Vector2(startJoint.X, startJoint.Y),
+      cardinalShift + new Vector2(endJoint.X, endJoint.Y),
+      startJoint.Z,
+      endJoint.Z
+    );
   }
 
   // CSi cardinal points 1-9 sit on the section's bounding box (rows bottom/middle/top along local 2, columns
@@ -181,52 +240,16 @@ public sealed class VolumetricDisplayValueExtractor
     );
   }
 
-  public Mesh? TryExtrudeShell(CsiShellWrapper shell, Mesh outline)
-  {
-    try
-    {
-      var areaObj = _settingsStore.Current.SapModel.AreaObj;
-      bool isOpening = false;
-      _ = areaObj.GetOpening(shell.Name, ref isOpening);
-      if (isOpening)
-      {
-        return Fallback(ModelObjectType.SHELL, "opening");
-      }
-
-      string sectionName = string.Empty;
-      _ = areaObj.GetProperty(shell.Name, ref sectionName);
-
-      double thickness = _thicknessResolver.GetThickness(sectionName);
-      if (double.IsNaN(thickness) || thickness <= 0)
-      {
-        return Fallback(ModelObjectType.SHELL, sectionName == NO_SECTION ? NO_SECTION : "no-thickness");
-      }
-
-      var points = new List<Vector3>(outline.vertices.Count / 3);
-      for (int i = 0; i + 2 < outline.vertices.Count; i += 3)
-      {
-        points.Add(new Vector3(outline.vertices[i], outline.vertices[i + 1], outline.vertices[i + 2]));
-      }
-
-      var prism = PrismBuilder.TryExtrudeOutline(points, thickness);
-      return prism is null ? Fallback(ModelObjectType.SHELL, "degenerate-outline") : ToMesh(prism);
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return Fallback(ModelObjectType.SHELL, ex.GetType().Name);
-    }
-  }
-
   private Mesh? Fallback(ModelObjectType elementType, string reason)
   {
-    _fallbacks.Record(elementType, reason);
+    _fallbacks.Record(elementType.ToString(), reason);
     return null;
   }
 
   private Mesh ToMesh(PrismMesh prism) =>
     new()
     {
-      vertices = prism.Vertices.ToList(),
+      vertices = prism.Vertices,
       faces = prism.Faces.ToList(),
       units = _settingsStore.Current.SpeckleUnits,
     };

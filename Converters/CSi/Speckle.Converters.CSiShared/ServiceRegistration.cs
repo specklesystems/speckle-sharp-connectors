@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
@@ -24,6 +25,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<SharedPropertiesExtractor>();
     serviceCollection.AddScoped<ExtrusionFallbackTracker>();
+    serviceCollection.AddScoped<FrameSectionAreaResolver>();
     serviceCollection.AddScoped<FrameSectionProfileResolver>();
     serviceCollection.AddScoped<VolumetricDisplayValueExtractor>();
 

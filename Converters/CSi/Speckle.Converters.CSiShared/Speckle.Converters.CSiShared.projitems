@@ -38,7 +38,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\SharedPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\ExtrusionFallbackTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\FrameSectionAreaResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\FrameSectionProfileResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IShellThicknessResolver.cs" />

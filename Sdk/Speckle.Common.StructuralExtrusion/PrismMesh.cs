@@ -3,10 +3,10 @@ namespace Speckle.Common.StructuralExtrusion;
 /// <summary>Indexed triangle mesh: flat xyz vertices and a Speckle face list (<c>3, a, b, c, …</c>).</summary>
 public sealed class PrismMesh
 {
-  public IReadOnlyList<double> Vertices { get; }
+  public List<double> Vertices { get; }
   public IReadOnlyList<int> Faces { get; }
 
-  public PrismMesh(IReadOnlyList<double> vertices, IReadOnlyList<int> faces)
+  public PrismMesh(List<double> vertices, IReadOnlyList<int> faces)
   {
     Vertices = vertices ?? throw new ArgumentNullException(nameof(vertices));
     Faces = faces ?? throw new ArgumentNullException(nameof(faces));
@@ -21,7 +21,6 @@ public sealed class PrismTemplate
 {
   public IReadOnlyList<double> LocalVertices { get; }
   public IReadOnlyList<int> Faces { get; }
-  public int VertexCount => LocalVertices.Count / 3;
 
   internal PrismTemplate(IReadOnlyList<double> localVertices, IReadOnlyList<int> faces)
   {

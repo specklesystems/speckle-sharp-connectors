@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -49,7 +50,7 @@ internal static class ServiceRegistration
     services.AddScoped<TsdDisplayValueExtractor>();
     services.AddScoped<TsdVolumetricDisplayValueExtractor>();
     services.AddScoped<TsdSectionPrismResolver>();
-    services.AddScoped<TsdExtrusionFallbackTracker>();
+    services.AddScoped<ExtrusionFallbackTracker>();
     services.AddScoped<TsdMemberPropertyExtractor>();
     services.AddScoped<TsdSlabPropertyExtractor>();
     services.AddScoped<TsdWallPropertyExtractor>();

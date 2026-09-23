@@ -1,6 +1,4 @@
-using Speckle.Converters.CSiShared.Utils;
-
-namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
+namespace Speckle.Common.StructuralExtrusion;
 
 /// <summary>
 /// Per-send tally of elements that kept their wireframe display value although volumetric geometry was requested,
@@ -14,7 +12,7 @@ public sealed class ExtrusionFallbackTracker
 
   public IReadOnlyDictionary<string, int> Counts => _counts;
 
-  public void Record(ModelObjectType elementType, string reason)
+  public void Record(string elementType, string reason)
   {
     string key = $"{elementType}/{reason}";
     _counts[key] = _counts.TryGetValue(key, out int count) ? count + 1 : 1;

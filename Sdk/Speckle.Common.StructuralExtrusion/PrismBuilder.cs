@@ -45,19 +45,10 @@ public static class PrismBuilder
       throw new ArgumentNullException(nameof(template));
     }
 
-    var local = template.LocalVertices;
-    var world = new double[local.Count];
-    for (int i = 0; i < local.Count; i += 3)
-    {
-      double z = local[i + 2];
-      double x = local[i] + startOffset.X + z * (endOffset.X - startOffset.X);
-      double y = local[i + 1] + startOffset.Y + z * (endOffset.Y - startOffset.Y);
-      var p = frame.ToWorld(origin, x, y, z * length);
-      world[i] = p.X;
-      world[i + 1] = p.Y;
-      world[i + 2] = p.Z;
-    }
-    return new PrismMesh(world, template.Faces);
+    return new PrismMesh(
+      ToWorld(template.LocalVertices, origin, frame, length, startOffset, endOffset),
+      template.Faces
+    );
   }
 
   /// <summary>Extrudes a planar 3D outline half the thickness to each side of its plane; null when degenerate.</summary>
@@ -106,21 +97,36 @@ public static class PrismBuilder
     }
 
     var built = TryBuildLocal(outer, Array.Empty<IReadOnlyList<Vector2>>(), -thickness / 2, thickness / 2);
-    if (built is null)
-    {
-      return null;
-    }
+    return built is null
+      ? null
+      : new PrismMesh(
+        ToWorld(built.Value.Vertices, centre, frame.Value, 1, Vector2.Zero, Vector2.Zero),
+        built.Value.Faces
+      );
+  }
 
-    var local = built.Value.Vertices;
-    var world = new double[local.Count];
+  // Local (x, y, z) triples → world, with the in-plane offset interpolated along z and z scaled by the length.
+  private static List<double> ToWorld(
+    IReadOnlyList<double> local,
+    Vector3 origin,
+    LocalFrame frame,
+    double length,
+    Vector2 startOffset,
+    Vector2 endOffset
+  )
+  {
+    var world = new List<double>(local.Count);
     for (int i = 0; i < local.Count; i += 3)
     {
-      var p = frame.Value.ToWorld(centre, local[i], local[i + 1], local[i + 2]);
-      world[i] = p.X;
-      world[i + 1] = p.Y;
-      world[i + 2] = p.Z;
+      double z = local[i + 2];
+      double x = local[i] + startOffset.X + z * (endOffset.X - startOffset.X);
+      double y = local[i + 1] + startOffset.Y + z * (endOffset.Y - startOffset.Y);
+      var p = frame.ToWorld(origin, x, y, z * length);
+      world.Add(p.X);
+      world.Add(p.Y);
+      world.Add(p.Z);
     }
-    return new PrismMesh(world, built.Value.Faces);
+    return world;
   }
 
   // Contours must already be wound: outer counter-clockwise, holes clockwise, so every side quad faces the solid's

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -31,7 +32,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   private readonly TsdEntitySnapshotBuilder _snapshotBuilder;
   private readonly TsdAnalysisResultsExtractor _analysisResultsExtractor;
   private readonly TsdConversionSettings _conversionSettings;
-  private readonly TsdExtrusionFallbackTracker _extrusionFallbacks;
+  private readonly ExtrusionFallbackTracker _extrusionFallbacks;
   private readonly IThreadContext _threadContext;
   private readonly IArtifactPipelineFactory _artifactPipelineFactory;
   private readonly ISpeckleApplication _speckleApplication;
@@ -42,7 +43,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     TsdEntitySnapshotBuilder snapshotBuilder,
     TsdAnalysisResultsExtractor analysisResultsExtractor,
     TsdConversionSettings conversionSettings,
-    TsdExtrusionFallbackTracker extrusionFallbacks,
+    ExtrusionFallbackTracker extrusionFallbacks,
     IThreadContext threadContext,
     IArtifactPipelineFactory artifactPipelineFactory,
     ISpeckleApplication speckleApplication,

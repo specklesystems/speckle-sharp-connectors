@@ -19,14 +19,17 @@ public sealed class FrameSectionProfileResolver
 
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly CsiToSpeckleCacheSingleton _cache;
+  private readonly FrameSectionAreaResolver _areaResolver;
 
   public FrameSectionProfileResolver(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    CsiToSpeckleCacheSingleton cache
+    CsiToSpeckleCacheSingleton cache,
+    FrameSectionAreaResolver areaResolver
   )
   {
     _settingsStore = settingsStore;
     _cache = cache;
+    _areaResolver = areaResolver;
   }
 
   public FrameSectionPrism Resolve(string sectionName)
@@ -63,7 +66,7 @@ public sealed class FrameSectionProfileResolver
       return new(null, null, $"{shape}/invalid-dimensions");
     }
 
-    double hostArea = GetHostArea(sectionName);
+    double hostArea = _areaResolver.GetArea(sectionName);
     if (double.IsNaN(hostArea) || hostArea <= 0)
     {
       return new(null, null, $"{shape}/no-host-area");
@@ -195,45 +198,5 @@ public sealed class FrameSectionProfileResolver
       default:
         return null;
     }
-  }
-
-  private double GetHostArea(string sectionName)
-  {
-    if (_cache.FrameSectionAreaCache.TryGetValue(sectionName, out double cached))
-    {
-      return cached;
-    }
-
-    double area = 0,
-      as2 = 0,
-      as3 = 0,
-      torsion = 0,
-      i22 = 0,
-      i33 = 0,
-      s22 = 0,
-      s33 = 0,
-      z22 = 0,
-      z33 = 0,
-      r22 = 0,
-      r33 = 0;
-    int result = _settingsStore.Current.SapModel.PropFrame.GetSectProps(
-      sectionName,
-      ref area,
-      ref as2,
-      ref as3,
-      ref torsion,
-      ref i22,
-      ref i33,
-      ref s22,
-      ref s33,
-      ref z22,
-      ref z33,
-      ref r22,
-      ref r33
-    );
-
-    double validatedArea = result == 0 ? area : double.NaN;
-    _cache.FrameSectionAreaCache[sectionName] = validatedArea;
-    return validatedArea;
   }
 }

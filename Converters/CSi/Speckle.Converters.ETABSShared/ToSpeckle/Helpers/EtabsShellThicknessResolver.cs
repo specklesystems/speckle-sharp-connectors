@@ -9,8 +9,6 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// </summary>
 public sealed class EtabsShellThicknessResolver : IShellThicknessResolver
 {
-  private const string NO_SECTION = "None";
-
   private readonly CsiToSpeckleCacheSingleton _cache;
   private readonly EtabsShellSectionResolver _sectionResolver;
 
@@ -22,7 +20,7 @@ public sealed class EtabsShellThicknessResolver : IShellThicknessResolver
 
   public double GetThickness(string sectionName)
   {
-    if (string.IsNullOrEmpty(sectionName) || sectionName == NO_SECTION)
+    if (string.IsNullOrEmpty(sectionName) || sectionName == CsiName.NONE)
     {
       return double.NaN;
     }
@@ -36,7 +34,6 @@ public sealed class EtabsShellThicknessResolver : IShellThicknessResolver
     return ExtractThickness(sectionProperties);
   }
 
-  // Resolved section properties nest as { "Property Data" -> { "Thickness" -> { "value", "units" } } }.
   private static double ExtractThickness(Dictionary<string, object?> sectionProperties)
   {
     if (
