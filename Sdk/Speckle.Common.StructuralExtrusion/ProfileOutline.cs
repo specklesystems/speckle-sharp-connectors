@@ -12,11 +12,33 @@ public sealed class ProfileOutline
   public IReadOnlyList<IReadOnlyList<Vector2>> Holes { get; }
   public double Area { get; }
 
+  /// <summary>Bounding box of the outer contour: depth along x, width along y (centroid at the origin).</summary>
+  public double MinDepth { get; }
+  public double MaxDepth { get; }
+  public double MinWidth { get; }
+  public double MaxWidth { get; }
+
   private ProfileOutline(IReadOnlyList<Vector2> outer, IReadOnlyList<IReadOnlyList<Vector2>> holes, double area)
   {
     Outer = outer;
     Holes = holes;
     Area = area;
+
+    double minDepth = double.PositiveInfinity,
+      maxDepth = double.NegativeInfinity,
+      minWidth = double.PositiveInfinity,
+      maxWidth = double.NegativeInfinity;
+    foreach (var p in outer)
+    {
+      minDepth = Math.Min(minDepth, p.X);
+      maxDepth = Math.Max(maxDepth, p.X);
+      minWidth = Math.Min(minWidth, p.Y);
+      maxWidth = Math.Max(maxWidth, p.Y);
+    }
+    MinDepth = minDepth;
+    MaxDepth = maxDepth;
+    MinWidth = minWidth;
+    MaxWidth = maxWidth;
   }
 
   /// <summary>Normalises winding, recentres on the area centroid; null when the net area is degenerate.</summary>

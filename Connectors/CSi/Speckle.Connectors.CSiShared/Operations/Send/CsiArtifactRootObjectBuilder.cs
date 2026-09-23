@@ -145,7 +145,7 @@ public class CsiArtifactRootObjectBuilder(
         var segments = collectionManager.GetCollectionSegments(converted);
         string appId = converted.applicationId ?? Guid.NewGuid().ToString();
         nameToAppId[(wrapper.ObjectType, wrapper.Name)] = appId;
-        collected.Add(new CollectedObject(appId, sourceType, converted, segments));
+        collected.Add(new CollectedObject(appId, sourceType, converted, segments, GetMaterialName(converted)));
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
         session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
@@ -180,9 +180,84 @@ public class CsiArtifactRootObjectBuilder(
       session.SetStat("extrusionFallbacks", extrusionFallbacks.Total);
     }
 
+    // Material colours only ride along with volumetric geometry (ENG-9048), so a send with the setting off is
+    // unchanged; the COM lookups stay in this phase because PropMaterial is main-thread-affine.
+    var materialColors = converterSettings.Current.SendVolumetricGeometry
+      ? ResolveMaterialColors(collected)
+      : new Dictionary<string, int>(StringComparer.Ordinal);
+
     var resultRows = ExtractResultRows(objects, nameToAppId, session);
-    return new CollectedModel(units, forceUnits, temperatureUnits, collected, resultRows, results, nameToAppId);
+    return new CollectedModel(
+      units,
+      forceUnits,
+      temperatureUnits,
+      collected,
+      resultRows,
+      results,
+      nameToAppId,
+      materialColors
+    );
   }
+
+  private const string NO_MATERIAL_OVERWRITE = "None";
+
+  private static string? GetMaterialName(Base converted)
+  {
+    if (
+      converted is not DataObject dataObject
+      || !dataObject.properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out var assignmentsObj)
+      || assignmentsObj is not IDictionary<string, object?> assignments
+    )
+    {
+      return null;
+    }
+
+    if (
+      assignments.TryGetValue(CommonObjectProperty.MATERIAL_OVERWRITE, out var overwrite)
+      && overwrite is string overwriteName
+      && overwriteName.Length > 0
+      && overwriteName != NO_MATERIAL_OVERWRITE
+    )
+    {
+      return overwriteName;
+    }
+
+    return
+      assignments.TryGetValue(ObjectPropertyKey.MATERIAL_ID, out var material)
+      && material is string materialName
+      && materialName.Length > 0
+      ? materialName
+      : null;
+  }
+
+  private Dictionary<string, int> ResolveMaterialColors(IEnumerable<CollectedObject> collected)
+  {
+    var colors = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (string name in collected.Select(o => o.MaterialName).OfType<string>().Distinct(StringComparer.Ordinal))
+    {
+      eMatType materialType = 0;
+      int color = 0;
+      string notes = string.Empty,
+        guid = string.Empty;
+      if (
+        converterSettings.Current.SapModel.PropMaterial.GetMaterial(
+          name,
+          ref materialType,
+          ref color,
+          ref notes,
+          ref guid
+        ) == 0
+      )
+      {
+        colors[name] = ColorRefToArgb(color);
+      }
+    }
+    return colors;
+  }
+
+  // CSi reports display colours as Win32 COLORREF (0x00BBGGRR).
+  private static int ColorRefToArgb(int colorRef) =>
+    unchecked((int)0xFF000000) | ((colorRef & 0xFF) << 16) | (colorRef & 0xFF00) | ((colorRef >> 16) & 0xFF);
 
   // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
   // structural_results rows — all 8 CSi result types, across the schema's three identity shapes: object-level
@@ -552,6 +627,7 @@ public class CsiArtifactRootObjectBuilder(
     AddUnitModelProperty(pipeline, "units.temperature", model.TemperatureUnits);
 
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
+    var materialKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
     foreach (CollectedObject co in model.Objects)
@@ -581,6 +657,7 @@ public class CsiArtifactRootObjectBuilder(
       );
 
       int ord = 0;
+      var geometryKs = new List<int>(display.Count);
       foreach (Base fragment in display)
       {
         try
@@ -588,6 +665,7 @@ public class CsiArtifactRootObjectBuilder(
           string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
           int gK = pipeline.AddGeometry(gAppId, fragment);
           pipeline.Display(objK, gK, ord++);
+          geometryKs.Add(gK);
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -597,6 +675,19 @@ public class CsiArtifactRootObjectBuilder(
             fragment.speckle_type,
             co.ApplicationId
           );
+        }
+      }
+
+      if (co.MaterialName is { } materialName && model.MaterialColors.TryGetValue(materialName, out int argb))
+      {
+        if (!materialKByName.TryGetValue(materialName, out int matK))
+        {
+          matK = pipeline.AddMaterial($"material:{materialName}", materialName, argb, 1.0, 0.0, 1.0);
+          materialKByName[materialName] = matK;
+        }
+        foreach (int gK in geometryKs)
+        {
+          pipeline.HasMaterial(gK, matK);
         }
       }
 
@@ -732,7 +823,8 @@ public class CsiArtifactRootObjectBuilder(
     string ApplicationId,
     string SourceType,
     Base Converted,
-    IReadOnlyList<string> Segments
+    IReadOnlyList<string> Segments,
+    string? MaterialName
   );
 
   private sealed record CollectedModel(
@@ -742,7 +834,8 @@ public class CsiArtifactRootObjectBuilder(
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results,
-    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId
+    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId,
+    IReadOnlyDictionary<string, int> MaterialColors
   );
 
   private sealed record BundleResult(

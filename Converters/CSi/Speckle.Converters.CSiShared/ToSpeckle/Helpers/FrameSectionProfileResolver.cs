@@ -3,8 +3,10 @@ using Speckle.Converters.Common;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
-/// <summary>The unit prism for a frame section, or the reason none could be built (the CSi shape name, qualified).</summary>
-public sealed record FrameSectionPrism(PrismTemplate? Template, string ShapeKey);
+/// <summary>
+/// The unit prism and outline for a frame section, or the reason none could be built (the CSi shape name, qualified).
+/// </summary>
+public sealed record FrameSectionPrism(PrismTemplate? Template, ProfileOutline? Outline, string ShapeKey);
 
 /// <summary>
 /// Resolves a frame section to a cached unit prism through the typed <c>PropFrame</c> getters (ENG-9048, ADR-0002).
@@ -45,34 +47,34 @@ public sealed class FrameSectionProfileResolver
     eFramePropType type = 0;
     if (propFrame.GetTypeOAPI(sectionName, ref type) != 0)
     {
-      return new(null, "unknown-type");
+      return new(null, null, "unknown-type");
     }
 
     string shape = type.ToString();
     var profile = ReadProfile(propFrame, sectionName, type);
     if (profile is null)
     {
-      return new(null, shape);
+      return new(null, null, shape);
     }
 
     var outline = SectionProfileCatalog.TryBuild(profile);
     if (outline is null)
     {
-      return new(null, $"{shape}/invalid-dimensions");
+      return new(null, null, $"{shape}/invalid-dimensions");
     }
 
     double hostArea = GetHostArea(sectionName);
     if (double.IsNaN(hostArea) || hostArea <= 0)
     {
-      return new(null, $"{shape}/no-host-area");
+      return new(null, null, $"{shape}/no-host-area");
     }
     if (Math.Abs(outline.Area - hostArea) / hostArea > AREA_TOLERANCE)
     {
-      return new(null, $"{shape}/area-mismatch");
+      return new(null, null, $"{shape}/area-mismatch");
     }
 
     var prism = PrismBuilder.TryBuildUnitPrism(outline);
-    return prism is null ? new(null, $"{shape}/tessellation-failed") : new(prism, shape);
+    return prism is null ? new(null, null, $"{shape}/tessellation-failed") : new(prism, outline, shape);
   }
 
   private static SectionProfile? ReadProfile(cPropFrame propFrame, string name, eFramePropType type)

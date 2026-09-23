@@ -14,6 +14,8 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 public sealed class VolumetricDisplayValueExtractor
 {
   private const double VERTICAL_TOLERANCE = 1e-3;
+  private const int CARDINAL_POINT_CENTROID = 10;
+  private const string LOCAL_COORDINATE_SYSTEM = "Local";
   private const string NO_SECTION = "None";
 
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
@@ -51,7 +53,7 @@ public sealed class VolumetricDisplayValueExtractor
       }
 
       var section = _profileResolver.Resolve(sectionName);
-      if (section.Template is null)
+      if (section.Template is null || section.Outline is null)
       {
         return Fallback(ModelObjectType.FRAME, section.ShapeKey);
       }
@@ -84,12 +86,99 @@ public sealed class VolumetricDisplayValueExtractor
         return Fallback(ModelObjectType.FRAME, "degenerate-axes");
       }
 
-      return ToMesh(PrismBuilder.Place(section.Template, start, localFrame.Value, length));
+      int cardinalPoint = CARDINAL_POINT_CENTROID;
+      bool mirror2 = false,
+        stiffTransform = false;
+      double[] jointOffset1 = [],
+        jointOffset2 = [];
+      string offsetSystem = string.Empty;
+      _ = sapModel.FrameObj.GetInsertionPoint(
+        frame.Name,
+        ref cardinalPoint,
+        ref mirror2,
+        ref stiffTransform,
+        ref jointOffset1,
+        ref jointOffset2,
+        ref offsetSystem
+      );
+      if (mirror2)
+      {
+        return Fallback(ModelObjectType.FRAME, "mirrored-section");
+      }
+
+      var cardinalShift = CardinalPointShift(section.Outline, cardinalPoint);
+      var startJoint = ToLocalOffset(jointOffset1, offsetSystem, localFrame.Value);
+      var endJoint = ToLocalOffset(jointOffset2, offsetSystem, localFrame.Value);
+      double physicalLength = length + endJoint.Z - startJoint.Z;
+      if (physicalLength <= 0)
+      {
+        return Fallback(ModelObjectType.FRAME, "zero-length");
+      }
+
+      return ToMesh(
+        PrismBuilder.Place(
+          section.Template,
+          start + startJoint.Z * localFrame.Value.ZAxis,
+          localFrame.Value,
+          physicalLength,
+          cardinalShift + new Vector2(startJoint.X, startJoint.Y),
+          cardinalShift + new Vector2(endJoint.X, endJoint.Y)
+        )
+      );
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       return Fallback(ModelObjectType.FRAME, ex.GetType().Name);
     }
+  }
+
+  // CSi cardinal points 1-9 sit on the section's bounding box (rows bottom/middle/top along local 2, columns
+  // left/centre/right along local 3, "left" being the +3 side); 10 is the centroid and 11 the shear centre, which the
+  // catalog approximates by the centroid. The analytical line passes through the cardinal point, so the centroid-based
+  // profile shifts by the opposite of that point.
+  private static Vector2 CardinalPointShift(ProfileOutline outline, int cardinalPoint)
+  {
+    if (cardinalPoint is < 1 or > 9)
+    {
+      return Vector2.Zero;
+    }
+
+    int row = (cardinalPoint - 1) / 3;
+    int column = (cardinalPoint - 1) % 3;
+    double depth = row switch
+    {
+      0 => outline.MinDepth,
+      1 => (outline.MinDepth + outline.MaxDepth) / 2,
+      _ => outline.MaxDepth,
+    };
+    double width = column switch
+    {
+      0 => outline.MaxWidth,
+      1 => (outline.MinWidth + outline.MaxWidth) / 2,
+      _ => outline.MinWidth,
+    };
+    return new Vector2(-depth, -width);
+  }
+
+  // Joint offsets come as (1, 2, 3) components in the local system or (X, Y, Z) in a global one; returned as
+  // (depth, width, axial) to match the profile frame.
+  private static Vector3 ToLocalOffset(double[] offset, string coordinateSystem, LocalFrame frame)
+  {
+    if (offset.Length < 3)
+    {
+      return Vector3.Zero;
+    }
+    if (string.Equals(coordinateSystem, LOCAL_COORDINATE_SYSTEM, StringComparison.OrdinalIgnoreCase))
+    {
+      return new Vector3(offset[1], offset[2], offset[0]);
+    }
+
+    var global = new Vector3(offset[0], offset[1], offset[2]);
+    return new Vector3(
+      Vector3.Dot(global, frame.XAxis),
+      Vector3.Dot(global, frame.YAxis),
+      Vector3.Dot(global, frame.ZAxis)
+    );
   }
 
   public Mesh? TryExtrudeShell(CsiShellWrapper shell, Mesh outline)

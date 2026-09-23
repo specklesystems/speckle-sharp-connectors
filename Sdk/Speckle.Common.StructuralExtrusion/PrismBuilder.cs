@@ -23,7 +23,22 @@ public static class PrismBuilder
     return built is null ? null : new PrismTemplate(built.Value.Vertices, built.Value.Faces);
   }
 
-  public static PrismMesh Place(PrismTemplate template, Vector3 origin, LocalFrame frame, double length)
+  public static PrismMesh Place(PrismTemplate template, Vector3 origin, LocalFrame frame, double length) =>
+    Place(template, origin, frame, length, Vector2.Zero, Vector2.Zero);
+
+  /// <summary>
+  /// Places the prism with the profile shifted in its own plane (x depth, y width) by <paramref name="startOffset"/>
+  /// at the origin end and <paramref name="endOffset"/> at the far end; unequal offsets give a sheared prism, which
+  /// is still one affine map per cached vertex.
+  /// </summary>
+  public static PrismMesh Place(
+    PrismTemplate template,
+    Vector3 origin,
+    LocalFrame frame,
+    double length,
+    Vector2 startOffset,
+    Vector2 endOffset
+  )
   {
     if (template is null)
     {
@@ -34,7 +49,10 @@ public static class PrismBuilder
     var world = new double[local.Count];
     for (int i = 0; i < local.Count; i += 3)
     {
-      var p = frame.ToWorld(origin, local[i], local[i + 1], local[i + 2] * length);
+      double z = local[i + 2];
+      double x = local[i] + startOffset.X + z * (endOffset.X - startOffset.X);
+      double y = local[i + 1] + startOffset.Y + z * (endOffset.Y - startOffset.Y);
+      var p = frame.ToWorld(origin, x, y, z * length);
       world[i] = p.X;
       world[i + 1] = p.Y;
       world[i + 2] = p.Z;

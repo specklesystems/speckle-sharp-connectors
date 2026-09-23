@@ -2,6 +2,7 @@ using Speckle.Common.StructuralExtrusion;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
+using TSD.API.Remoting.Common.Properties;
 using TSD.API.Remoting.Geometry;
 using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Structure;
@@ -206,7 +207,24 @@ public sealed class TsdVolumetricDisplayValueExtractor
       return null;
     }
 
-    return PrismBuilder.Place(prism.Template, start, frame.Value, length);
+    // TSD resolves alignment (snap level + offset) into per-end total offsets along the major (depth) and minor
+    // (width) axes, applied here in the +major / +minor directions of the frame.
+    var startOffset = new Vector2(ReadOrZero(span.StartMajorTotalOffset), ReadOrZero(span.StartMinorTotalOffset));
+    var endOffset = new Vector2(ReadOrZero(span.EndMajorTotalOffset), ReadOrZero(span.EndMinorTotalOffset));
+    return PrismBuilder.Place(prism.Template, start, frame.Value, length, startOffset, endOffset);
+  }
+
+  private static double ReadOrZero(IReadOnlyProperty<double> property)
+  {
+    try
+    {
+      double value = property.Value;
+      return double.IsNaN(value) ? 0 : value;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return 0;
+    }
   }
 
   private List<Base>? Fallback(string elementType, string reason)
