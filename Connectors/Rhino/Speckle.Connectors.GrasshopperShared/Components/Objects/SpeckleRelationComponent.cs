@@ -32,7 +32,7 @@ public class SpeckleRelationComponent : GH_Component
       // display name only - Grasshopper binds by ComponentGuid, so this is cosmetic and safe to change
       "Speckle Relation",
       "SR",
-      "Relate a Speckle object to others. The object comes out with the relations attached - publish that. Explore reads them back after a load.",
+      "Relate a Speckle object to others. The object comes out as Related with the relations attached - publish that, not the original. Explore reads them back after a load.",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     )
@@ -59,14 +59,16 @@ public class SpeckleRelationComponent : GH_Component
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    var info = Info;
-    pManager.AddGenericParameter(
-      info.SourceName,
-      info.SourceName,
-      "The source object with the relation(s) attached. Publish this, not the original.",
-      GH_ParamAccess.item
-    );
+    // a fixed role name, not the type's source name: the output IS the source object, and calling it "From" again
+    // hides that it is the copy carrying the relations - the one to publish
+    pManager.AddGenericParameter(OUTPUT_NAME, OUTPUT_NICKNAME, OutputDescription(Info), GH_ParamAccess.item);
   }
+
+  private const string OUTPUT_NAME = "Related Object";
+  private const string OUTPUT_NICKNAME = "Related";
+
+  private static string OutputDescription(SpeckleRelationTypeInfo info) =>
+    $"The {info.SourceName} object with its relation(s) attached. Publish this, or wire it on into collections - not the original.";
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
@@ -132,6 +134,7 @@ public class SpeckleRelationComponent : GH_Component
     }
 
     copy.Relations = relations;
+    Message = relations.Count == 1 ? "1 relation" : $"{relations.Count} relations";
     da.SetData(0, copy.CreateGoo());
   }
 
@@ -204,7 +207,7 @@ public class SpeckleRelationComponent : GH_Component
     }
     if (Params.Output.Count >= 1)
     {
-      SetEnd(Params.Output[0], info.SourceName, Params.Output[0].Description);
+      Params.Output[0].Description = OutputDescription(info);
     }
     ApplyTypeToButton();
     Params.OnParametersChanged();

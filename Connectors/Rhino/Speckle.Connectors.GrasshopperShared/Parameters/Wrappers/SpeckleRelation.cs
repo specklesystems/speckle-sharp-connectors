@@ -55,7 +55,7 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.HostedOn,
       "HOSTED_ON",
       "Hosted",
-      "The element placed on the host, e.g. a door. Comes out again with the relation attached.",
+      "The element placed on the host, e.g. a door. Comes out again as Related.",
       "Host",
       "What the element is placed on, e.g. a wall.",
       "Placement, not ownership: the hosted element sits on its host but is not a component of it. One host per element."
@@ -64,7 +64,7 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.ConnectsTo,
       "CONNECTS_TO",
       "From",
-      "The object the connections start at. Comes out again with the relations attached.",
+      "The object the connections start at. Comes out again as Related.",
       "To",
       "The objects the connections end at.",
       "Directed connectivity between objects, e.g. a connector to the column, beam and slab it joins."
@@ -73,7 +73,7 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.InAssembly,
       "IN_ASSEMBLY",
       "Member",
-      "An object that belongs to the assembly. Comes out again with the relation attached.",
+      "An object that belongs to the assembly. Comes out again as Related.",
       "Assembly",
       "The assembly object the member belongs to.",
       "Fabrication membership. The first member published for an assembly is its main member."
@@ -82,7 +82,7 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.Subelement,
       "SUBELEMENT",
       "Parent",
-      "The owning object, e.g. a curtain wall. Comes out again with the relations attached.",
+      "The owning object, e.g. a curtain wall. Comes out again as Related.",
       "Child",
       "Components of the parent, e.g. its mullions.",
       "Ownership: the child is a component of the parent. One parent per child."
