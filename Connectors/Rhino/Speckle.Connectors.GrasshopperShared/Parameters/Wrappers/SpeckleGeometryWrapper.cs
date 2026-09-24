@@ -178,6 +178,7 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
       Path = Path,
       ModelContext = ModelContext,
       ObjectIndex = ObjectIndex,
+      Relations = Relations,
     };
 
   public virtual ObjectAttributes CreateObjectAttributes(int layerIndex = -1, bool bakeMaterial = false)

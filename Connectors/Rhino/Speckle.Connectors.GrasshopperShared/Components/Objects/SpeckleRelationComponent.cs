@@ -8,13 +8,14 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 /// <summary>
-/// Relates two Speckle objects [ENG-9475]. The relation type is picked from the button in the component; the two inputs
-/// rename themselves to the spec's direction for that type (Hosted → Host, Parent → Child, …), so it is hard to wire
-/// an edge backwards. The output is a relation goo: wire it into Publish next to the objects it names, and Explore
-/// shows it again after a load.
+/// Relates a Speckle object to others [ENG-9475]. A passthrough like Speckle Object: the source object comes out again
+/// with the relations attached, and that output is what you publish. The relation type is picked from the button in
+/// the component; both inputs rename themselves to the spec's direction for that type (Hosted → Host, Parent → Child,
+/// …), so it is hard to wire an edge backwards. Chain components to give one object several relation types. Explore
+/// shows the relations again after a load.
 /// </summary>
 /// <remarks>
-/// Ends are held by application id, so they must be Speckle goos - a Speckle Object, Geometry or Block Instance. Raw
+/// Targets are held by application id, so they must be Speckle goos - a Speckle Object, Geometry or Block Instance. Raw
 /// Rhino geometry mints a fresh id on every cast, so the same curve wired here and into Publish would never match.
 /// </remarks>
 [Guid("3B7C9E2D-5A41-4F8E-9D6C-1E0F2A8B7C54")]
@@ -31,7 +32,7 @@ public class SpeckleRelationComponent : GH_Component
       // display name only - Grasshopper binds by ComponentGuid, so this is cosmetic and safe to change
       "Speckle Relation",
       "SR",
-      "Relate two Speckle objects. Publish the relation alongside the objects; Explore reads it back after a load.",
+      "Relate a Speckle object to others. The object comes out with the relations attached - publish that. Explore reads them back after a load.",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     )
@@ -51,111 +52,118 @@ public class SpeckleRelationComponent : GH_Component
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     var info = Info;
-    pManager.AddGenericParameter(info.SourceName, info.SourceNickName, info.SourceDescription, GH_ParamAccess.item);
-    pManager.AddGenericParameter(info.TargetName, info.TargetNickName, info.TargetDescription, GH_ParamAccess.item);
+    // nicknames ARE the full words: the direction is the point, and a one-letter nick hides it
+    pManager.AddGenericParameter(info.SourceName, info.SourceName, info.SourceDescription, GH_ParamAccess.item);
+    pManager.AddGenericParameter(info.TargetName, info.TargetName, info.TargetDescription, GH_ParamAccess.list);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddParameter(
-      new SpeckleRelationParam(),
-      "Relation",
-      "R",
-      "The relation. Wire it into Publish together with the objects it relates.",
+    var info = Info;
+    pManager.AddGenericParameter(
+      info.SourceName,
+      info.SourceName,
+      "The source object with the relation(s) attached. Publish this, not the original.",
       GH_ParamAccess.item
     );
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    IGH_Goo? source = null;
-    IGH_Goo? target = null;
-    if (!da.GetData(0, ref source) || !da.GetData(1, ref target))
+    IGH_Goo? sourceGoo = null;
+    List<IGH_Goo?> targetGoos = new();
+    if (!da.GetData(0, ref sourceGoo) || !da.GetDataList(1, targetGoos))
     {
       return;
     }
 
     var info = Info;
-    if (
-      !TryGetEnd(source, info.SourceName, out string sourceId, out string? sourceName)
-      || !TryGetEnd(target, info.TargetName, out string targetId, out string? targetName)
-    )
+    if (ToWrapper(sourceGoo, info.SourceName) is not { } source)
     {
       return;
     }
 
-    if (string.Equals(sourceId, targetId, StringComparison.Ordinal))
+    // deep copy so the canvas object upstream is never mutated - same rule as every other passthrough
+    SpeckleWrapper copy = source switch
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "An object cannot be related to itself.");
-      return;
-    }
+      SpeckleDataObjectWrapper dataObject => dataObject.DeepCopy(),
+      SpeckleGeometryWrapper geometry => geometry.DeepCopy(), // virtual: a block instance copies as a block instance
+      _ => throw new InvalidOperationException($"{source.GetType().Name} cannot carry relations"),
+    };
 
-    da.SetData(
-      0,
-      new SpeckleRelationGoo(
-        new SpeckleRelation
-        {
-          Type = _type,
-          SourceId = sourceId,
-          TargetId = targetId,
-          SourceName = sourceName,
-          TargetName = targetName,
-        }
+    var relations = new List<SpeckleRelation>(copy.Relations);
+    foreach (var targetGoo in targetGoos)
+    {
+      if (targetGoo is null)
+      {
+        continue; // a null in the target list is a hole, not a target
+      }
+      if (ToWrapper(targetGoo, info.TargetName) is not { } target)
+      {
+        return; // ToWrapper said why
+      }
+      if (string.IsNullOrEmpty(target.ApplicationId))
+      {
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Error,
+          $"A {info.TargetName} object has no application id, so nothing can point at it."
+        );
+        return;
+      }
+      if (
+        !string.IsNullOrEmpty(copy.ApplicationId)
+        && string.Equals(copy.ApplicationId, target.ApplicationId, StringComparison.Ordinal)
       )
-    );
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Skipped a relation from an object to itself.");
+        continue;
+      }
+
+      var relation = new SpeckleRelation
+      {
+        Type = _type,
+        TargetId = target.ApplicationId!,
+        TargetName = string.IsNullOrWhiteSpace(target.Name) ? null : target.Name,
+      };
+      if (!relations.Any(existing => existing.SameEdgeAs(relation)))
+      {
+        relations.Add(relation);
+      }
+    }
+
+    copy.Relations = relations;
+    da.SetData(0, copy.CreateGoo());
   }
 
   /// <summary>
-  /// The application id a Speckle goo will publish under. Only wrappers qualify: they carry their id through wires
-  /// and deep copies, so what this component records is what Publish interns.
+  /// The wrapper behind a Speckle goo. Only wrappers qualify: they carry their application id through wires and deep
+  /// copies, so what a relation records is what Publish interns. Anything else gets told why.
   /// </summary>
-  private bool TryGetEnd(IGH_Goo? goo, string endName, out string id, out string? name)
+  private SpeckleWrapper? ToWrapper(IGH_Goo? goo, string endName)
   {
-    id = "";
-    name = null;
-    string? appId;
     switch (goo)
     {
       case SpeckleBlockInstanceWrapperGoo instance:
-        appId = instance.Value.ApplicationId;
-        name = instance.Value.Name;
-        break;
+        return instance.Value;
       case SpeckleDataObjectWrapperGoo dataObject:
-        appId = dataObject.Value.ApplicationId;
-        name = dataObject.Value.Name;
-        break;
+        return dataObject.Value;
       case SpeckleGeometryWrapperGoo geometry:
-        appId = geometry.Value.ApplicationId;
-        name = geometry.Value.Name;
-        break;
+        return geometry.Value;
       case SpeckleCollectionWrapperGoo:
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
           $"{endName} is a collection. Collections are containers, not objects - relate the objects inside it."
         );
-        return false;
+        return null;
       case null:
-        return false;
+        return null;
       default:
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
           $"{endName} is a {goo.TypeName}, not a Speckle object. Pass it through Speckle Object or Speckle Geometry first so it keeps one application id."
         );
-        return false;
+        return null;
     }
-
-    if (string.IsNullOrEmpty(appId))
-    {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{endName} has no application id, so it cannot be related.");
-      return false;
-    }
-
-    id = appId!;
-    if (string.IsNullOrWhiteSpace(name))
-    {
-      name = null;
-    }
-    return true;
   }
 
   // ── relation type: button + persisted state ─────────────────────────────────────────────────────────────
@@ -185,18 +193,23 @@ public class SpeckleRelationComponent : GH_Component
     ExpireSolution(true);
   }
 
-  /// <summary>Renames the two inputs and the button to the current type. Inputs keep their wires.</summary>
+  /// <summary>Renames the inputs, output and button to the current type. Params keep their wires.</summary>
   private void ApplyType()
   {
     var info = Info;
     if (Params.Input.Count >= 2)
     {
-      SetEnd(Params.Input[0], info.SourceName, info.SourceNickName, info.SourceDescription);
-      SetEnd(Params.Input[1], info.TargetName, info.TargetNickName, info.TargetDescription);
+      SetEnd(Params.Input[0], info.SourceName, info.SourceDescription);
+      SetEnd(Params.Input[1], info.TargetName, info.TargetDescription);
+    }
+    if (Params.Output.Count >= 1)
+    {
+      SetEnd(Params.Output[0], info.SourceName, Params.Output[0].Description);
     }
     ApplyTypeToButton();
     Params.OnParametersChanged();
     Attributes?.ExpireLayout();
+    OnDisplayExpired(true);
   }
 
   private void ApplyTypeToButton()
@@ -207,10 +220,10 @@ public class SpeckleRelationComponent : GH_Component
     TypeButton.Description = $"{info.Description}\n\nLeft-click to pick another relation type.";
   }
 
-  private static void SetEnd(IGH_Param param, string name, string nickName, string description)
+  private static void SetEnd(IGH_Param param, string name, string description)
   {
     param.Name = name;
-    param.NickName = nickName;
+    param.NickName = name;
     param.Description = description;
   }
 
@@ -229,7 +242,7 @@ public class SpeckleRelationComponent : GH_Component
     }
 
     bool result = base.Read(reader);
-    ApplyType(); // the file restores whatever the inputs were called; the type decides what they are called now
+    ApplyType(); // the file restores whatever the params were called; the type decides what they are called now
     return result;
   }
 }

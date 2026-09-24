@@ -25,21 +25,18 @@ public class SendComponentInput
   public SpeckleCollectionWrapperGoo Input { get; }
   public bool Run { get; }
   public SpecklePropertyGroupGoo? RootProperties { get; }
-  public IReadOnlyList<SpeckleRelation> Relations { get; }
 
   public SendComponentInput(
     SpeckleUrlModelResource resource,
     SpeckleCollectionWrapperGoo input,
     bool run,
-    SpecklePropertyGroupGoo? rootProperties,
-    IReadOnlyList<SpeckleRelation> relations
+    SpecklePropertyGroupGoo? rootProperties
   )
   {
     Resource = resource;
     Input = input;
     Run = run;
     RootProperties = rootProperties;
-    Relations = relations;
   }
 }
 
@@ -140,17 +137,6 @@ public abstract class SendComponentBase(
     List<IGH_Goo> inputGoos = new();
     da.GetDataList(1, inputGoos);
 
-    // relations are not scene-tree members: they come out first so the tree below is built exactly as before [ENG-9475]
-    List<SpeckleRelation> relations = new();
-    inputGoos = SpeckleRelation.Peel(inputGoos, relations);
-    if (relations.Count > 0 && !UseArtifacts)
-    {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Warning,
-        $"Ignored {relations.Count} relation(s): this legacy Publish component does not write them. Use the current Publish component."
-      );
-    }
-
     SpeckleCollectionWrapperGoo rootCollectionWrapper = new(BuildRootCollection(inputGoos));
 
     string? versionMessage = null;
@@ -177,12 +163,13 @@ public abstract class SendComponentBase(
     bool run = false;
     da.GetData(runIndex, ref run);
 
-    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo, relations);
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo);
   }
 
   /// <summary>
-  /// One warning for every relation the artefact builder could not write - a dangling end, a second parent - or null
-  /// when all of them went through. The builder reports them as <see cref="SpeckleRelation.SOURCE_TYPE"/> results.
+  /// One warning for every relation the artefact builder could not write - a dangling target, a second parent - or
+  /// null when all of them went through. The builder reports them as <see cref="SpeckleRelation.SOURCE_TYPE"/>
+  /// results [ENG-9475].
   /// </summary>
   internal static string? DescribeDroppedRelations(IReadOnlyList<SendConversionResult> conversionResults)
   {
@@ -326,11 +313,7 @@ public abstract class SendComponentBase(
     OnPublishStarting();
 
     // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly
-    var rootWrapper = new SpeckleRootCollectionWrapper(
-      input.Input.Value,
-      input.RootProperties?.Unwrap(),
-      input.Relations
-    );
+    var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
     var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();

@@ -114,8 +114,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRelation.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRelationGoo.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRelationParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRootCollectionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRootCollectionWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleWrapper.cs" />

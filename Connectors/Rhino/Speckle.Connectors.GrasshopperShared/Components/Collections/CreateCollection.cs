@@ -107,17 +107,10 @@ public class CreateCollection : VariableParameterComponentBase
 
     var duplicateNames = new HashSet<string>();
     int skippedCount = 0;
-    int relationCount = 0;
 
     foreach (var obj in data)
     {
-      // a relation is an edge between objects, not a member of a collection: it belongs on the Publish input [ENG-9475]
-      if (obj is SpeckleRelationGoo)
-      {
-        childCollection.Elements.Add(null);
-        relationCount++;
-      }
-      else if (obj is SpeckleCollectionWrapperGoo collectionGoo)
+      if (obj is SpeckleCollectionWrapperGoo collectionGoo)
       {
         var colClone = (SpeckleCollectionWrapperGoo)collectionGoo.Duplicate();
         colClone.Value.Path = childPath;
@@ -165,14 +158,6 @@ public class CreateCollection : VariableParameterComponentBase
         childCollection.Elements.Add(null);
         skippedCount++;
       }
-    }
-
-    if (relationCount > 0)
-    {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Warning,
-        $"Ignored {relationCount} relation(s). Relations are not collection members - wire them into Publish next to the objects."
-      );
     }
 
     // add warning if objects were skipped (CNX-2855)

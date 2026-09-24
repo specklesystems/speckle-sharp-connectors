@@ -1,11 +1,10 @@
-using Grasshopper.Kernel.Types;
-
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
 /// The object→object relations Grasshopper can author [ENG-9475]. Values are the bundle-spec <c>rel_types.rel</c> ids,
 /// so a saved definition keeps meaning if the order here ever changes. The spec vocabulary is closed - a new relation
-/// is a spec change first, then a row here and a case in the artefact builder's <c>EmitRelations</c>.
+/// is a spec change first, then a row in <see cref="SpeckleRelationTypes.All"/> and a case in the artefact builder's
+/// <c>EmitRelations</c>.
 /// </summary>
 /// <remarks>
 /// Only relations whose BOTH ends are objects belong here. IN_ROOM / BOUNDS want a room object Grasshopper cannot make,
@@ -22,14 +21,13 @@ public enum SpeckleRelationType
 }
 
 /// <summary>How one relation type reads on the canvas: its two ends, named in the spec's direction.</summary>
+/// <remarks>Nicknames are the full words on purpose - direction is the whole point of the labels.</remarks>
 public sealed record SpeckleRelationTypeInfo(
   SpeckleRelationType Type,
   string SpecName,
   string SourceName,
-  string SourceNickName,
   string SourceDescription,
   string TargetName,
-  string TargetNickName,
   string TargetDescription,
   string Description
 )
@@ -57,10 +55,8 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.HostedOn,
       "HOSTED_ON",
       "Hosted",
-      "H",
-      "The element placed on the host, e.g. a door.",
+      "The element placed on the host, e.g. a door. Comes out again with the relation attached.",
       "Host",
-      "Ho",
       "What the element is placed on, e.g. a wall.",
       "Placement, not ownership: the hosted element sits on its host but is not a component of it. One host per element."
     ),
@@ -68,21 +64,17 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.ConnectsTo,
       "CONNECTS_TO",
       "From",
-      "F",
-      "The object the connection starts at.",
+      "The object the connections start at. Comes out again with the relations attached.",
       "To",
-      "T",
-      "The object the connection ends at.",
-      "Directed connectivity between two objects, e.g. a connector to the column, beam and slab it joins."
+      "The objects the connections end at.",
+      "Directed connectivity between objects, e.g. a connector to the column, beam and slab it joins."
     ),
     new(
       SpeckleRelationType.InAssembly,
       "IN_ASSEMBLY",
       "Member",
-      "M",
-      "An object that belongs to the assembly.",
+      "An object that belongs to the assembly. Comes out again with the relation attached.",
       "Assembly",
-      "A",
       "The assembly object the member belongs to.",
       "Fabrication membership. The first member published for an assembly is its main member."
     ),
@@ -90,11 +82,9 @@ public static class SpeckleRelationTypes
       SpeckleRelationType.Subelement,
       "SUBELEMENT",
       "Parent",
-      "P",
-      "The owning object, e.g. a curtain wall.",
+      "The owning object, e.g. a curtain wall. Comes out again with the relations attached.",
       "Child",
-      "C",
-      "A component of the parent, e.g. a mullion.",
+      "Components of the parent, e.g. its mullions.",
       "Ownership: the child is a component of the parent. One parent per child."
     ),
   ];
@@ -108,12 +98,13 @@ public static class SpeckleRelationTypes
 }
 
 /// <summary>
-/// One typed edge between two objects, held by application id. Objects stay independent on the canvas: the relation is
-/// its own goo, wired into Publish next to the objects it names, and resolved to object Ks only at publish time.
+/// One outgoing edge of the object that carries it (<see cref="SpeckleWrapper.Relations"/>), pointing at its target by
+/// application id - the same shape the bundle stores: src is the carrier, dst is this. The Speckle Relation component
+/// is a passthrough: the source object comes out with its relations attached and is what gets published.
 /// </summary>
 /// <remarks>
-/// Names are a snapshot for the canvas tooltip, nothing more. Holding the end wrappers would go stale on every deep
-/// copy and bloat internalised data.
+/// The target name is a snapshot for the canvas tooltip, nothing more. Holding the target wrapper would go stale on
+/// every deep copy.
 /// </remarks>
 public sealed class SpeckleRelation
 {
@@ -122,43 +113,14 @@ public sealed class SpeckleRelation
   public const string SOURCE_TYPE = "Relation";
 
   public required SpeckleRelationType Type { get; init; }
-  public required string SourceId { get; init; }
   public required string TargetId { get; init; }
-  public string? SourceName { get; init; }
   public string? TargetName { get; init; }
 
   public SpeckleRelationTypeInfo Info => SpeckleRelationTypes.Info(Type);
 
   public bool SameEdgeAs(SpeckleRelation other) =>
-    Type == other.Type
-    && string.Equals(SourceId, other.SourceId, StringComparison.Ordinal)
-    && string.Equals(TargetId, other.TargetId, StringComparison.Ordinal);
+    Type == other.Type && string.Equals(TargetId, other.TargetId, StringComparison.Ordinal);
 
   public override string ToString() =>
-    $"{Info.Label}: {Describe(SourceName, SourceId)} → {Describe(TargetName, TargetId)}";
-
-  private static string Describe(string? name, string id) => string.IsNullOrWhiteSpace(name) ? id : name!;
-
-  /// <summary>
-  /// Splits relation goos out of a Publish input list. Relations are model-scoped edges, not scene-tree members, so
-  /// they ride the root collection wrapper (next to model properties) rather than the collection tree - and taking
-  /// them out first keeps Publish's single-collection fast path intact.
-  /// </summary>
-  /// <returns>The goos that are not relations, order and null placeholders preserved.</returns>
-  public static List<IGH_Goo> Peel(IEnumerable<IGH_Goo> goos, List<SpeckleRelation> relations)
-  {
-    var rest = new List<IGH_Goo>();
-    foreach (var goo in goos)
-    {
-      if (goo is SpeckleRelationGoo { Value: { } relation })
-      {
-        relations.Add(relation);
-      }
-      else
-      {
-        rest.Add(goo);
-      }
-    }
-    return rest;
-  }
+    $"{Info.Label} → {(string.IsNullOrWhiteSpace(TargetName) ? TargetId : TargetName)}";
 }
