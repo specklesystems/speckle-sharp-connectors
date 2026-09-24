@@ -61,6 +61,9 @@ public abstract class SendAsyncComponentBase : GH_AsyncComponent<SendAsyncCompon
   public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
   public SpecklePropertyGroupGoo? RootProperties { get; private set; }
+
+  /// <summary>Relation goos peeled off the Collection input; they ride the root wrapper, not the tree [ENG-9475].</summary>
+  public IReadOnlyList<SpeckleRelation> Relations { get; private set; } = [];
   public SpeckleUrlModelResource? OutputParam { get; set; }
   public bool HasMultipleInputs { get; set; }
 
@@ -291,6 +294,18 @@ public abstract class SendAsyncComponentBase : GH_AsyncComponent<SendAsyncCompon
     List<IGH_Goo> inputGoos = new();
     da.GetDataList(1, inputGoos);
 
+    // relations are not scene-tree members: they come out first so the tree below is built exactly as before [ENG-9475]
+    List<SpeckleRelation> relations = new();
+    inputGoos = SpeckleRelation.Peel(inputGoos, relations);
+    Relations = relations;
+    if (relations.Count > 0 && !UseArtifacts)
+    {
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Warning,
+        $"Ignored {relations.Count} relation(s): this legacy Publish component does not write them. Use the current Publish component."
+      );
+    }
+
     if (inputGoos.Count == 0)
     {
       RootCollectionWrapper = null;
@@ -515,7 +530,11 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponentBase>
     // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
     // constructed here from the Collection + Model Properties inputs.
     // if this changes, then we need to update below!
-    var rootWrapper = new SpeckleRootCollectionWrapper(rootCollectionWrapper.Value, Parent.RootProperties?.Unwrap());
+    var rootWrapper = new SpeckleRootCollectionWrapper(
+      rootCollectionWrapper.Value,
+      Parent.RootProperties?.Unwrap(),
+      Parent.Relations
+    );
 
     rootCollectionWrapper = new SpeckleRootCollectionWrapperGoo(rootWrapper);
 
@@ -543,6 +562,11 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponentBase>
         Parent.UseArtifacts
       )
       .ConfigureAwait(false);
+
+    if (SendComponentBase.DescribeDroppedRelations(result.ConversionResults) is { } droppedRelations)
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Warning, droppedRelations));
+    }
 
     if (ingestionId != null)
     {

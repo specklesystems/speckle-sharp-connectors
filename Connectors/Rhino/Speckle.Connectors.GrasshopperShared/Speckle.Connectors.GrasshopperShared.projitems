@@ -27,6 +27,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleGeometryPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleGeometryPassthroughLegacy.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpecklePropertiesPassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleRelationComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleRelationComponentAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
@@ -111,6 +113,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRelation.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRelationGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRelationParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRootCollectionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleRootCollectionWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleWrapper.cs" />

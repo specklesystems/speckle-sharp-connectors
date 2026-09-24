@@ -124,6 +124,7 @@ public class GrasshopperArtifactRootObjectBuilder(
     var geometryKsByAppId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
     var instanceKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
     var instanceObjectKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
+    var objectKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
     var results = new List<SendConversionResult>();
 
     // Deep-copy so the walk (which stamps applicationIds + drives the block packer) never mutates canvas objects.
@@ -140,6 +141,7 @@ public class GrasshopperArtifactRootObjectBuilder(
       geometryKsByAppId,
       instanceKByAppId,
       instanceObjectKByAppId,
+      objectKByAppId,
       results,
       session,
       onOperationProgressed,
@@ -163,6 +165,13 @@ public class GrasshopperArtifactRootObjectBuilder(
       instanceObjectKByAppId
     );
 
+    // Canvas-authored relations resolve by applicationId once every object K exists, same as the proxies above.
+    int relationCount = 0;
+    if (root is SpeckleRootCollectionWrapper { Relations: { Count: > 0 } relations })
+    {
+      relationCount = EmitRelations(ctx, relations);
+    }
+
     // Default scene view: the GH collection tree (IN_COLLECTION); the CONTAINER parent chain carries the nesting.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
 
@@ -180,6 +189,7 @@ public class GrasshopperArtifactRootObjectBuilder(
     session.SetStat("objects", objectCount);
     session.SetStat("materials", materialPacker.RenderMaterialProxies.Count);
     session.SetStat("definitions", blockPacker.InstanceDefinitionProxies.Count);
+    session.SetStat("relations", relationCount);
     return new BundleResult(bundle, rootId, objectCount, results);
   }
 
@@ -247,6 +257,7 @@ public class GrasshopperArtifactRootObjectBuilder(
       if (!isDefinitionMember)
       {
         ctx.Pipeline.InCollection(objK, collK, ord);
+        ctx.ObjectKByAppId[appId] = objK; // a definition member has no placement of its own to relate
       }
       ctx.Pipeline.AddProperties(
         appId,
@@ -287,6 +298,7 @@ public class GrasshopperArtifactRootObjectBuilder(
     {
       int objK = ctx.Pipeline.InternObject(appId);
       ctx.Pipeline.InCollection(objK, collK, ord);
+      ctx.ObjectKByAppId[appId] = objK;
       ctx.Pipeline.AddProperties(
         appId,
         wrapper.DataObject.properties ?? s_emptyProps,
@@ -404,6 +416,106 @@ public class GrasshopperArtifactRootObjectBuilder(
 
     ctx.InstanceKByAppId[appId] = instK;
     ctx.InstanceObjectKByAppId[appId] = objK;
+    ctx.ObjectKByAppId[appId] = objK;
+  }
+
+  // ── relations (canvas-authored object→object edges) — after the walk so both ends have an object K [ENG-9475] ──
+  //
+  // Resolution is deliberately local rather than PlacementTopology: that helper derives edges from one element's
+  // owner/host/room ids, Revit-shaped, and knows no IN_ASSEMBLY. Grasshopper hands over explicit pairs already, so
+  // the rules are just: exact duplicates collapse, a dangling end drops the edge, a second parent or host keeps the
+  // first. Each drop is reported as a WARNING result under SpeckleRelation.SOURCE_TYPE, which Publish turns into one
+  // runtime warning - object counts only tally SUCCESS, so these never inflate them.
+  //
+  // Ordinals follow arrival order: SUBELEMENT per parent, IN_ASSEMBLY per assembly (ord 0 = the main member).
+  // CONNECTS_TO carries a scope, not an ordinal, and canvas edges are unscoped (0).
+  private static int EmitRelations(WalkContext ctx, IReadOnlyList<SpeckleRelation> relations)
+  {
+    var seen = new HashSet<(SpeckleRelationType, string, string)>();
+    var parentByChild = new Dictionary<string, string>(StringComparer.Ordinal);
+    var hostByHosted = new Dictionary<string, string>(StringComparer.Ordinal);
+    var nextChildOrd = new Dictionary<int, int>();
+    var nextMemberOrd = new Dictionary<int, int>();
+    int written = 0;
+
+    foreach (var relation in relations)
+    {
+      if (!seen.Add((relation.Type, relation.SourceId, relation.TargetId)))
+      {
+        continue; // the same edge wired twice is one edge
+      }
+
+      if (!ctx.ObjectKByAppId.TryGetValue(relation.SourceId, out int srcK))
+      {
+        Drop(ctx, relation, $"{relation.Info.SourceName} is not among the published objects");
+        continue;
+      }
+      if (!ctx.ObjectKByAppId.TryGetValue(relation.TargetId, out int dstK))
+      {
+        Drop(ctx, relation, $"{relation.Info.TargetName} is not among the published objects");
+        continue;
+      }
+
+      switch (relation.Type)
+      {
+        case SpeckleRelationType.Subelement:
+          if (parentByChild.TryGetValue(relation.TargetId, out var parent))
+          {
+            Drop(ctx, relation, $"child already has a parent ({parent}); one parent per child");
+            continue;
+          }
+          parentByChild[relation.TargetId] = relation.SourceId;
+          ctx.Pipeline.Subelement(srcK, dstK, NextOrd(nextChildOrd, srcK));
+          break;
+
+        case SpeckleRelationType.HostedOn:
+          if (hostByHosted.TryGetValue(relation.SourceId, out var host))
+          {
+            Drop(ctx, relation, $"element already has a host ({host}); one host per element");
+            continue;
+          }
+          hostByHosted[relation.SourceId] = relation.TargetId;
+          ctx.Pipeline.HostedOn(srcK, dstK);
+          break;
+
+        case SpeckleRelationType.ConnectsTo:
+          ctx.Pipeline.ConnectsTo(srcK, dstK);
+          break;
+
+        case SpeckleRelationType.InAssembly:
+          ctx.Pipeline.InAssembly(srcK, dstK, NextOrd(nextMemberOrd, dstK));
+          break;
+
+        default:
+          Drop(ctx, relation, $"relation type {relation.Type} has no writer");
+          continue;
+      }
+
+      written++;
+    }
+
+    return written;
+  }
+
+  private static int NextOrd(Dictionary<int, int> counters, int ownerK)
+  {
+    counters.TryGetValue(ownerK, out int ord);
+    counters[ownerK] = ord + 1;
+    return ord;
+  }
+
+  private static void Drop(WalkContext ctx, SpeckleRelation relation, string reason)
+  {
+    ctx.Results.Add(
+      new SendConversionResult(
+        Status.WARNING,
+        relation.ToString(),
+        SpeckleRelation.SOURCE_TYPE,
+        null,
+        new SpeckleException(reason)
+      )
+    );
+    ctx.Session.Increment("relationsDropped");
   }
 
   // Splits a clean Speckle object into its lossless raw 3dm SOLID blob (if any) + DISPLAY geometry; records the display
@@ -650,6 +762,8 @@ public class GrasshopperArtifactRootObjectBuilder(
     Dictionary<string, int> InstanceKByAppId,
     // a placement's colour tags on its OBJECT and its material on its INSTANCE node, so both Ks are needed
     Dictionary<string, int> InstanceObjectKByAppId,
+    // every placed object (geometry, data object, instance) by applicationId - what a canvas relation can point at
+    Dictionary<string, int> ObjectKByAppId,
     List<SendConversionResult> Results,
     ArtefactSessionLog Session,
     IProgress<CardProgress> Progress,
