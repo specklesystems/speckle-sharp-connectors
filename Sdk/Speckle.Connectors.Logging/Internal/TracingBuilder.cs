@@ -8,10 +8,10 @@ internal static class TracingBuilder
 {
   public static IDisposable Initialize(SpeckleTracing? logConfiguration, ResourceBuilder resourceBuilder)
   {
-    var tracerProviderBuilder = OpenTelemetry
-      .Sdk.CreateTracerProviderBuilder()
-      .AddSource(Consts.TRACING_SOURCE)
-      .AddHttpClientInstrumentation();
+    // No AddHttpClientInstrumentation here: connectors share the host app's process, so it records every add-in's
+    // HttpClient traffic (in prod, one machine's IDEA StatiCa health poll was 69 % of all Connector spans, all errors),
+    // while Speckle's own calls are already spanned by the SDK's SpeckleHttpClientHandler ("Http Request").
+    var tracerProviderBuilder = OpenTelemetry.Sdk.CreateTracerProviderBuilder().AddSource(Consts.TRACING_SOURCE);
     foreach (var tracing in logConfiguration?.Otel ?? [])
     {
       tracerProviderBuilder = tracerProviderBuilder.AddOtlpExporter(x => ProcessOptions(tracing, x));
