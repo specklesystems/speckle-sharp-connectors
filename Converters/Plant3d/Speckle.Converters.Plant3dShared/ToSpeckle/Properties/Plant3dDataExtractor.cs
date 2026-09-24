@@ -12,14 +12,20 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 public class Plant3dDataExtractor
 {
   private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
+  private readonly Plant3dClassHierarchyResolver _classHierarchyResolver;
+  private readonly Plant3dLineGroupResolver _lineGroupResolver;
   private readonly ILogger<Plant3dDataExtractor> _logger;
 
   public Plant3dDataExtractor(
     IConverterSettingsStore<Plant3dConversionSettings> settingsStore,
+    Plant3dClassHierarchyResolver classHierarchyResolver,
+    Plant3dLineGroupResolver lineGroupResolver,
     ILogger<Plant3dDataExtractor> logger
   )
   {
     _settingsStore = settingsStore;
+    _classHierarchyResolver = classHierarchyResolver;
+    _lineGroupResolver = lineGroupResolver;
     _logger = logger;
   }
 
@@ -44,8 +50,7 @@ public class Plant3dDataExtractor
       }
 
       // Find the data row linked to this entity (returns single int row ID)
-      int rowId = dlm.FindAcPpRowId(entity.ObjectId);
-      if (rowId <= 0)
+      if (!TryGetRowId(dlm, entity, out var rowId))
       {
         return result;
       }
@@ -61,6 +66,8 @@ public class Plant3dDataExtractor
           result[key] = kvp.Value;
         }
       }
+
+      AddDataManagerProperties(dlm, entity, result);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -71,6 +78,36 @@ public class Plant3dDataExtractor
 
     return result;
   }
-
 #pragma warning restore CA1031
+
+  private static bool TryGetRowId(PPDL.DataLinksManager dataLinksManager, ADB.Entity entity, out int rowId)
+  {
+    // Checking HasLinks avoids many exceptions where the entity is not Plant object e.g. lines, text, block references
+    rowId = dataLinksManager.HasLinks(entity.ObjectId) ? dataLinksManager.FindAcPpRowId(entity.ObjectId) : 0;
+    return rowId > 0;
+  }
+
+  private void AddDataManagerProperties(
+    PPDL.DataLinksManager dataLinksManager,
+    ADB.Entity entity,
+    Dictionary<string, object?> result
+  )
+  {
+    var classHierarchy = _classHierarchyResolver.Resolve(dataLinksManager, entity.ObjectId);
+    var properties = new Dictionary<string, object>()
+    {
+      { "Category", classHierarchy.ClassName },
+      { "Level1", classHierarchy.Level1 },
+      { "Level2", classHierarchy.Level2 },
+      { "Level3", classHierarchy.Level3 },
+      { "Level4", classHierarchy.Level4 },
+      { "Level5", classHierarchy.Level5 },
+    };
+    result["Data Manager"] = properties;
+
+    if (_lineGroupResolver.TryGetGroupId(dataLinksManager, entity.ObjectId, out var groupId))
+    {
+      properties["GroupId"] = groupId;
+    }
+  }
 }
