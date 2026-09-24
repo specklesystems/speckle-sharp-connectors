@@ -67,11 +67,12 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
 | **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | · | · |
 | **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | · | · |
-| **3 SUBELEMENT** | · | · | · | · | ● | · | ● | ● | · | ◐¹ |
+| **3 SUBELEMENT** | · | ◐³ | · | · | ● | · | ● | ● | · | ◐¹ |
+| **18 IN_ASSEMBLY** | · | ◐³ | · | · | · | · | · | · | · | · |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
-| **21 CONNECTS_TO** | · | · | · | · | ● | · | ● | · | ● | · |
-| **22 HOSTED_ON** | · | · | · | · | · | · | ● | · | · | · |
+| **21 CONNECTS_TO** | · | ◐³ | · | · | ● | · | ● | · | ● | · |
+| **22 HOSTED_ON** | · | ◐³ | · | · | · | · | ● | · | · | · |
 | **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
 | **30 CENTERLINE** | · | · | · | · | · | · | ● | · | · | · |
 | _camera_views_ | ● | · | · | · | · | ● | ● | · | · | · |
@@ -82,6 +83,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 
 ¹ TSD `SUBELEMENT` is wired but unreachable — `elements` is always empty.
 ² Revit folds `BOUNDS` into `IN_ROOM`.
+³ Grasshopper writes these only when the user authors them with the **Speckle Relation** component (ENG-9475); nothing is derived from the canvas.
 
 Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them**. Plant3D is send-only. SketchUp is a pure-Ruby producer.
 
@@ -162,9 +164,9 @@ An object keeps its layer AND its group(s) — separate axes. Instance colours a
 
 ---
 
-### Grasshopper — CAD · computational · emits 8
+### Grasshopper — CAD · computational · emits 8 (+4 authored)
 
-The Rhino geometry set minus groups: each collection — including one per data-tree branch — becomes a nested CONTAINER, with instancing, materials and colours resolved the same way.
+The Rhino geometry set minus groups: each collection — including one per data-tree branch — becomes a nested CONTAINER, with instancing, materials and colours resolved the same way. On top, four object→object relations the user wires up by hand.
 
 **Data trees → collections** — `DISPLAY` · `IN_COLLECTION` + eav sidecar
 
@@ -186,6 +188,10 @@ graph LR
 ```
 
 Every GH branch maps to one CONTAINER; the exact path array rides a sidecar eav object (`__collection_topology_{k}`) so receivers rebuild the tree with no schema change. GH reuses Rhino's geometry/material/color/block packers verbatim — no layer or level concept.
+
+**Authored relations** — `HOSTED_ON` · `CONNECTS_TO` · `IN_ASSEMBLY` · `SUBELEMENT` (ENG-9475)
+
+The **Speckle Relation** component takes two Speckle goos (Object / Geometry / Block Instance), a relation type picked from a button in the component (the inputs rename to the spec's direction: Hosted → Host, Parent → Child, …), and outputs a relation goo holding the two application ids. Relation goos go into Publish's Collection input next to the objects; Publish peels them off before building the tree and parks them on the root wrapper beside the model properties, and the artefact builder resolves them to object Ks after the walk (`EmitRelations`, mirroring how proxies resolve). Rules: exact duplicates collapse, a dangling end drops the edge, a second parent (SUBELEMENT) or host (HOSTED_ON) keeps the first — every drop becomes one Publish warning. Ordinals follow arrival order; CONNECTS_TO is unscoped (ord 0). Nothing else is derived: no IN_ROOM / BOUNDS (no room objects on a canvas) and no IN_GROUP / IN_SYSTEM (container ends). The vocabulary is the spec's closed enum, so a new relation is a spec change first.
 
 - **Nodes:** CONTAINER `"Collection"` (nested, one per branch) · DEFINITION/INSTANCE · MATERIAL · COLOR
 - **Consumes:** the Explore component reads the envelope graph catalog, so every relation surfaces without a code
