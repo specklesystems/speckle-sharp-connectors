@@ -303,7 +303,7 @@ public class CsiArtifactRootObjectBuilder(
 
         axes.TryGetValue("LoadCase", out var loadCase);
         double? station =
-          axes.TryGetValue("ElmSta", out var sta)
+          axes.TryGetValue("ObjSta", out var sta)
           && double.TryParse(sta, NumberStyles.Float, CultureInfo.InvariantCulture, out var s)
             ? s
             : null;
@@ -429,11 +429,11 @@ public class CsiArtifactRootObjectBuilder(
     new(
       "frameForces",
       "frameForce",
-      "Elm",
+      "Obj",
       null,
       null,
       null,
-      new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" },
+      new[] { "Obj", "Elm", "LoadCase", "Wrap:ObjSta", "Wrap:StepNum" },
       ElementObjectType: ModelObjectType.FRAME
     ),
     new(
