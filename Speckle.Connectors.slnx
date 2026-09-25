@@ -127,10 +127,16 @@
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino7\Speckle.Converters.Rhino7.csproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/8/">
-    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
-    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/8/MacOS/">
+    <Project Path="Connectors/Rhino/Speckle.Connectors.Grasshopper8.Mac/Speckle.Connectors.Grasshopper8.Mac.csproj" />
+    <Project Path="Connectors/Rhino/Speckle.Connectors.Rhino8.Mac/Speckle.Connectors.Rhino8.Mac.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/8/Win/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/9/">
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoHeadless\Speckle.Connectors.RhinoHeadless.csproj" />

@@ -24,6 +24,8 @@
     <NoWarn>
       <!--Disabled by design-->
       CA5399;CA1812;
+      <!-- CA2000 is slow AF, and creates many false positives -->
+      CA2000;
       <!--XML comment-->
       CS1591;CS1573;
       <!-- Globalization rules -->
