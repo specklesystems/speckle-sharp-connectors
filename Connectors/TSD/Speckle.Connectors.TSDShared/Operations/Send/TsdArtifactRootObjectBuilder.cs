@@ -442,6 +442,22 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       }
     }
 
+    if (_snapshotBuilder.CenterlinesByAppId.TryGetValue(appId, out var centerlines))
+    {
+      for (int span = 0; span < centerlines.Count; span++)
+      {
+        try
+        {
+          // Own key per span: sharing one with a display fragment would collapse DISPLAY and CENTERLINE onto one blob.
+          pipeline.Centerline(objK, pipeline.AddGeometry($"{appId}:cl{span}", centerlines[span]), span);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(ex, "Skipped centerline geometry on {AppId}", appId);
+        }
+      }
+    }
+
     int childOrd = 0;
     foreach (TsdObject child in obj.elements)
     {

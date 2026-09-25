@@ -12,6 +12,7 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -41,7 +42,8 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// as nested CONTAINER nodes + IN_COLLECTION. Analysis results flatten into <c>structural_results</c> rows (all 8
 /// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
 /// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. Material display colours become
-/// MATERIAL nodes + HAS_MATERIAL edges only when volumetric geometry is requested (ENG-9048); section/material
+/// MATERIAL nodes + HAS_MATERIAL edges, and each frame's analytical line a CENTERLINE, only when volumetric geometry is
+/// requested (ENG-9048); section/material
 /// <c>GroupProxy</c>s remain deferred.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the CSi COM <c>SapModel</c> API is main-thread-affine, so phase 1
 /// (<see cref="CollectOnMain"/>) converts on the host thread → a pure-Speckle snapshot; phase 2
@@ -54,6 +56,7 @@ public class CsiArtifactRootObjectBuilder(
   CsiSendCollectionManager collectionManager,
   AnalysisResultsExtractor analysisResultsExtractor,
   ExtrusionFallbackTracker extrusionFallbacks,
+  CsiToSpeckleCacheSingleton csiCache,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
@@ -146,7 +149,17 @@ public class CsiArtifactRootObjectBuilder(
         var segments = collectionManager.GetCollectionSegments(converted);
         string appId = converted.applicationId ?? Guid.NewGuid().ToString();
         nameToAppId[(wrapper.ObjectType, wrapper.Name)] = appId;
-        collected.Add(new CollectedObject(appId, sourceType, converted, segments, GetMaterialName(converted)));
+        csiCache.FrameCenterlineCache.TryGetValue(wrapper.Name, out var centerline);
+        collected.Add(
+          new CollectedObject(
+            appId,
+            sourceType,
+            converted,
+            segments,
+            GetMaterialName(converted),
+            wrapper.ObjectType == ModelObjectType.FRAME ? centerline : null
+          )
+        );
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
         session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
@@ -690,6 +703,19 @@ public class CsiArtifactRootObjectBuilder(
         }
       }
 
+      if (co.Centerline is { } centerline)
+      {
+        try
+        {
+          // Own key: sharing one with a display fragment would collapse the DISPLAY and CENTERLINE edges onto one blob.
+          pipeline.Centerline(objK, pipeline.AddGeometry($"{co.ApplicationId}:cl", centerline), 0);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogWarning(ex, "Skipped centerline geometry on {AppId}", co.ApplicationId);
+        }
+      }
+
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -823,7 +849,8 @@ public class CsiArtifactRootObjectBuilder(
     string SourceType,
     Base Converted,
     IReadOnlyList<string> Segments,
-    string? MaterialName
+    string? MaterialName,
+    Speckle.Objects.Geometry.Line? Centerline
   );
 
   private sealed record CollectedModel(

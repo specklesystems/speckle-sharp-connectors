@@ -1,3 +1,5 @@
+using Speckle.Objects.Geometry;
+
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
 public class CsiToSpeckleCacheSingleton
@@ -33,4 +35,10 @@ public class CsiToSpeckleCacheSingleton
   /// Per-section unit prisms for volumetric display values, or the reason none could be built (ENG-9048).
   /// </summary>
   public Dictionary<string, FrameSectionPrism> FramePrismCache { get; set; } = [];
+
+  /// <summary>
+  /// Analytical node-to-node line per frame name, recorded when volumetric geometry is requested so the artefact
+  /// builder can ship it as CENTERLINE while the solid takes DISPLAY (ENG-9048).
+  /// </summary>
+  public Dictionary<string, Line> FrameCenterlineCache { get; set; } = [];
 }

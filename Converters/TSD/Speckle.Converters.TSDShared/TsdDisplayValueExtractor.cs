@@ -26,28 +26,38 @@ public sealed class TsdDisplayValueExtractor
     _volumetricExtractor = volumetricExtractor;
   }
 
-  public async Task<List<Base>> GetMemberDisplayValueAsync(
+  /// <summary>
+  /// The member's display value, plus its analytical span lines as centerlines when volumetric geometry is requested
+  /// (empty otherwise) — one per span, in span order (ENG-9048).
+  /// </summary>
+  public async Task<(List<Base> Display, List<SOG.Line> Centerlines)> GetMemberDisplayValueAsync(
     IReadOnlyList<IMemberSpan> spans,
     IUnitBase? unit,
     string speckleUnits
   )
   {
-    var displayValue = new List<Base>();
-
     if (spans.Count == 0)
     {
-      return displayValue;
+      return (new List<Base>(), new List<SOG.Line>());
     }
 
-    if (_settings.SendVolumetricGeometry)
+    var lines = await GetSpanLinesAsync(spans, unit, speckleUnits).ConfigureAwait(false);
+    if (!_settings.SendVolumetricGeometry)
     {
-      var solids = await _volumetricExtractor.TryExtrudeMemberAsync(spans, unit, speckleUnits).ConfigureAwait(false);
-      if (solids is not null)
-      {
-        return solids;
-      }
+      return (lines.Cast<Base>().ToList(), new List<SOG.Line>());
     }
 
+    var solids = await _volumetricExtractor.TryExtrudeMemberAsync(spans, unit, speckleUnits).ConfigureAwait(false);
+    return (solids ?? lines.Cast<Base>().ToList(), lines);
+  }
+
+  private async Task<List<SOG.Line>> GetSpanLinesAsync(
+    IReadOnlyList<IMemberSpan> spans,
+    IUnitBase? unit,
+    string speckleUnits
+  )
+  {
+    var lines = new List<SOG.Line>();
     var baseCoordinates = new List<double>();
     foreach (var span in spans)
     {
@@ -70,14 +80,14 @@ public sealed class TsdDisplayValueExtractor
 
     if (baseCoordinates.Count == 0)
     {
-      return displayValue;
+      return lines;
     }
 
     var coordinates = await ConvertFromBaseAsync(baseCoordinates, unit).ConfigureAwait(false);
 
     for (int i = 0; i + 5 < coordinates.Count; i += 6)
     {
-      displayValue.Add(
+      lines.Add(
         new SOG.Line
         {
           start = new SOG.Point(coordinates[i], coordinates[i + 1], coordinates[i + 2], speckleUnits),
@@ -87,7 +97,7 @@ public sealed class TsdDisplayValueExtractor
       );
     }
 
-    return displayValue;
+    return lines;
   }
 
   public async Task<List<Base>> GetSlabDisplayValueAsync(ISlabItem slabItem, IUnitBase? unit, string speckleUnits)
