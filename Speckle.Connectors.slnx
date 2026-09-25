@@ -183,6 +183,7 @@
     <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
+    <Project Path="DUI3\Speckle.Connectors.DUI.EtoWebView\Speckle.Connectors.DUI.EtoWebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
