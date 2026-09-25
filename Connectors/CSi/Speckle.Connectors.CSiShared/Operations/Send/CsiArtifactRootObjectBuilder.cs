@@ -21,6 +21,8 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using DataObject = Speckle.Objects.Data.DataObject; // disambiguate from System.Windows.Forms.DataObject (ETABS uses WinForms)
 using Path = System.IO.Path;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecStructuralResult = Speckle.Bundle.Spec.StructuralResult;
 
 namespace Speckle.Connectors.CSiShared.Builders;
 
@@ -597,15 +599,18 @@ public class CsiArtifactRootObjectBuilder(
     {
       pipeline.AddStructuralResult(
         r.ObjectAppId,
-        r.Location,
-        r.ResultType,
-        r.LoadCase,
-        r.Component,
-        r.Station,
-        r.Step,
-        r.Value,
-        elementName: r.ElementName,
-        positionLabel: r.PositionLabel
+        new SpecStructuralResult(
+          ObjectIndex: null,
+          ElementName: r.ElementName,
+          Location: r.Location,
+          ResultType: r.ResultType,
+          LoadCase: r.LoadCase,
+          Component: r.Component,
+          PositionLabel: r.PositionLabel,
+          Station: r.Station,
+          Step: r.Step,
+          Value: r.Value
+        )
       );
     }
 
@@ -648,12 +653,12 @@ public class CsiArtifactRootObjectBuilder(
         parentK = existing;
         continue;
       }
-      int collK = pipeline.AddCollection(soFar, name, parentK, "Collection");
+      int collK = pipeline.AddCollection(soFar, new SpecContainer(name, parentK, "Collection", null));
       cache[soFar] = collK;
       parentK = collK;
     }
     // segments is always non-empty (GetCollectionSegments returns at least one), so parentK is set.
-    return parentK ?? pipeline.AddCollection("Model", "Model", null, "Collection");
+    return parentK ?? pipeline.AddCollection("Model", new SpecContainer("Model", null, "Collection", null));
   }
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();

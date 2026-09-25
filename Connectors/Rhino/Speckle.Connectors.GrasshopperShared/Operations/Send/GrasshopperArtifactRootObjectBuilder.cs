@@ -23,6 +23,8 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using Path = System.IO.Path;
 using SOG = Speckle.Objects.Geometry;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecMaterial = Speckle.Bundle.Spec.Material;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
@@ -192,10 +194,12 @@ public class GrasshopperArtifactRootObjectBuilder(
     // synthetic object; the objects table is for real objects [ENG-9291].
     int collK = ctx.Pipeline.AddCollection(
       collWrapper.ApplicationId,
-      collWrapper.Name,
-      parentCollK,
-      "Collection",
-      ghTopology: collWrapper.Topology is { Length: > 0 } topology ? topology : null
+      new SpecContainer(
+        collWrapper.Name,
+        parentCollK,
+        "Collection",
+        collWrapper.Topology is { Length: > 0 } topology ? topology : null
+      )
     );
 
     // collection-level color/material are collected for parity with the v1 walk; they resolve to no geometry K and are
@@ -520,13 +524,15 @@ public class GrasshopperArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
-        value.name,
-        value.diffuse,
-        value.opacity,
-        value.metalness,
-        value.roughness,
-        value.emissive,
-        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        new SpecMaterial(
+          value.name,
+          value.diffuse,
+          value.opacity,
+          value.metalness,
+          value.roughness,
+          value.emissive,
+          value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        )
       );
       // Distinct: the packer appends per walk, so geometry reached twice lists its id twice
       foreach (var objectId in materialProxy.objects.Distinct())
