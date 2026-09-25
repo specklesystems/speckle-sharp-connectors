@@ -213,6 +213,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
       Path = [.. Path],
       Parent = Parent,
       ObjectIndex = ObjectIndex,
+      Relations = Relations,
       ModelContext = ModelContext,
     };
 

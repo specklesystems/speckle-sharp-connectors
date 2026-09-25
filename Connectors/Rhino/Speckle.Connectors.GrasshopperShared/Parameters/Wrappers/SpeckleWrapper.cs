@@ -50,6 +50,13 @@ public abstract class SpeckleWrapper
   public SpeckleModelContext? ModelContext { get; set; }
 
   /// <summary>
+  /// Outgoing relations authored on the canvas with the Speckle Relation component [ENG-9475]: this object is the
+  /// source, each entry names the target. Empty for anything loaded or cast - relations are write-only in Grasshopper.
+  /// Treated as immutable: the component replaces the list on the copy it outputs. Every DeepCopy must carry it.
+  /// </summary>
+  public IReadOnlyList<SpeckleRelation> Relations { get; set; } = [];
+
+  /// <summary>
   /// Creates an <see cref="IGH_Goo"/> from this wrapper
   /// </summary>
   /// <returns></returns>
