@@ -187,6 +187,20 @@
         "resolved": "5.0.0",
         "contentHash": "erBZjkQHWL9jpasCE/0qKAryzVBJFxGHVBAvgRN1bzM0q2s1S4oYREEEL0Vb+1kA/6BKb5FjUZMp5VXmy+gzkQ=="
       },
+      "speckle.common.meshtriangulation": {
+        "type": "Project",
+        "dependencies": {
+          "LibTessDotNet": "[1.1.15, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
+        }
+      },
+      "speckle.common.structuralextrusion": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common.MeshTriangulation": "[1.0.0, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
+        }
+      },
       "speckle.connectors.common": {
         "type": "Project",
         "dependencies": {
@@ -220,8 +234,15 @@
       "speckle.converters.etabs23": {
         "type": "Project",
         "dependencies": {
+          "Speckle.Common.StructuralExtrusion": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }
+      },
+      "LibTessDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[1.1.15, )",
+        "resolved": "1.1.15",
+        "contentHash": "KuA7N3Nv/lIeawJdQBQJR6oqWD9KETHLbWzBqapwFs+Tby+R5I4crkKujKMm5bXcSuFZ8LNtflFQVadsWCbBjg=="
       },
       "Microsoft.Web.WebView2": {
         "type": "CentralTransitive",

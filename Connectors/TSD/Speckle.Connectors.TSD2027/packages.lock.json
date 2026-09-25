@@ -218,6 +218,13 @@
           "Speckle.DoubleNumerics": "[4.1.0, )"
         }
       },
+      "speckle.common.structuralextrusion": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common.MeshTriangulation": "[1.0.0, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
+        }
+      },
       "speckle.connectors.common": {
         "type": "Project",
         "dependencies": {
@@ -252,6 +259,7 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Common.MeshTriangulation": "[1.0.0, )",
+          "Speckle.Common.StructuralExtrusion": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
