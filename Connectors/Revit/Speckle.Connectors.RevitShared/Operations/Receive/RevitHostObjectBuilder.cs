@@ -98,7 +98,7 @@ public sealed class RevitHostObjectBuilder(
 
     // 0 - Clean then Rock n Roll! 🎸
     {
-      activityFactory.Start("Pre receive clean");
+      using var _ = activityFactory.Start("Pre receive clean");
       transactionManager.StartTransaction(true, "Pre receive clean");
       try
       {
