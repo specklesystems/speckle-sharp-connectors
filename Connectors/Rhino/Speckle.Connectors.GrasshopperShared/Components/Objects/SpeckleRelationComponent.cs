@@ -42,7 +42,7 @@ public class SpeckleRelationComponent : GH_Component
   }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_objects_query;
+  protected override Bitmap Icon => Resources.speckle_objects_relation;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   private SpeckleRelationTypeInfo Info => SpeckleRelationTypes.Info(_type);
