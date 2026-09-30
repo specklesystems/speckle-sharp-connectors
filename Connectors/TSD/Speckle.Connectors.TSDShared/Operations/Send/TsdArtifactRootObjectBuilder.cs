@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -31,6 +32,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   private readonly TsdEntitySnapshotBuilder _snapshotBuilder;
   private readonly TsdAnalysisResultsExtractor _analysisResultsExtractor;
   private readonly TsdConversionSettings _conversionSettings;
+  private readonly ExtrusionFallbackTracker _extrusionFallbacks;
   private readonly IThreadContext _threadContext;
   private readonly IArtifactPipelineFactory _artifactPipelineFactory;
   private readonly ISpeckleApplication _speckleApplication;
@@ -41,6 +43,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     TsdEntitySnapshotBuilder snapshotBuilder,
     TsdAnalysisResultsExtractor analysisResultsExtractor,
     TsdConversionSettings conversionSettings,
+    ExtrusionFallbackTracker extrusionFallbacks,
     IThreadContext threadContext,
     IArtifactPipelineFactory artifactPipelineFactory,
     ISpeckleApplication speckleApplication,
@@ -51,6 +54,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     _snapshotBuilder = snapshotBuilder;
     _analysisResultsExtractor = analysisResultsExtractor;
     _conversionSettings = conversionSettings;
+    _extrusionFallbacks = extrusionFallbacks;
     _threadContext = threadContext;
     _artifactPipelineFactory = artifactPipelineFactory;
     _speckleApplication = speckleApplication;
@@ -157,6 +161,16 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     if (results.Count > 0 && results.All(x => x.Status == Status.ERROR))
     {
       throw new SpeckleException("Failed to convert all objects.");
+    }
+
+    if (_extrusionFallbacks.Total > 0)
+    {
+      _logger.LogWarning(
+        "Volumetric geometry kept the wireframe display value for {FallbackCount} element(s): {@FallbackCounts}",
+        _extrusionFallbacks.Total,
+        _extrusionFallbacks.Counts
+      );
+      session.SetStat("extrusionFallbacks", _extrusionFallbacks.Total);
     }
 
     await _snapshotBuilder.ApplyUnitsAsync(propertyTrees, modelUnits.Units).ConfigureAwait(false);
@@ -425,6 +439,22 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogWarning(ex, "Skipped unsupported display geometry {Type} on {AppId}", fragment.speckle_type, appId);
+      }
+    }
+
+    if (_snapshotBuilder.CenterlinesByAppId.TryGetValue(appId, out var centerlines))
+    {
+      for (int span = 0; span < centerlines.Count; span++)
+      {
+        try
+        {
+          // Own key per span: sharing one with a display fragment would collapse DISPLAY and CENTERLINE onto one blob.
+          pipeline.Centerline(objK, pipeline.AddGeometry($"{appId}:cl{span}", centerlines[span]), span);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(ex, "Skipped centerline geometry on {AppId}", appId);
+        }
       }
     }
 
