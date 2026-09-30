@@ -14,7 +14,8 @@ public class CsiConversionSettingsFactory(
   public CsiConversionSettings Create(
     cSapModel document,
     List<string>? selectedLoadCasesAndCombinations = null,
-    List<string>? selectedResultTypes = null
+    List<string>? selectedResultTypes = null,
+    bool sendVolumetricGeometry = false
   )
   {
     // NOTE: only applicable to ETABS. If we bring in SAP2000 then we need to revert to GetPresentUnits
@@ -29,7 +30,8 @@ public class CsiConversionSettingsFactory(
       document,
       unitsConverter.ConvertOrThrow(lengthUnit),
       selectedLoadCasesAndCombinations ?? [],
-      selectedResultTypes ?? []
+      selectedResultTypes ?? [],
+      sendVolumetricGeometry
     );
   }
 }

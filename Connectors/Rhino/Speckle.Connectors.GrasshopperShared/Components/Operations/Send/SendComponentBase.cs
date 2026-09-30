@@ -341,6 +341,10 @@ public abstract class SendComponentBase(
           cancellationToken
         )
         .ConfigureAwait(false);
+
+      await ingestionTracker
+        .SetVersionMessage(client, sendInfo.ProjectId, versionId, VersionMessage, cancellationToken)
+        .ConfigureAwait(false);
     }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components

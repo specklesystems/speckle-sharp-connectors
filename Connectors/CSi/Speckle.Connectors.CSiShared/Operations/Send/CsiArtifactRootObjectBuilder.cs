@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -11,6 +12,7 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -41,8 +43,10 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// Grouping reuses <see cref="CsiSendCollectionManager.GetCollectionSegments"/> (base: by type; ETABS: level→category)
 /// as nested CONTAINER nodes + IN_COLLECTION. Analysis results flatten into <c>structural_results</c> rows (all 8
 /// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
-/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. **Deferred this pass:**
-/// section/material <c>GroupProxy</c>s (CSi has no render materials/colors).</para>
+/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. Material display colours become
+/// MATERIAL nodes + HAS_MATERIAL edges, and each frame's analytical line a CENTERLINE, only when volumetric geometry is
+/// requested (ENG-9048); section/material
+/// <c>GroupProxy</c>s remain deferred.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the CSi COM <c>SapModel</c> API is main-thread-affine, so phase 1
 /// (<see cref="CollectOnMain"/>) converts on the host thread → a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) builds the parquet bundle on a worker (the pipeline's sync-over-async IO deadlocks on a
@@ -53,6 +57,8 @@ public class CsiArtifactRootObjectBuilder(
   IConverterSettingsStore<CsiConversionSettings> converterSettings,
   CsiSendCollectionManager collectionManager,
   AnalysisResultsExtractor analysisResultsExtractor,
+  ExtrusionFallbackTracker extrusionFallbacks,
+  CsiToSpeckleCacheSingleton csiCache,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
@@ -145,7 +151,17 @@ public class CsiArtifactRootObjectBuilder(
         var segments = collectionManager.GetCollectionSegments(converted);
         string appId = converted.applicationId ?? Guid.NewGuid().ToString();
         nameToAppId[(wrapper.ObjectType, wrapper.Name)] = appId;
-        collected.Add(new CollectedObject(appId, sourceType, converted, segments));
+        csiCache.FrameCenterlineCache.TryGetValue(wrapper.Name, out var centerline);
+        collected.Add(
+          new CollectedObject(
+            appId,
+            sourceType,
+            converted,
+            segments,
+            GetMaterialName(converted),
+            wrapper.ObjectType == ModelObjectType.FRAME ? centerline : null
+          )
+        );
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
         session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
@@ -170,9 +186,92 @@ public class CsiArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
+    if (extrusionFallbacks.Total > 0)
+    {
+      logger.LogWarning(
+        "Volumetric geometry kept the wireframe display value for {FallbackCount} element(s): {@FallbackCounts}",
+        extrusionFallbacks.Total,
+        extrusionFallbacks.Counts
+      );
+      session.SetStat("extrusionFallbacks", extrusionFallbacks.Total);
+    }
+
+    // Material colours only ride along with volumetric geometry (ENG-9048), so a send with the setting off is
+    // unchanged; the COM lookups stay in this phase because PropMaterial is main-thread-affine.
+    var materialColors = converterSettings.Current.SendVolumetricGeometry
+      ? ResolveMaterialColors(collected)
+      : new Dictionary<string, int>(StringComparer.Ordinal);
+
     var resultRows = ExtractResultRows(objects, nameToAppId, session);
-    return new CollectedModel(units, forceUnits, temperatureUnits, collected, resultRows, results, nameToAppId);
+    return new CollectedModel(
+      units,
+      forceUnits,
+      temperatureUnits,
+      collected,
+      resultRows,
+      results,
+      nameToAppId,
+      materialColors
+    );
   }
+
+  private static string? GetMaterialName(Base converted)
+  {
+    if (
+      converted is not DataObject dataObject
+      || !dataObject.properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out var assignmentsObj)
+      || assignmentsObj is not IDictionary<string, object?> assignments
+    )
+    {
+      return null;
+    }
+
+    if (
+      assignments.TryGetValue(CommonObjectProperty.MATERIAL_OVERWRITE, out var overwrite)
+      && overwrite is string overwriteName
+      && overwriteName.Length > 0
+      && overwriteName != CsiName.NONE
+    )
+    {
+      return overwriteName;
+    }
+
+    return
+      assignments.TryGetValue(ObjectPropertyKey.MATERIAL_ID, out var material)
+      && material is string materialName
+      && materialName.Length > 0
+      ? materialName
+      : null;
+  }
+
+  private Dictionary<string, int> ResolveMaterialColors(IEnumerable<CollectedObject> collected)
+  {
+    var colors = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (string name in collected.Select(o => o.MaterialName).OfType<string>().Distinct(StringComparer.Ordinal))
+    {
+      eMatType materialType = 0;
+      int color = 0;
+      string notes = string.Empty,
+        guid = string.Empty;
+      if (
+        converterSettings.Current.SapModel.PropMaterial.GetMaterial(
+          name,
+          ref materialType,
+          ref color,
+          ref notes,
+          ref guid
+        ) == 0
+      )
+      {
+        colors[name] = ColorRefToArgb(color);
+      }
+    }
+    return colors;
+  }
+
+  // CSi reports display colours as Win32 COLORREF (0x00BBGGRR).
+  private static int ColorRefToArgb(int colorRef) =>
+    unchecked((int)0xFF000000) | ((colorRef & 0xFF) << 16) | (colorRef & 0xFF00) | ((colorRef >> 16) & 0xFF);
 
   // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
   // structural_results rows — all 8 CSi result types, across the schema's three identity shapes: object-level
@@ -305,7 +404,7 @@ public class CsiArtifactRootObjectBuilder(
 
         axes.TryGetValue("LoadCase", out var loadCase);
         double? station =
-          axes.TryGetValue("ElmSta", out var sta)
+          axes.TryGetValue("ObjSta", out var sta)
           && double.TryParse(sta, NumberStyles.Float, CultureInfo.InvariantCulture, out var s)
             ? s
             : null;
@@ -431,11 +530,11 @@ public class CsiArtifactRootObjectBuilder(
     new(
       "frameForces",
       "frameForce",
-      "Elm",
+      "Obj",
       null,
       null,
       null,
-      new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" },
+      new[] { "Obj", "Elm", "LoadCase", "Wrap:ObjSta", "Wrap:StepNum" },
       ElementObjectType: ModelObjectType.FRAME
     ),
     new(
@@ -542,6 +641,7 @@ public class CsiArtifactRootObjectBuilder(
     AddUnitModelProperty(pipeline, "units.temperature", model.TemperatureUnits);
 
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
+    var materialKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
     foreach (CollectedObject co in model.Objects)
@@ -571,6 +671,7 @@ public class CsiArtifactRootObjectBuilder(
       );
 
       int ord = 0;
+      var geometryKs = new List<int>(display.Count);
       foreach (Base fragment in display)
       {
         try
@@ -578,6 +679,7 @@ public class CsiArtifactRootObjectBuilder(
           string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
           int gK = pipeline.AddGeometry(gAppId, fragment);
           pipeline.Display(objK, gK, ord++);
+          geometryKs.Add(gK);
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -587,6 +689,32 @@ public class CsiArtifactRootObjectBuilder(
             fragment.speckle_type,
             co.ApplicationId
           );
+        }
+      }
+
+      if (co.MaterialName is { } materialName && model.MaterialColors.TryGetValue(materialName, out int argb))
+      {
+        if (!materialKByName.TryGetValue(materialName, out int matK))
+        {
+          matK = pipeline.AddMaterial($"material:{materialName}", materialName, argb, 1.0, 0.0, 1.0);
+          materialKByName[materialName] = matK;
+        }
+        foreach (int gK in geometryKs)
+        {
+          pipeline.HasMaterial(gK, matK);
+        }
+      }
+
+      if (co.Centerline is { } centerline)
+      {
+        try
+        {
+          // Own key: sharing one with a display fragment would collapse the DISPLAY and CENTERLINE edges onto one blob.
+          pipeline.Centerline(objK, pipeline.AddGeometry($"{co.ApplicationId}:cl", centerline), 0);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogWarning(ex, "Skipped centerline geometry on {AppId}", co.ApplicationId);
         }
       }
 
@@ -725,7 +853,9 @@ public class CsiArtifactRootObjectBuilder(
     string ApplicationId,
     string SourceType,
     Base Converted,
-    IReadOnlyList<string> Segments
+    IReadOnlyList<string> Segments,
+    string? MaterialName,
+    Speckle.Objects.Geometry.Line? Centerline
   );
 
   private sealed record CollectedModel(
@@ -735,7 +865,8 @@ public class CsiArtifactRootObjectBuilder(
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results,
-    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId
+    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId,
+    IReadOnlyDictionary<string, int> MaterialColors
   );
 
   private sealed record BundleResult(
