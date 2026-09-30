@@ -34,9 +34,9 @@
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
-        "requested": "[0.9.6, )",
-        "resolved": "0.9.6",
-        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "IQDpN+ByCHdgj6Toawp2cA4Vn/UmJPsKukfyeDecaSXdLVuOC4McCoDjuDVDOA2pcBYwHQLlESw4InQFwqyGTQ=="
       },
       "Speckle.Revit.API": {
         "type": "Direct",
@@ -88,9 +88,9 @@
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
-        "requested": "[0.9.6, )",
-        "resolved": "0.9.6",
-        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "IQDpN+ByCHdgj6Toawp2cA4Vn/UmJPsKukfyeDecaSXdLVuOC4McCoDjuDVDOA2pcBYwHQLlESw4InQFwqyGTQ=="
       },
       "Speckle.Revit.API": {
         "type": "Direct",
