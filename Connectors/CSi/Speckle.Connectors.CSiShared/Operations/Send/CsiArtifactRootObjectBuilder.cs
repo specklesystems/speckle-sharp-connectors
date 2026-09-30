@@ -696,7 +696,7 @@ public class CsiArtifactRootObjectBuilder(
       {
         if (!materialKByName.TryGetValue(materialName, out int matK))
         {
-          matK = pipeline.AddMaterial($"material:{materialName}", materialName, argb, 1.0, 0.0, 1.0);
+          matK = pipeline.AddMaterial($"material:{materialName}", new(materialName, argb, 1.0, 0.0, 1.0, null, null));
           materialKByName[materialName] = matK;
         }
         foreach (int gK in geometryKs)
