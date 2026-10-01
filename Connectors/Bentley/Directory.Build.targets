@@ -1,0 +1,104 @@
+<Project>
+  <PropertyGroup>
+    <UseWpf>true</UseWpf>
+
+    <!--
+      All Bentley connector/converter projects share source files that live in the
+      Speckle.Connectors.MicroStation.* namespace tree. Pin the root namespace so SDK-globbed
+      files in version-specific projects (e.g. SpeckleAddInIdentity.cs) compile under the
+      same namespace and IDE0130 doesn't fire.
+    -->
+    <RootNamespace>Speckle.Connectors.MicroStation</RootNamespace>
+
+    <!--
+      A Bentley product csproj sets these three properties:
+        BentleyProductFolder  e.g. "MicroStation", "OpenRoadsDesigner", "OpenBridgeModeler"
+        BentleyProductVersion e.g. "2026", "2025"
+        BentleyPrefsVersion   e.g. "26.0.0", "25.0.0"  (the per-user prefs subfolder name; verify against the actual product on first launch)
+      The deploy + cfg-registration targets below activate when BentleyProductVersion is set.
+    -->
+
+    <!-- Back-compat: if a csproj only sets MicroStationVersion, mirror it to BentleyProductVersion. -->
+    <BentleyProductVersion Condition="'$(BentleyProductVersion)' == '' AND '$(MicroStationVersion)' != ''">$(MicroStationVersion)</BentleyProductVersion>
+    <BentleyProductFolder Condition="'$(BentleyProductFolder)' == '' AND '$(MicroStationVersion)' != ''">MicroStation</BentleyProductFolder>
+    <BentleyPrefsVersion Condition="'$(BentleyPrefsVersion)' == '' AND '$(MicroStationVersion)' != ''">26.0.0</BentleyPrefsVersion>
+
+    <SpeckleBentleyDeployDir>$(ProgramData)\Speckle\Connectors\$(BentleyProductFolder)\$(BentleyProductVersion)\</SpeckleBentleyDeployDir>
+  </PropertyGroup>
+
+  <!--
+    Post-build: copy connector output to the deploy directory so the add-in is automatically
+    picked up by the Bentley host application on the developer's machine.
+  -->
+  <Target Name="DeployToBentleyProduct"
+          AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' AND '$(BentleyProductVersion)' != ''">
+    <MakeDir Directories="$(SpeckleBentleyDeployDir)" />
+    <ItemGroup>
+      <_DeployFiles Include="$(OutputPath)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DeployFiles)"
+          DestinationFiles="@(_DeployFiles->'$(SpeckleBentleyDeployDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[Speckle] Deployed to $(SpeckleBentleyDeployDir)" />
+  </Target>
+
+  <!--
+    Post-build: register SpeckleAddIn.cfg in the host application's per-user prefs directory.
+    Bentley products auto-load *.cfg files from %LOCALAPPDATA%\Bentley\<Product>\<PrefsVersion>\prefs\.
+    The prefs folder is created by the host application itself on first launch — until then, copying
+    is harmless but the host will not pick up the cfg until it has run at least once.
+  -->
+  <Target Name="RegisterBentleyCfg"
+          AfterTargets="DeployToBentleyProduct"
+          Condition="'$(OS)' == 'Windows_NT' AND '$(BentleyProductVersion)' != '' AND '$(BentleyPrefsVersion)' != ''">
+    <PropertyGroup>
+      <_BentleyCfgSrc>$(SpeckleBentleyDeployDir)Plugin\SpeckleAddIn.cfg</_BentleyCfgSrc>
+      <_BentleyCfgDst>$([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData))\Bentley\$(BentleyProductFolder)\$(BentleyPrefsVersion)\prefs\SpeckleAddIn.cfg</_BentleyCfgDst>
+    </PropertyGroup>
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_BentleyCfgDst)'))" />
+    <Copy SourceFiles="$(_BentleyCfgSrc)" DestinationFiles="$(_BentleyCfgDst)" SkipUnchangedFiles="true" Condition="Exists('$(_BentleyCfgSrc)')" />
+    <Message Importance="high" Text="[Speckle] Registered cfg: $(_BentleyCfgDst)" Condition="Exists('$(_BentleyCfgSrc)')" />
+  </Target>
+
+  <!--
+    Post-build: ensure Personal.ucf in the user prefs folder %includes our SpeckleAddIn.cfg.
+    Bentley products do NOT auto-scan prefs\*.cfg at startup — Personal.ucf is read instead,
+    and it must explicitly %include the cfg. (Bentley's own addins live under config\appl\
+    which mslocal.cfg auto-scans, but that path requires admin to write to.) This target
+    appends the %include block to Personal.ucf if not already present (idempotent).
+  -->
+  <Target Name="IncludeBentleyCfgInPersonalUcf"
+          AfterTargets="RegisterBentleyCfg"
+          Condition="'$(OS)' == 'Windows_NT' AND '$(BentleyProductVersion)' != '' AND '$(BentleyPrefsVersion)' != ''">
+    <PropertyGroup>
+      <_PersonalUcfPath>$([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData))\Bentley\$(BentleyProductFolder)\$(BentleyPrefsVersion)\prefs\Personal.ucf</_PersonalUcfPath>
+      <_SpeckleIncludeMarker># Speckle Connector auto-include</_SpeckleIncludeMarker>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(_PersonalUcfPath)')">
+      <_PersonalUcfContent>$([System.IO.File]::ReadAllText('$(_PersonalUcfPath)'))</_PersonalUcfContent>
+      <_PersonalUcfHasInclude>$(_PersonalUcfContent.Contains('$(_SpeckleIncludeMarker)'))</_PersonalUcfHasInclude>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_PersonalUcfPath)') AND '$(_PersonalUcfHasInclude)' != 'True'">
+      <!-- %24 escapes $ so MSBuild doesn't evaluate $(_USTN_HOMEPREFS) — that's a Bentley runtime variable -->
+      <_SpeckleIncludeLines Include="# Speckle Connector auto-include"/>
+      <_SpeckleIncludeLines Include="%25if exists (%24(_USTN_HOMEPREFS)SpeckleAddIn.cfg)"/>
+      <_SpeckleIncludeLines Include="%25include %24(_USTN_HOMEPREFS)SpeckleAddIn.cfg"/>
+      <_SpeckleIncludeLines Include="%25endif"/>
+    </ItemGroup>
+    <WriteLinesToFile File="$(_PersonalUcfPath)"
+                      Lines="@(_SpeckleIncludeLines)"
+                      Encoding="UTF-8"
+                      Overwrite="false"
+                      Condition="Exists('$(_PersonalUcfPath)') AND '$(_PersonalUcfHasInclude)' != 'True'" />
+    <Message Importance="high"
+             Text="[Speckle] Appended %include directive to Personal.ucf: $(_PersonalUcfPath)"
+             Condition="Exists('$(_PersonalUcfPath)') AND '$(_PersonalUcfHasInclude)' != 'True'" />
+    <Message Importance="high"
+             Text="[Speckle] Personal.ucf already contains Speckle %include — no changes."
+             Condition="Exists('$(_PersonalUcfPath)') AND '$(_PersonalUcfHasInclude)' == 'True'" />
+    <Message Importance="high"
+             Text="[Speckle] Personal.ucf does not exist yet at $(_PersonalUcfPath) — launch the host app once, then rebuild."
+             Condition="!Exists('$(_PersonalUcfPath)')" />
+  </Target>
+</Project>
