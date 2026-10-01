@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Rhino 8 Mac loads only .NET Core plug-ins (AnyCPU). McNeel ships its own System.Drawing / System.Windows.Forms
+       implementation on Mac, so the shared WinForms/GDI+ component UI runs unmodified against the WinForms
+       FrameworkReference (rhino-mac-connector spec, ticket 02). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <TargetExt>.gha</TargetExt>
+    <!-- Emits runtimes/ + deps.json so the IronCompress osx native ships next to the plug-in (ZstdNativeLoader) -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!--Root Namespace needs to be aligned across all grasshopper csproj to ensure the .resx file in the shared project has the correct resource namespace-->
+    <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
+    <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
+    <!-- GrasshopperAsyncComponent publishes net48 only; it is pure managed and its references (Grasshopper, WinForms)
+         resolve against Rhino 8 Mac's own assemblies. If it ever fails to load, publish a net8.0 build of it instead. -->
+    <!-- CA1866/CA2249/CA2263 suggest net core-only overloads (StartsWith(char), Contains(char), Enum.GetValues<T>) in
+         GrasshopperShared, which the net48 heads compile too; the shared code stays on the common API surface. -->
+    <!-- CS86xx: net8's annotated BCL/DI surfaces 12 nullability sites in GrasshopperShared that net48's unannotated
+         references hide (PriorityLoader.Container is ServiceProvider?, GetService vs GetRequiredService, EventHandler
+         sender, ...). Real, but fixing them touches Windows-shared files — follow-up, not this head. -->
+    <NoWarn>$(NoWarn);NU1701;CA1866;CA2249;CA2263;CS8602;CS8603;CS8604;CS8622;CS8714;CA1508</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <GenerateResourceUsePreserializedResources>True</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Shown in Rhino/Grasshopper's own plug-in listing — the "(Alpha)" tag needs to survive there, not just in docs -->
+    <Title>Speckle.Connectors.Grasshopper8.Mac (Alpha)</Title>
+    <Description>Speckle Grasshopper connector for Rhino 8 on macOS — Alpha, self-built, no official distribution</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <!-- UseWindowsForms=true would add these implicit usings (and Windows-only build targets); the shared GH code
+         relies on them, so add them explicitly the way RhinoHeadless does. -->
+    <Using Include="System.Drawing" />
+    <Using Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GrasshopperAsyncComponent" />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="System.Resources.Extensions" />
+    <!-- managed IronCompress reference; the osx native comes through runtimes/ via EnableDynamicLoading -->
+    <PackageReference Include="IronCompress" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <Import
+    Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems"
+    Label="Shared"
+  />
+</Project>
