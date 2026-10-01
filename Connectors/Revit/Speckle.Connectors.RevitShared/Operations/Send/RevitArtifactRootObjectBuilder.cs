@@ -30,6 +30,10 @@ using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using SOG = Speckle.Objects.Geometry;
+using SpecCameraView = Speckle.Bundle.Spec.CameraView;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecLevel = Speckle.Bundle.Spec.Level;
+using SpecMaterial = Speckle.Bundle.Spec.Material;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
@@ -211,7 +215,7 @@ public class RevitArtifactRootObjectBuilder(
     // placements, and they flatten this post-loop.
     var objectKsByPlacement = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
     var modelContainerKeys = new HashSet<string>(StringComparer.Ordinal);
-    var cameraViews = new List<CameraView>();
+    var cameraViews = new List<SpecCameraView>();
     var countProgress = 0;
     var skippedObjectCount = 0;
 
@@ -234,7 +238,7 @@ public class RevitArtifactRootObjectBuilder(
         modelName = mainDoc.Title;
       }
 
-      int modelK = pipeline.AddContainer(modelKey, modelName, null, "Model");
+      int modelK = pipeline.AddContainer(modelKey, new SpecContainer(modelName, null, "Model", null));
       modelContainerKeys.Add(modelKey);
 
       // This placement's own identity map. Keyed per modelKey, which now derives from the SAME source as the
@@ -394,7 +398,7 @@ public class RevitArtifactRootObjectBuilder(
   // too). MUST run inside the caller's converterSettings.Push for the owning document, so origin/forward/up go
   // through the same ReferencePointTransform + main-document scaling as the document's element geometry (this is
   // what places linked-model cameras correctly in host coordinates). View/Ord = the running dense index.
-  private void CollectDocumentViews(Document doc, string? linkedModelName, List<CameraView> cameraViews)
+  private void CollectDocumentViews(Document doc, string? linkedModelName, List<SpecCameraView> cameraViews)
   {
     string units = converterSettings.Current.SpeckleUnits;
     using FilteredElementCollector collector = new(doc);
@@ -431,7 +435,7 @@ public class RevitArtifactRootObjectBuilder(
 
         int ord = cameraViews.Count;
         cameraViews.Add(
-          new CameraView(
+          new SpecCameraView(
             View: ord,
             Name: linkedModelName is null ? view3D.Name : $"{linkedModelName} - {view3D.Name}",
             IsDefault: false,
@@ -445,6 +449,9 @@ public class RevitArtifactRootObjectBuilder(
             UpX: up.X,
             UpY: up.Y,
             UpZ: up.Z,
+            TargetX: null,
+            TargetY: null,
+            TargetZ: null,
             Units: units,
             IsOrtho: isOrtho
           )
@@ -913,13 +920,15 @@ public class RevitArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
-        value.name,
-        value.diffuse,
-        value.opacity,
-        value.metalness,
-        value.roughness,
-        value.emissive,
-        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        new SpecMaterial(
+          value.name,
+          value.diffuse,
+          value.opacity,
+          value.metalness,
+          value.roughness,
+          value.emissive,
+          value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        )
       );
       foreach (var meshAppId in materialProxy.objects)
       {
@@ -935,7 +944,7 @@ public class RevitArtifactRootObjectBuilder(
     foreach (var levelProxy in levelUnpacker.Unpack(flatElements))
     {
       double elevation = levelProxy.value["elevation"] is double d ? d : 0.0;
-      int lvlK = pipeline.AddLevel(levelProxy.applicationId.NotNull(), levelProxy.value.name, elevation);
+      int lvlK = pipeline.AddLevel(levelProxy.applicationId.NotNull(), new SpecLevel(levelProxy.value.name, elevation));
       // flatElements repeats a linked element once per link instance, so LevelUnpacker lists its UniqueId once per
       // placement too. Dedup here or every occurrence's edge is written N times (relations.parquet is an append-only
       // log — nothing downstream collapses duplicate rows) [ENG-9212].
@@ -1132,7 +1141,10 @@ public class RevitArtifactRootObjectBuilder(
       int? parentK = group.Document.GetElement(group.GroupId) is Group parent
         ? ResolveGroupContainer(pipeline, modelKey, parent, cache)
         : null;
-      containerK = pipeline.AddContainer($"{modelKey}:{group.UniqueId}", group.GroupType.Name, parentK, "Group");
+      containerK = pipeline.AddContainer(
+        $"{modelKey}:{group.UniqueId}",
+        new SpecContainer(group.GroupType.Name, parentK, "Group", null)
+      );
     }
 
     cache[group.UniqueId] = containerK;
