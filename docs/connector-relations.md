@@ -417,10 +417,11 @@ graph LR
   DU -->|DISPLAY| SH
   DU -->|CENTERLINE| AX
   EL([obj · Elbow fitting]):::obj
-  B0[geo · branch 0]:::geo
-  B1[geo · branch 1]:::geo
-  EL -->|CENTERLINE ord 0| B0
-  EL -->|CENTERLINE ord 1| B1
+  B0[geo · path arc]:::geo
+  TE([obj · Tee fitting]):::obj
+  B1[geo · branch 0..2]:::geo
+  EL -->|CENTERLINE| B0
+  TE -->|CENTERLINE ord 0..2| B1
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
 ```
@@ -438,12 +439,20 @@ Walls are therefore excluded, which also sidesteps their location line being a c
 the centre. Gated on type and `BuiltInCategory`, **never on category name** — those are localised, so a
 name-based list matches nothing on a German or French model.
 
-**(b) Connector branches**, for a point-placed MEP fitting — elbow, tee, cross, transition — which has no
-location curve at all and so left a gap in every run. Each connector reports where the run enters or leaves the
-fitting and the insertion point is the node they meet at, so the fitting ships **one segment per connector**
-(`MepCenterlineExtractor`), `ord` = branch index. That is what a single-line drawing draws, and the only shape
-that survives a branch — no single curve can express a tee. Consumers weld duct and fitting segments into
-continuous runs (Join Curves). Origins come from `Connector.CoordinateSystem.Origin`, **not** `Connector.Origin`,
+**(b) The fitting path**, for a point-placed MEP fitting — elbow, tee, cross, transition — which has no
+location curve at all and so left a gap in every run (`MepCenterlineExtractor`). Two sources, `ord` = piece index
+either way:
+
+- **The family's own path curves.** Fitting families draw their single-line representation as model curves — an
+  elbow's is the true arc — and `get_Geometry` returns them. Which `Options` do so varies by category and family
+  author, so a few sets are tried (coarse first, the active view last) and the curves are only accepted when,
+  after trimming dead ends, they **tie every end connector together**. That check is what keeps stray symbolic
+  lines out.
+- **Connector branches**, when the family carries no usable path. Each connector reports where the run enters or
+  leaves the fitting and the insertion point is the node they meet at, so the fitting ships **one straight segment
+  per connector** — a sharp corner on an elbow.
+
+Consumers weld duct and fitting pieces into continuous runs (Join Curves). Origins come from `Connector.CoordinateSystem.Origin`, **not** `Connector.Origin`,
 which is documented to throw for a connector belonging to a family instance — i.e. every fitting. Scoped by
 connector **domain** (HVAC, piping, cable tray); electrical and structural-analytical connectors are excluded.
 
