@@ -144,11 +144,13 @@ internal sealed class GrasshopperArtefactObjectBuilder
       // Never fan one object out into several wrappers: name and properties would be copied onto each, and a sum over
       // them double-counts [ENG-9382]. An empty object is only right for a genuinely property-only source - one
       // placed as a block already comes through as its instance wrapper, and adding an empty one beside it would
-      // double the count.
-      if (
-        (WasDataObject(props, geometryWrappers.Count) || geometryWrappers.Count > 1)
-        && (geometryWrappers.Count > 0 || instCount == 0)
-      )
+      // double the count. A single geometry with a name or properties is an object too - attributes belong to the
+      // object, never to a bare geometry [ENG-9414].
+      bool isObject =
+        WasDataObject(props, geometryWrappers.Count)
+        || geometryWrappers.Count > 1
+        || (geometryWrappers.Count == 1 && IsAttributed(name, props));
+      if (isObject && (geometryWrappers.Count > 0 || instCount == 0))
       {
         collection.Elements.Add(BuildDataObject(objK, appId, name, props, geometryWrappers, collection));
       }
@@ -299,6 +301,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
     props.GetString("speckle_type") is { } speckleType
       ? speckleType.StartsWith("Objects.Data.", StringComparison.Ordinal)
       : geometryCount > 1;
+
+  // root scalars (speckle_type, units, type) sit on every row, so only a real name or the properties subtree count
+  private static bool IsAttributed(string? name, PropertyView props) =>
+    name is not null || props.Under("properties").Keys.Any();
 
   /// <summary>
   /// Rebuilds the DataObject the v3 graph would have had, keyed on the source object's application id so anything
