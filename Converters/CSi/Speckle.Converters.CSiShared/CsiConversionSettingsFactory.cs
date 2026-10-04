@@ -31,7 +31,7 @@ public class CsiConversionSettingsFactory(
 
     string speckleUnits = unitsConverter.ConvertOrThrow(lengthUnit);
 
-    // ETABS can retain database-unit geometry after opening a file in different present units.
+    // ENG-10421: ETABS can retain database-unit geometry after opening a file in different present units.
     // Reapplying the same units refreshes its API conversion factors without changing the selected units.
     if (document.SetPresentUnits_2(forceUnit, lengthUnit, temperatureUnit) != 0)
     {

@@ -15,11 +15,20 @@
   <ItemGroup>
     <ProjectReference Include="../../../Sdk/Speckle.Converters.Common/Speckle.Converters.Common.csproj" />
     <Compile Include="../Speckle.Converters.CSiShared/CsiConversionSettings.cs" Link="CsiConversionSettings.cs" />
-    <Compile Include="../Speckle.Converters.CSiShared/CsiConversionSettingsFactory.cs" Link="CsiConversionSettingsFactory.cs" />
-    <Compile Include="../Speckle.Converters.CSiShared/CsiToSpeckleUnitConverter.cs" Link="CsiToSpeckleUnitConverter.cs" />
+    <Compile
+      Include="../Speckle.Converters.CSiShared/CsiConversionSettingsFactory.cs"
+      Link="CsiConversionSettingsFactory.cs"
+    />
+    <Compile
+      Include="../Speckle.Converters.CSiShared/CsiToSpeckleUnitConverter.cs"
+      Link="CsiToSpeckleUnitConverter.cs"
+    />
     <Compile Include="../Speckle.Converters.CSiShared/CsiWrappers.cs" Link="CsiWrappers.cs" />
     <Compile Include="../Speckle.Converters.CSiShared/GlobalUsing.cs" Link="GlobalUsing.cs" />
     <Compile Include="../Speckle.Converters.CSiShared/Utils/Enums.cs" Link="Enums.cs" />
-    <Compile Include="../Speckle.Converters.CSiShared/ToSpeckle/Raw/LineToSpeckleConverter.cs" Link="LineToSpeckleConverter.cs" />
+    <Compile
+      Include="../Speckle.Converters.CSiShared/ToSpeckle/Raw/LineToSpeckleConverter.cs"
+      Link="LineToSpeckleConverter.cs"
+    />
   </ItemGroup>
 </Project>
