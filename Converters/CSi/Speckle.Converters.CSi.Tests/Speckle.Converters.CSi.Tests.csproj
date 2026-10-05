@@ -3,8 +3,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="altcover" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Moq" />
     <PackageReference Include="NUnit" />
@@ -14,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../Sdk/Speckle.Converters.Common/Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="../../../Sdk/Speckle.Testing/Speckle.Testing.csproj" />
     <Compile Include="../Speckle.Converters.CSiShared/CsiConversionSettings.cs" Link="CsiConversionSettings.cs" />
     <Compile
       Include="../Speckle.Converters.CSiShared/CsiConversionSettingsFactory.cs"

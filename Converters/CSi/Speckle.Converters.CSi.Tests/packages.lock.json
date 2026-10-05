@@ -2,6 +2,12 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "altcover": {
+        "type": "Direct",
+        "requested": "[9.0.102, )",
+        "resolved": "9.0.102",
+        "contentHash": "q3Rf5t0M9kXlcO5qhsaAe6NrFSNd5enrhKmF/Ezgmomqw34PbUTbRSYjSDNhS3YGDyUrPTkyPn14EfLDJWztcA=="
+      },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
         "requested": "[18.4.0, )",
@@ -313,6 +319,14 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
+          "Speckle.Sdk": "[2026.9.0-beta.7, )"
+        }
+      },
+      "speckle.testing": {
+        "type": "Project",
+        "dependencies": {
+          "Moq": "[4.20.70, )",
+          "NUnit": "[4.5.1, )",
           "Speckle.Sdk": "[2026.9.0-beta.7, )"
         }
       },
