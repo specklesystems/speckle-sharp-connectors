@@ -61,7 +61,7 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   {
     if (entity is PP.PnIDObjects.Asset asset && entity.Database.TransactionManager.TopTransaction is ADB.Transaction tr)
     {
-      if (SafeGetObject(asset.StyleId, tr) is ADB.BlockTableRecord block && !block.IsAnonymous)
+      if (SafeGetObject(asset.BlockTableRecord, tr) is ADB.BlockTableRecord block && !block.IsAnonymous)
       {
         properties["Symbol Name"] = block.Name;
       }
