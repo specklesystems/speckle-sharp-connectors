@@ -544,6 +544,11 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponentBase>
       )
       .ConfigureAwait(false);
 
+    if (SendComponentBase.DescribeDroppedRelations(result.ConversionResults) is { } droppedRelations)
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Warning, droppedRelations));
+    }
+
     if (ingestionId != null)
     {
       Parent.Message = "Remote processing";
