@@ -61,16 +61,18 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   {
     if (entity is PP.PnIDObjects.Asset asset && entity.Database.TransactionManager.TopTransaction is ADB.Transaction tr)
     {
-      var block = tr.GetObject(asset.BlockTableRecord, ADB.OpenMode.ForRead) as ADB.BlockTableRecord;
-      if (block is not null && !block.IsAnonymous)
+      if (SafeGetObject(asset.StyleId, tr) is ADB.BlockTableRecord block && !block.IsAnonymous)
       {
         properties["Symbol Name"] = block.Name;
       }
 
-      if (tr.GetObject(asset.StyleId, ADB.OpenMode.ForRead) is PP.Styles.AssetStyle assetStyle)
+      if (SafeGetObject(asset.StyleId, tr) is PP.Styles.AssetStyle assetStyle)
       {
         properties["Graphical Style"] = assetStyle.Name;
       }
     }
   }
+
+  private static ADB.DBObject? SafeGetObject(ADB.ObjectId objectId, ADB.Transaction tr) =>
+    !objectId.IsNull && !objectId.IsErased && objectId.IsValid ? tr.GetObject(objectId, ADB.OpenMode.ForRead) : null;
 }
