@@ -40,7 +40,6 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
     // geometry [ENG-8827].
     AddDictionaryToPropertyDictionary(_textPropertiesExtractor.GetTextProperties(entity), "Text", properties);
 
-    // Add the block name and graphical style for Plant 3D assets
     AddAssetProperties(entity, properties);
 
     return properties;
@@ -60,7 +59,6 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
 
   private static void AddAssetProperties(ADB.Entity entity, Dictionary<string, object?> properties)
   {
-    // Check if the entity is a Plant3D P&ID Asset and that we're in an database transaction.
     if (entity is PP.PnIDObjects.Asset asset && entity.Database.TransactionManager.TopTransaction is ADB.Transaction tr)
     {
       var block = tr.GetObject(asset.BlockTableRecord, ADB.OpenMode.ForRead) as ADB.BlockTableRecord;
@@ -71,7 +69,7 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
 
       if (tr.GetObject(asset.StyleId, ADB.OpenMode.ForRead) is PP.Styles.AssetStyle assetStyle)
       {
-        properties.Add("Graphical Style", assetStyle.Name);
+        properties["Graphical Style"] = assetStyle.Name;
       }
     }
   }
