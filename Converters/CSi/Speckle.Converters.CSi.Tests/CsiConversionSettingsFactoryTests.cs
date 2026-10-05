@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Moq;
 using NUnit.Framework;
 using Speckle.Converters.Common;
@@ -15,6 +16,9 @@ public class CsiConversionSettingsFactoryTests : MoqTest
   private const double START_X_INCHES = 577.2;
   private const double END_X_INCHES = 864;
   private const double SPAN_INCHES = END_X_INCHES - START_X_INCHES;
+
+  private static readonly Expression<Func<cSapModel, int>> s_readPresentUnits = x =>
+    x.GetPresentUnits_2(ref It.Ref<eForce>.IsAny, ref It.Ref<eLength>.IsAny, ref It.Ref<eTemperature>.IsAny);
 
   private delegate int ReadUnits(ref eForce force, ref eLength length, ref eTemperature temperature);
   private delegate int ReadPoints(string name, ref string start, ref string end);
@@ -55,7 +59,6 @@ public class CsiConversionSettingsFactoryTests : MoqTest
       );
     model.SetupGet(x => x.FrameObj).Returns(frames.Object);
 
-    // The model is stored in inches: until the present units are reapplied, the API hands back database numbers.
     var points = Create<cPointObj>();
     points
       .Setup(x =>
@@ -71,6 +74,7 @@ public class CsiConversionSettingsFactoryTests : MoqTest
         new ReadCoordinate(
           (string name, ref double x, ref double y, ref double z, string _) =>
           {
+            // ENG-10421: the model is stored in inches, and the API hands back those numbers until synchronized.
             double apiConversionFactor = synchronized ? inchesToPresentUnits : 1;
             x = (name == START_JOINT_NAME ? START_X_INCHES : END_X_INCHES) * apiConversionFactor;
             y = 576 * apiConversionFactor;
@@ -94,13 +98,10 @@ public class CsiConversionSettingsFactoryTests : MoqTest
   public void Create_StopsWhenReadingUnitsFails()
   {
     var model = Create<cSapModel>();
-    model
-      .Setup(x =>
-        x.GetPresentUnits_2(ref It.Ref<eForce>.IsAny, ref It.Ref<eLength>.IsAny, ref It.Ref<eTemperature>.IsAny)
-      )
-      .Returns(1);
+    model.Setup(s_readPresentUnits).Returns(1);
 
     Assert.Throws<InvalidOperationException>(() => CreateFactory().Create(model.Object));
+    model.Verify(s_readPresentUnits, Times.Once);
   }
 
   [Test]
@@ -119,9 +120,7 @@ public class CsiConversionSettingsFactoryTests : MoqTest
 
   private static void SetupPresentUnits(Mock<cSapModel> model, eLength presentLengthUnit) =>
     model
-      .Setup(x =>
-        x.GetPresentUnits_2(ref It.Ref<eForce>.IsAny, ref It.Ref<eLength>.IsAny, ref It.Ref<eTemperature>.IsAny)
-      )
+      .Setup(s_readPresentUnits)
       .Returns(
         new ReadUnits(
           (ref eForce force, ref eLength length, ref eTemperature temperature) =>
