@@ -85,23 +85,28 @@ public class ChannelHandednessTests
   [TestCase(false, true, false, 0)]
   [TestCase(false, false, false, 90)]
   [TestCase(false, false, true, 0)]
+  [TestCase(false, true, false, 90)]
+  [TestCase(false, false, true, 90)]
   [TestCase(true, false, false, 0)]
   [TestCase(true, true, false, 0)]
   [TestCase(true, false, false, 90)]
   [TestCase(true, false, true, 0)]
+  [TestCase(true, true, false, 90)]
+  [TestCase(true, false, true, 90)]
   public void Extrude_C5X9_WebFollowsSourceLocal3(bool mirrored, bool reversed, bool vertical, double angle)
   {
     var fixture = CreateFixture(mirrored, angle);
     var end = vertical ? new Vector3(0, 0, 1000) : new Vector3(reversed ? -1000 : 1000, 0, 0);
-    var local2 =
-      vertical ? Vector3.UnitX
-      : angle == 90 ? -Vector3.UnitY
-      : Vector3.UnitZ;
-    var local3 =
-      vertical ? Vector3.UnitY
-      : angle == 90 ? -Vector3.UnitZ
-      : reversed ? Vector3.UnitY
-      : -Vector3.UnitY;
+    var (local2, local3) = (vertical, reversed, angle) switch
+    {
+      (true, _, 90) => (Vector3.UnitY, -Vector3.UnitX),
+      (true, _, 0) => (Vector3.UnitX, Vector3.UnitY),
+      (false, true, 90) => (Vector3.UnitY, -Vector3.UnitZ),
+      (false, false, 90) => (-Vector3.UnitY, -Vector3.UnitZ),
+      (false, true, 0) => (Vector3.UnitZ, Vector3.UnitY),
+      (false, false, 0) => (Vector3.UnitZ, -Vector3.UnitY),
+      _ => throw new ArgumentOutOfRangeException(nameof(angle)),
+    };
     var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(end));
     Assert.That(mesh, Is.Not.Null);
     var sectionPoints = ProjectStart(mesh!, Vector3.Zero, local2, local3);
@@ -123,31 +128,45 @@ public class ChannelHandednessTests
     VerifyChannelCalls(fixture.Properties, Times.Once());
   }
 
-  [TestCase(1)]
-  [TestCase(2)]
-  [TestCase(3)]
-  [TestCase(4)]
-  [TestCase(5)]
-  [TestCase(6)]
-  [TestCase(7)]
-  [TestCase(8)]
-  [TestCase(9)]
-  [TestCase(10)]
-  public void Extrude_ChannelAnchorsUseOrientedBoundsAndEndOffsets(int cardinal)
+  [TestCase(false, 1)]
+  [TestCase(false, 2)]
+  [TestCase(false, 3)]
+  [TestCase(false, 4)]
+  [TestCase(false, 5)]
+  [TestCase(false, 6)]
+  [TestCase(false, 7)]
+  [TestCase(false, 8)]
+  [TestCase(false, 9)]
+  [TestCase(false, 10)]
+  [TestCase(true, 7)]
+  [TestCase(true, 9)]
+  [TestCase(true, 10)]
+  public void Extrude_ChannelAnchorsUseOrientedBoundsAndEndOffsets(bool mirrored, int cardinal)
   {
-    var fixture = CreateFixture(false, cardinal: cardinal, startOffset: [5, 7, 11], endOffset: [9, -3, 17]);
+    var fixture = CreateFixture(mirrored, cardinal: cardinal, startOffset: [5, 7, 11], endOffset: [9, -3, 17]);
     var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(new Vector3(1000, 0, 0)));
     Assert.That(mesh, Is.Not.Null);
     double area = 2 * WIDTH * FLANGE + (DEPTH - 2 * FLANGE) * WEB;
     double centroid = WEB * (DEPTH - 2 * FLANGE) * (WIDTH - WEB) / (2 * area);
     double minDepth = cardinal == 10 ? -DEPTH / 2 : -(cardinal - 1) / 3 * DEPTH / 2;
-    double minWidth = cardinal == 10 ? -WIDTH / 2 - centroid : ((cardinal - 1) % 3 - 2) * WIDTH / 2;
+    double minWidth =
+      cardinal == 10 ? -WIDTH / 2 + (mirrored ? centroid : -centroid) : ((cardinal - 1) % 3 - 2) * WIDTH / 2;
     var start = ProjectEnd(mesh!, Vector3.UnitZ, -Vector3.UnitY, false);
     var end = ProjectEnd(mesh!, Vector3.UnitZ, -Vector3.UnitY, true);
     Assert.That(start.Min(p => p.X), Is.EqualTo(minDepth + 7).Within(1e-6));
     Assert.That(start.Min(p => p.Y), Is.EqualTo(minWidth + 11).Within(1e-6));
     Assert.That(end.Min(p => p.X), Is.EqualTo(minDepth - 3).Within(1e-6));
     Assert.That(end.Min(p => p.Y), Is.EqualTo(minWidth + 17).Within(1e-6));
+    double webMin = mirrored ? minWidth : minWidth + WIDTH - WEB;
+    double webMax = mirrored ? minWidth + WEB : minWidth + WIDTH;
+    var startWeb = WebWidths(start);
+    var endWeb = WebWidths(end);
+    Assert.That(startWeb, Has.Length.EqualTo(2));
+    Assert.That(endWeb, Has.Length.EqualTo(2));
+    Assert.That(startWeb[0], Is.EqualTo(webMin + 11).Within(1e-6));
+    Assert.That(startWeb[1], Is.EqualTo(webMax + 11).Within(1e-6));
+    Assert.That(endWeb[0], Is.EqualTo(webMin + 17).Within(1e-6));
+    Assert.That(endWeb[1], Is.EqualTo(webMax + 17).Within(1e-6));
     Assert.That(mesh!.vertices.Where((_, index) => index % 3 == 0).Min(), Is.EqualTo(5).Within(1e-6));
     Assert.That(mesh.vertices.Where((_, index) => index % 3 == 0).Max(), Is.EqualTo(1009).Within(1e-6));
   }
@@ -295,11 +314,11 @@ public class ChannelHandednessTests
   private static double[] WebWidths(IReadOnlyList<Vector2> points)
   {
     var widths = new List<double>();
+    double slice = (points.Min(p => p.X) + points.Max(p => p.X)) / 2;
     for (int i = 0; i < points.Count; i++)
     {
       var start = points[i];
       var end = points[(i + 1) % points.Count];
-      double slice = -DEPTH / 2;
       if ((start.X < slice && end.X > slice) || (start.X > slice && end.X < slice))
       {
         widths.Add(start.Y + (end.Y - start.Y) * (slice - start.X) / (end.X - start.X));
