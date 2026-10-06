@@ -9,15 +9,12 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 /// </summary>
 public class Plant3dClassHierarchyResolver
 {
-  private readonly Dictionary<string, Plant3dClassHierarchy> _classHierarchyLookup = [];
+  private readonly Dictionary<string, Plant3dClassHierarchy> _classHierarchyCache = [];
   private const string PNP_BASE_CLASS_NAME = "PnPBase";
 
   /// <summary>
   /// Traverses the object's class hierarchy to provide a fully qualified category and individual category levels.
   /// </summary>
-  /// <param name="dataLinksManager"></param>
-  /// <param name="objectId"></param>
-  /// <returns></returns>
   public Plant3dClassHierarchy Resolve(PPDL.DataLinksManager dataLinksManager, ObjectId objectId)
   {
     ArgumentNullException.ThrowIfNull(dataLinksManager);
@@ -35,14 +32,14 @@ public class Plant3dClassHierarchyResolver
       return new();
     }
 
-    // Cache the class names for performance, class names will be unique as they represent table names in the Plant 3D project database.
-    if (_classHierarchyLookup.TryGetValue(className, out var cachedHierarchy))
+    // Class names will be unique as they represent table names in the Plant 3D project database.
+    if (_classHierarchyCache.TryGetValue(className, out var cachedHierarchy))
     {
       return cachedHierarchy;
     }
 
     var hierarchy = BuildHierarchyPath(database, className);
-    _classHierarchyLookup[className] = hierarchy;
+    _classHierarchyCache[className] = hierarchy;
 
     return hierarchy;
   }
@@ -54,7 +51,7 @@ public class Plant3dClassHierarchyResolver
     // Traverse the class hierarchy until we reach the base class (PnPBase) or an empty class name.
     while (
       !string.IsNullOrWhiteSpace(className)
-      && !string.Equals(className, PNP_BASE_CLASS_NAME, StringComparison.InvariantCultureIgnoreCase)
+      && !string.Equals(className, PNP_BASE_CLASS_NAME, StringComparison.OrdinalIgnoreCase)
     )
     {
       hierarchy.Add(className);
@@ -63,7 +60,6 @@ public class Plant3dClassHierarchyResolver
       className = classTable.BaseTableName;
     }
 
-    // Reverse the hierarchy to have the base class first and the most derived class last.
     hierarchy.Reverse();
 
     return Plant3dClassHierarchy.FromList(hierarchy);
@@ -84,13 +80,13 @@ public record Plant3dClassHierarchy(
 {
   private const string CLASS_HIERARCHY_SEPARATOR = " > ";
 
-  public static Plant3dClassHierarchy FromList(IReadOnlyCollection<string> hierarchy)
+  public static Plant3dClassHierarchy FromList(IReadOnlyList<string> hierarchy)
   {
     return new(string.Join(CLASS_HIERARCHY_SEPARATOR, hierarchy), Level(0), Level(1), Level(2), Level(3), Level(4));
 
     string Level(int index)
     {
-      return hierarchy.Count > index ? hierarchy.ElementAt(index) : string.Empty;
+      return hierarchy.Count > index ? hierarchy[index] : string.Empty;
     }
   }
-};
+}

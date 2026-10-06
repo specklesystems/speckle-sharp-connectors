@@ -56,7 +56,6 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
   /// The dataLinksManager is used to initialize the LineGroupManager the first time this method is called.
   /// Subsequent calls will use the cached LineGroupManager.
   /// </summary>
-  /// <returns>False if the object is not part of a line group.</returns>
   public bool TryGetGroupId(PPDL.DataLinksManager dataLinksManager, ADB.ObjectId objectId, out int groupId)
   {
     try
