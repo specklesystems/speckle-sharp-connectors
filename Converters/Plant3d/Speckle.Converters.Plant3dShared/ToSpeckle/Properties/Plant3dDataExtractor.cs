@@ -96,7 +96,7 @@ public class Plant3dDataExtractor
     var classHierarchy = _classHierarchyResolver.Resolve(dataLinksManager, entity.ObjectId);
     var properties = new Dictionary<string, object>()
     {
-      { "Category", classHierarchy.ClassName },
+      { "Category", classHierarchy.Category },
       { "Level1", classHierarchy.Level1 },
       { "Level2", classHierarchy.Level2 },
       { "Level3", classHierarchy.Level3 },

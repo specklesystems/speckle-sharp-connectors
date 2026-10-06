@@ -44,7 +44,7 @@ public class Plant3dClassHierarchyResolver
     return hierarchy;
   }
 
-  private static Plant3dClassHierarchy BuildHierarchyPath(PnPDatabase database, string className)
+  private static Plant3dClassHierarchy BuildHierarchyPath(PnPDatabase database, string? className)
   {
     List<string> hierarchy = [];
 
@@ -56,8 +56,8 @@ public class Plant3dClassHierarchyResolver
     {
       hierarchy.Add(className);
 
-      PnPTable classTable = database.Tables[className];
-      className = classTable.BaseTableName;
+      PnPTable? classTable = database.Tables.Contains(className) ? database.Tables[className] : null;
+      className = classTable?.BaseTableName;
     }
 
     hierarchy.Reverse();
@@ -70,7 +70,7 @@ public class Plant3dClassHierarchyResolver
 /// Represents a category from the Plant 3D Data Manager, provides the full category, and level by level.
 /// </summary>
 public record Plant3dClassHierarchy(
-  string ClassName = "",
+  string Category = "",
   string Level1 = "",
   string Level2 = "",
   string Level3 = "",
