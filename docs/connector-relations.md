@@ -58,7 +58,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | **1 DISPLAY** | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | **2 SOLID** | ● | ● | ● | ● | ● | · | · | · | · | · |
-| **5 HAS_MATERIAL** | ● | ● | ● | ● | ● | ● | ● | ● | · | · |
+| **5 HAS_MATERIAL** | ● | ● | ● | ● | ● | ● | ● | ● | ◐³ | · |
 | **6 HAS_COLOR** | ● | ● | ● | ● | ● | ● | · | · | · | · |
 | **4 DEFINES** | ● | ● | ● | ● | ● | ● | ● | · | · | · |
 | **8 DISPLAY_INSTANCE** | ● | ● | ● | ● | ● | ● | ● | · | · | · |
@@ -67,13 +67,14 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
 | **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | · | · |
 | **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | · | · |
-| **3 SUBELEMENT** | · | · | · | · | ● | · | ● | ● | · | ◐¹ |
+| **3 SUBELEMENT** | · | ◐⁴ | · | · | ● | · | ● | ● | · | ◐¹ |
+| **18 IN_ASSEMBLY** | · | ◐⁴ | · | · | · | · | · | · | · | · |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
-| **21 CONNECTS_TO** | · | · | · | · | ● | · | ● | · | ● | · |
-| **22 HOSTED_ON** | · | · | · | · | · | · | ● | · | · | · |
+| **21 CONNECTS_TO** | · | ◐⁴ | · | · | ● | · | ● | · | ● | · |
+| **22 HOSTED_ON** | · | ◐⁴ | · | · | · | · | ● | · | · | · |
 | **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
-| **30 CENTERLINE** | · | · | · | · | · | · | ● | · | · | · |
+| **30 CENTERLINE** | · | · | · | · | · | · | ● | · | ◐³ | ◐³ |
 | _camera_views_ | ● | · | · | · | · | ● | ● | · | · | · |
 | _structural_results_ | · | · | · | · | · | · | · | · | ● | ● |
 | _reference_point (meta)_ | · | · | · | · | · | · | ● | · | · | · |
@@ -82,6 +83,8 @@ What each connector actually emits, verified in the send builders. `●` emitted
 
 ¹ TSD `SUBELEMENT` is wired but unreachable — `elements` is always empty.
 ² Revit folds `BOUNDS` into `IN_ROOM`.
+³ Only with the "Send Volumetric Geometry" card setting (ENG-9048): frames/members ship their analytical line as `CENTERLINE` while the extruded solid takes `DISPLAY`; CSi also emits material display colours.
+⁴ Grasshopper writes these only when the user authors them with the **Speckle Relation** component (ENG-9475); nothing is derived from the canvas.
 
 Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them**. Plant3D is send-only. SketchUp is a pure-Ruby producer.
 
@@ -162,9 +165,9 @@ An object keeps its layer AND its group(s) — separate axes. Instance colours a
 
 ---
 
-### Grasshopper — CAD · computational · emits 8
+### Grasshopper — CAD · computational · emits 8 (+4 authored)
 
-The Rhino geometry set minus groups: each collection — including one per data-tree branch — becomes a nested CONTAINER, with instancing, materials and colours resolved the same way.
+The Rhino geometry set minus groups: each collection — including one per data-tree branch — becomes a nested CONTAINER, with instancing, materials and colours resolved the same way. On top, four object→object relations the user wires up by hand.
 
 **Data trees → collections** — `DISPLAY` · `IN_COLLECTION` + eav sidecar
 
@@ -186,6 +189,10 @@ graph LR
 ```
 
 Every GH branch maps to one CONTAINER; the exact path array rides a sidecar eav object (`__collection_topology_{k}`) so receivers rebuild the tree with no schema change. GH reuses Rhino's geometry/material/color/block packers verbatim — no layer or level concept.
+
+**Authored relations** — `HOSTED_ON` · `CONNECTS_TO` · `IN_ASSEMBLY` · `SUBELEMENT` (ENG-9475)
+
+The **Speckle Relation** component is a passthrough like Speckle Object: a source Speckle goo (Object / Geometry / Block Instance) goes in, a list of target goos goes in, and the source comes out again with the relations attached (`SpeckleWrapper.Relations`, outgoing edges by target application id — the same shape the bundle stores). The relation type is picked from a button in the component and both inputs rename to the spec's direction (Hosted → Host, From → To, Member → Assembly, Parent → Child); chain components to give one object several types. Nothing changes in Publish: the artefact builder queues each placed object's relations with its K during the walk and resolves the targets afterwards (`EmitRelations`, same timing as the proxies). Rules: exact duplicates collapse, a dangling target drops the edge, a second parent (SUBELEMENT) or host (HOSTED_ON) keeps the first — every drop becomes one Publish warning. Ordinals follow arrival order; CONNECTS_TO is unscoped (ord 0). Nothing else is derived: no IN_ROOM / BOUNDS (no room objects on a canvas) and no IN_GROUP / IN_SYSTEM (container ends). The vocabulary is the spec's closed enum, so a new relation is a spec change first.
 
 - **Nodes:** CONTAINER `"Collection"` (nested, one per branch) · DEFINITION/INSTANCE · MATERIAL · COLOR
 - **Consumes:** the Explore component reads the envelope graph catalog, so every relation surfaces without a code
@@ -491,7 +498,7 @@ Every object (owner and child) lands in a flat by-type collection AND is wired i
 
 ---
 
-### CSi · ETABS · SAP — structural · analysis · emits 3
+### CSi · ETABS · SAP — structural · analysis · emits 3 (+2 volumetric)
 
 The analysis model as display-only geometry in a nested scene tree, plus a member↔joint connectivity graph and a flat table of analysis result rows — the primary `structural_results` producer.
 
@@ -532,11 +539,29 @@ Object-level rows (frameForce, jointReaction) join back via `object_index`; mode
 - **Nodes:** CONTAINER `"Collection"` — ETABS level→category; base CSi/SAP flat by-type
 - **Sidecar:** `structural_results` — frame/joint (object) · base/modal (model)
 - **Receive:** send-only
-- **Watch out:** results gate on a **locked/analysed** model; a results failure never fails the geometry send. Sections/materials stay in eav (deferred)
+**Volumetric geometry** — `DISPLAY` · `CENTERLINE` · `HAS_MATERIAL` (setting-gated, ENG-9048)
+
+```mermaid
+graph LR
+  FR([obj · Frame]):::obj
+  SO[geo · extruded section]:::geo
+  AX[geo · analytical line]:::geo
+  MAT{{node · Material}}:::nd
+  FR -->|DISPLAY| SO
+  FR -->|CENTERLINE| AX
+  SO -->|HAS_MATERIAL| MAT
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
+  classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
+```
+
+With "Send Volumetric Geometry (Beta)" on, a frame's display is its section extruded along the member (insertion point applied) and its node-to-node analytical line moves to `CENTERLINE` — so the solid and the analysis axis both survive, and Grasshopper's Explore returns the axis. Every frame gets a `CENTERLINE`, including those whose section falls back to a wireframe display. Shells are extruded but carry no `CENTERLINE` (it is an axis-curve relation). Material display colours become MATERIAL nodes.
+
+- **Watch out:** results gate on a **locked/analysed** model; a results failure never fails the geometry send. Sections stay in eav (deferred); materials only as colours, and only for volumetric sends
 
 ---
 
-### TSD — structural · design · emits 2
+### TSD — structural · design · emits 2 (+1 volumetric)
 
 A flat structural model — members grouped by member-type, slabs, walls — with mesh display geometry and a separate stream of numeric-only analysis results.
 
@@ -562,6 +587,7 @@ Members group by member-type (Beam, Column, Slab…) into flat collections. Resu
 - **Nodes:** CONTAINER `"Collection"` (flat, by MemberType)
 - **Sidecar:** `structural_results` — forces / reactions / displacements, model-level
 - **Receive:** send-only
+- **Volumetric geometry** (ENG-9048, setting-gated): members display one extruded prism per span and ship each span's analytical line as `CENTERLINE` (`ord` = span index); slabs/walls are extruded, no `CENTERLINE`. TSD exposes no material colour.
 - **Watch out:** `SUBELEMENT` is wired but **unreachable** (elements always empty) — scaffolding for future child modeling
 
 ---

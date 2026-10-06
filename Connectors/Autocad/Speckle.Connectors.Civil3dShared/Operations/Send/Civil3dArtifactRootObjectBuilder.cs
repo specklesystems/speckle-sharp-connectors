@@ -9,6 +9,7 @@ using Speckle.Converters.Common;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+using SpecPropertySetField = Speckle.Bundle.Spec.PropertySetField;
 
 namespace Speckle.Connectors.Civil3dShared.Operations.Send;
 
@@ -121,18 +122,20 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
           bucketByFieldObserved?.TryGetValue(fieldName, out bucketId);
         }
         pipeline.AddPropertySetDefinition(
-          setName,
-          setKey,
-          fieldName,
-          bucketId, // null only if BOTH the definition getter threw and no instance value was seen
-          Field(fd, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY) as string,
-          defaultString,
-          defaultDouble,
-          defaultBoolean,
-          Field(fd, "units") as string,
-          Field(fd, PropertySetDefinitionHandler.PROP_DEF_DESCRIPTION_KEY) as string,
-          setDescription,
-          appliesTo
+          new SpecPropertySetField(
+            SetName: setName,
+            SetKey: setKey,
+            SetDescription: setDescription,
+            FieldName: fieldName,
+            FieldBucketId: bucketId, // null only if BOTH the definition getter threw and no instance value was seen
+            DataType: Field(fd, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY) as string,
+            DefaultString: defaultString,
+            DefaultDouble: defaultDouble,
+            DefaultBoolean: defaultBoolean,
+            Unit: Field(fd, "units") as string,
+            Description: Field(fd, PropertySetDefinitionHandler.PROP_DEF_DESCRIPTION_KEY) as string,
+            AppliesTo: appliesTo
+          )
         );
       }
     }
