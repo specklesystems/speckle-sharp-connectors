@@ -52,23 +52,33 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     };
 
   /// <summary>
-  /// Gets the group ID for objects that participate in a line group.
+  /// Gets the group ID and Type for objects that participate in a line group.
   /// The dataLinksManager is used to initialize the LineGroupManager the first time this method is called.
   /// Subsequent calls will use the cached LineGroupManager.
   /// </summary>
-  public bool TryGetGroupId(PPDL.DataLinksManager dataLinksManager, ADB.ObjectId objectId, out int groupId)
+  public bool TryGetGroupInfo(
+    PPDL.DataLinksManager dataLinksManager,
+    ADB.ObjectId objectId,
+    out LineGroupInfo? groupInfo
+  )
   {
     try
     {
       if (EnsureInitialized(dataLinksManager))
       {
-        groupId = _context.LineGroupManager.GroupId(objectId);
-        return groupId > 0;
+        var groupId = _context.LineGroupManager.GroupId(objectId);
+        if (groupId > 0)
+        {
+          var groupType = _context.LineGroupManager.Type(groupId).ToString();
+          groupInfo = new LineGroupInfo(groupId, groupType);
+          return true;
+        }
       }
     }
     // The call to GroupId will raise an exception with the message "eNotImplementedYet" if the object can not participate in a group.
     catch (Autodesk.AutoCAD.Runtime.Exception) { }
-    groupId = 0;
+
+    groupInfo = null;
     return false;
   }
 
@@ -105,3 +115,5 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     public void Dispose() => LineGroupManager.Dispose();
   }
 }
+
+public record LineGroupInfo(int GroupId, string GroupType);

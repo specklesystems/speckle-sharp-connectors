@@ -9,13 +9,13 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 /// </summary>
 public class Plant3dClassHierarchyResolver
 {
-  private readonly Dictionary<string, Plant3dClassHierarchy> _classHierarchyCache = [];
+  private readonly Dictionary<string, Plant3dClassHierarchy?> _classHierarchyCache = [];
   private const string PNP_BASE_CLASS_NAME = "PnPBase";
 
   /// <summary>
   /// Traverses the object's class hierarchy to provide a fully qualified category and individual category levels.
   /// </summary>
-  public Plant3dClassHierarchy Resolve(PPDL.DataLinksManager dataLinksManager, ObjectId objectId)
+  public Plant3dClassHierarchy? Resolve(PPDL.DataLinksManager dataLinksManager, ObjectId objectId)
   {
     ArgumentNullException.ThrowIfNull(dataLinksManager);
 
@@ -25,11 +25,11 @@ public class Plant3dClassHierarchyResolver
     return Resolve(database, className);
   }
 
-  private Plant3dClassHierarchy Resolve(PnPDatabase database, string className)
+  private Plant3dClassHierarchy? Resolve(PnPDatabase database, string className)
   {
     if (string.IsNullOrWhiteSpace(className))
     {
-      return new();
+      return null;
     }
 
     // Class names will be unique as they represent table names in the Plant 3D project database.
@@ -44,9 +44,9 @@ public class Plant3dClassHierarchyResolver
     return hierarchy;
   }
 
-  private static Plant3dClassHierarchy BuildHierarchyPath(PnPDatabase database, string? className)
+  private static Plant3dClassHierarchy? BuildHierarchyPath(PnPDatabase database, string? className)
   {
-    List<string> hierarchy = [];
+    List<string> levels = [];
 
     // Traverse the class hierarchy until we reach the base class (PnPBase) or an empty class name.
     while (
@@ -54,39 +54,30 @@ public class Plant3dClassHierarchyResolver
       && !string.Equals(className, PNP_BASE_CLASS_NAME, StringComparison.OrdinalIgnoreCase)
     )
     {
-      hierarchy.Add(className);
+      levels.Add(className);
 
       PnPTable? classTable = database.Tables.Contains(className) ? database.Tables[className] : null;
       className = classTable?.BaseTableName;
     }
 
-    hierarchy.Reverse();
+    if (levels.Count == 0)
+    {
+      return null;
+    }
 
-    return Plant3dClassHierarchy.FromList(hierarchy);
+    levels.Reverse();
+
+    return new Plant3dClassHierarchy(levels);
   }
 }
 
 /// <summary>
 /// Represents a category from the Plant 3D Data Manager, provides the full category, and level by level.
 /// </summary>
-public record Plant3dClassHierarchy(
-  string Category = "",
-  string Level1 = "",
-  string Level2 = "",
-  string Level3 = "",
-  string Level4 = "",
-  string Level5 = ""
-)
+public class Plant3dClassHierarchy(IReadOnlyList<string> levels)
 {
   private const string CLASS_HIERARCHY_SEPARATOR = " > ";
 
-  public static Plant3dClassHierarchy FromList(IReadOnlyList<string> hierarchy)
-  {
-    return new(string.Join(CLASS_HIERARCHY_SEPARATOR, hierarchy), Level(0), Level(1), Level(2), Level(3), Level(4));
-
-    string Level(int index)
-    {
-      return hierarchy.Count > index ? hierarchy[index] : string.Empty;
-    }
-  }
+  public string Category { get; } = string.Join(CLASS_HIERARCHY_SEPARATOR, levels);
+  public IReadOnlyList<string> Levels { get; } = levels;
 }

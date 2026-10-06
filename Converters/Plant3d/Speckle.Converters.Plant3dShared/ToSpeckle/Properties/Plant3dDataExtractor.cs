@@ -94,20 +94,29 @@ public class Plant3dDataExtractor
   )
   {
     var classHierarchy = _classHierarchyResolver.Resolve(dataLinksManager, entity.ObjectId);
-    var properties = new Dictionary<string, object>()
+    var hasGroup = _lineGroupResolver.TryGetGroupInfo(dataLinksManager, entity.ObjectId, out var groupInfo);
+
+    if (classHierarchy is null && (!hasGroup || groupInfo is null))
     {
-      { "Category", classHierarchy.Category },
-      { "Level1", classHierarchy.Level1 },
-      { "Level2", classHierarchy.Level2 },
-      { "Level3", classHierarchy.Level3 },
-      { "Level4", classHierarchy.Level4 },
-      { "Level5", classHierarchy.Level5 },
-    };
+      return;
+    }
+
+    var properties = new Dictionary<string, object>();
     result["Data Manager"] = properties;
 
-    if (_lineGroupResolver.TryGetGroupId(dataLinksManager, entity.ObjectId, out var groupId))
+    if (classHierarchy is not null)
     {
-      properties["GroupId"] = groupId;
+      properties["Category"] = classHierarchy.Category;
+      for (int i = 0; i < classHierarchy.Levels?.Count; i++)
+      {
+        properties[$"Level {i + 1}"] = classHierarchy.Levels[i];
+      }
+    }
+
+    if (groupInfo is not null)
+    {
+      properties["Group Id"] = groupInfo.GroupId;
+      properties["Group Type"] = groupInfo.GroupType;
     }
   }
 }
