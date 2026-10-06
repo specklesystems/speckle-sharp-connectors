@@ -94,7 +94,7 @@ public class Plant3dDataExtractor
   )
   {
     var classHierarchy = _classHierarchyResolver.Resolve(dataLinksManager, entity.ObjectId);
-    var hasGroup = _lineGroupResolver.TryGetGroupInfo(dataLinksManager, entity.ObjectId, out var groupInfo);
+    var hasGroup = _lineGroupResolver.TryGetGroupInfo(dataLinksManager, entity, out var groupInfo);
 
     if (classHierarchy is null && (!hasGroup || groupInfo is null))
     {

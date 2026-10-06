@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.ProcessPower.PnIDObjects;
 using Microsoft.Extensions.Logging;
+using Speckle.Sdk;
+using AR = Autodesk.AutoCAD.Runtime;
 
 namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 
@@ -12,18 +14,19 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
 
   private bool Initialize(PPDL.DataLinksManager dataLinksManager)
   {
+    _initState = InitState.Failed;
+
     // Initialize and validate the LineGroupManager by calling a method that will throw if not available
     var context = new LineGroupManagerContext(dataLinksManager);
-    if (Validate(context))
+    if (!Validate(context))
     {
-      _context = context;
-      _initState = InitState.Success;
-      return true;
+      context.Dispose();
+      return false;
     }
 
-    context.Dispose();
-    _initState = InitState.Failed;
-    return false;
+    _context = context;
+    _initState = InitState.Success;
+    return true;
   }
 
   private bool Validate(LineGroupManagerContext context)
@@ -33,9 +36,9 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
       context.Validate();
       return true;
     }
-    catch (Autodesk.AutoCAD.Runtime.Exception ex)
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      logger.LogWarning(ex, "Failed to validate the LineGroupManager (2D drawings only)");
+      logger.LogDebug("Failed to validate the LineGroupManager (2D drawings only)");
       return false;
     }
   }
@@ -56,17 +59,13 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
   /// The dataLinksManager is used to initialize the LineGroupManager the first time this method is called.
   /// Subsequent calls will use the cached LineGroupManager.
   /// </summary>
-  public bool TryGetGroupInfo(
-    PPDL.DataLinksManager dataLinksManager,
-    ADB.ObjectId objectId,
-    out LineGroupInfo? groupInfo
-  )
+  public bool TryGetGroupInfo(PPDL.DataLinksManager dataLinksManager, ADB.Entity entity, out LineGroupInfo? groupInfo)
   {
     try
     {
-      if (EnsureInitialized(dataLinksManager))
+      if (entity is LineSegment && EnsureInitialized(dataLinksManager))
       {
-        var groupId = _context.LineGroupManager.GroupId(objectId);
+        var groupId = _context.LineGroupManager.GroupId(entity.ObjectId);
         if (groupId > 0)
         {
           var groupType = _context.LineGroupManager.Type(groupId).ToString();
@@ -76,7 +75,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
       }
     }
     // The call to GroupId will raise an exception with the message "eNotImplementedYet" if the object can not participate in a group.
-    catch (Autodesk.AutoCAD.Runtime.Exception) { }
+    catch (AR.Exception ex) when (ex.ErrorStatus == AR.ErrorStatus.NotImplementedYet) { }
 
     groupInfo = null;
     return false;
