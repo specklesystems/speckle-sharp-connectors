@@ -5,7 +5,7 @@ namespace Speckle.Common.StructuralExtrusion;
 /// <summary>
 /// Turns a <see cref="SectionProfile"/> into its outline polygon. Shapes are drawn with +x as "up" (local 2) and
 /// +y along local 3; asymmetric shapes put their web/vertical leg on the -y side and their flange/horizontal leg
-/// at -x, matching the CSi section viewer.
+/// at -x.
 /// </summary>
 public static class SectionProfileCatalog
 {
