@@ -202,13 +202,28 @@ public sealed class VolumetricDisplayValueExtractor
       }
       normal = Vector3.Normalize(normal);
       var assignments = _shellAssignments.Read(shell.Name, offsets, matrix, thickness);
+      var boundary = ShellBoundaryReader.TryRead(
+        areaObj,
+        shell.Name,
+        points,
+        _settingsStore.Current.SpeckleUnits,
+        out string failure
+      );
+      if (boundary is null)
+      {
+        return Fallback(ModelObjectType.SHELL, failure);
+      }
+      assignments = new ShellGeometryAssignments(
+        boundary.Interpolate(assignments.Displacements),
+        boundary.Interpolate(assignments.Thicknesses)
+      );
       PrismMesh? prism;
       if (
         assignments.Displacements.All(displacement => displacement == assignments.Displacements[0])
         && assignments.Thicknesses.All(value => value == thickness)
       )
       {
-        prism = PrismBuilder.TryExtrudeOutline(points, thickness);
+        prism = PrismBuilder.TryExtrudeOutline(boundary.Points, thickness);
         if (prism is not null)
         {
           var shift = assignments.Displacements[0];
@@ -222,7 +237,7 @@ public sealed class VolumetricDisplayValueExtractor
       }
       else
       {
-        prism = ShellMeshBuilder.TryBuild(points, normal, assignments);
+        prism = ShellMeshBuilder.TryBuild(boundary.Points, normal, assignments);
       }
       return prism is null ? Fallback(ModelObjectType.SHELL, "degenerate-outline") : ToMesh(prism);
     }
