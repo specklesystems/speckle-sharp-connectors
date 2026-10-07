@@ -136,6 +136,20 @@ public class PhysicalFrameAxisTests
     Assert.That(fixture.Fallbacks.Counts["FRAME/zero-length"], Is.EqualTo(1));
   }
 
+  [Test]
+  public void Extrude_PhysicalAxisParallelToAnalyticalLocal2FallsBack()
+  {
+    var fixture = CreateFixture(0, 10, [], [-1500, 0, 1000], "Global");
+
+    var mesh = fixture.Extractor.TryExtrudeFrame(
+      new CsiFrameWrapper { Name = FRAME },
+      Axis(Vector3.Zero, new Vector3(1500, 0, 0))
+    );
+
+    Assert.That(mesh, Is.Null);
+    Assert.That(fixture.Fallbacks.Counts["FRAME/degenerate-axes"], Is.EqualTo(1));
+  }
+
   private static void AssertCap(
     Mesh mesh,
     int first,
