@@ -209,7 +209,12 @@ public sealed class VolumetricDisplayValueExtractor
     }
   }
 
-  private sealed record Insertion(ProfileOutline Outline, Vector3 StartOffset, Vector3 EndOffset, Vector2 CardinalShift);
+  private sealed record Insertion(
+    ProfileOutline Outline,
+    Vector3 StartOffset,
+    Vector3 EndOffset,
+    Vector2 CardinalShift
+  );
 
   private static Insertion ReadInsertion(cFrameObj frameObj, string frameName, ProfileOutline outline, LocalFrame frame)
   {
