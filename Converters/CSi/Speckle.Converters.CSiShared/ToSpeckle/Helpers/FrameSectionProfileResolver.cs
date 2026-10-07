@@ -1,6 +1,5 @@
 using Speckle.Common.StructuralExtrusion;
 using Speckle.Converters.Common;
-using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
@@ -15,7 +14,6 @@ public sealed record FrameSectionPrism(PrismTemplate? Template, ProfileOutline? 
 /// </summary>
 public sealed class FrameSectionProfileResolver
 {
-  // Root radii and fillets are not modelled, so the catalog area sits a little under the host's.
   public const double AREA_TOLERANCE = 0.05;
 
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
@@ -65,7 +63,7 @@ public sealed class FrameSectionProfileResolver
     if (outline is not null && type == eFramePropType.Channel && !mirrorAbout2)
     {
       // ENG-10468: an unmirrored CSI channel has its web on positive local 3.
-      outline = MirrorChannelAboutLocal2(outline);
+      outline = outline.MirrorAboutDepth();
     }
     if (outline is null)
     {
@@ -86,9 +84,6 @@ public sealed class FrameSectionProfileResolver
     return prism is null ? new(null, null, $"{shape}/tessellation-failed") : new(prism, outline, shape);
   }
 
-  private static ProfileOutline? MirrorChannelAboutLocal2(ProfileOutline outline) =>
-    ProfileOutline.TryCreate(outline.Outer.Select(point => new Vector2(point.X, -point.Y)).ToArray());
-
   private static SectionProfile? ReadProfile(
     cPropFrame propFrame,
     string name,
@@ -107,7 +102,8 @@ public sealed class FrameSectionProfileResolver
       tf = 0,
       tw = 0,
       t2b = 0,
-      tfb = 0;
+      tfb = 0,
+      rootRadius = 0;
 
     switch (type)
     {
@@ -122,7 +118,7 @@ public sealed class FrameSectionProfileResolver
           : null;
       case eFramePropType.I:
         if (
-          propFrame.GetISection(
+          propFrame.GetISection_1(
             name,
             ref fileName,
             ref material,
@@ -132,16 +128,36 @@ public sealed class FrameSectionProfileResolver
             ref tw,
             ref t2b,
             ref tfb,
+            ref rootRadius,
             ref color,
             ref notes,
             ref guid
           ) != 0
         )
         {
-          return null;
+          if (
+            propFrame.GetISection(
+              name,
+              ref fileName,
+              ref material,
+              ref t3,
+              ref t2,
+              ref tf,
+              ref tw,
+              ref t2b,
+              ref tfb,
+              ref color,
+              ref notes,
+              ref guid
+            ) != 0
+          )
+          {
+            return null;
+          }
+          rootRadius = 0;
         }
         // Symmetric catalogue sections may report the bottom flange as zero.
-        return new ISectionProfile(t3, t2, tf, tw, t2b > 0 ? t2b : t2, tfb > 0 ? tfb : tf);
+        return new ISectionProfile(t3, t2, tf, tw, t2b > 0 ? t2b : t2, tfb > 0 ? tfb : tf, rootRadius);
       case eFramePropType.Channel:
         return
           propFrame.GetChannel_1(

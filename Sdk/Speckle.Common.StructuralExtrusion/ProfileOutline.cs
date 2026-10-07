@@ -18,6 +18,14 @@ public sealed class ProfileOutline
   public double MinWidth { get; }
   public double MaxWidth { get; }
 
+  public ProfileOutline MirrorAboutDepth() =>
+    TryCreate(
+      Outer.Select(point => new Vector2(point.X, -point.Y)).ToArray(),
+      Holes
+        .Select(hole => (IReadOnlyList<Vector2>)hole.Select(point => new Vector2(point.X, -point.Y)).ToArray())
+        .ToArray()
+    )!;
+
   private ProfileOutline(IReadOnlyList<Vector2> outer, IReadOnlyList<IReadOnlyList<Vector2>> holes, double area)
   {
     Outer = outer;

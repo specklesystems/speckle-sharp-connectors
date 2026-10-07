@@ -10,6 +10,7 @@ namespace Speckle.Common.StructuralExtrusion;
 public static class SectionProfileCatalog
 {
   public const int CIRCLE_SEGMENTS = 24;
+  private const int ROOT_FILLET_SEGMENTS = 12;
 
   /// <summary>Null when a dimension is non-positive or the walls do not fit inside the envelope.</summary>
   public static ProfileOutline? TryBuild(SectionProfile profile)
@@ -46,6 +47,11 @@ public static class SectionProfileCatalog
       )
       || p.TopFlangeThickness + p.BottomFlangeThickness >= p.Depth
       || p.WebThickness >= Math.Min(p.TopFlangeWidth, p.BottomFlangeWidth)
+      || double.IsNaN(p.RootRadius)
+      || double.IsInfinity(p.RootRadius)
+      || p.RootRadius < 0
+      || 2 * p.RootRadius > p.Depth - p.TopFlangeThickness - p.BottomFlangeThickness
+      || 2 * p.RootRadius > Math.Min(p.TopFlangeWidth, p.BottomFlangeWidth) - p.WebThickness
     )
     {
       return null;
@@ -59,7 +65,8 @@ public static class SectionProfileCatalog
     double wb = p.BottomFlangeWidth / 2;
     double tw = p.WebThickness / 2;
 
-    return ProfileOutline.TryCreate([
+    Vector2[] corners =
+    [
       new(bottom, -wb),
       new(bottom, wb),
       new(bottomInner, wb),
@@ -72,7 +79,33 @@ public static class SectionProfileCatalog
       new(topInner, -tw),
       new(bottomInner, -tw),
       new(bottomInner, -wb),
-    ]);
+    ];
+    if (p.RootRadius == 0)
+    {
+      return ProfileOutline.TryCreate(corners);
+    }
+
+    var points = new List<Vector2>();
+    for (int i = 0; i < corners.Length; i++)
+    {
+      if (i is not (3 or 4 or 9 or 10))
+      {
+        points.Add(corners[i]);
+        continue;
+      }
+
+      var corner = corners[i];
+      var incoming = Vector2.Normalize(corners[i - 1] - corner);
+      var outgoing = Vector2.Normalize(corners[i + 1] - corner);
+      var centre = corner + p.RootRadius * (incoming + outgoing);
+      double startAngle = Math.Atan2(-outgoing.Y, -outgoing.X);
+      for (int segment = 0; segment <= ROOT_FILLET_SEGMENTS; segment++)
+      {
+        double angle = startAngle + segment * Math.PI / (2 * ROOT_FILLET_SEGMENTS);
+        points.Add(centre + p.RootRadius * new Vector2(Math.Cos(angle), Math.Sin(angle)));
+      }
+    }
+    return ProfileOutline.TryCreate(points);
   }
 
   private static ProfileOutline? Channel(ChannelProfile p)

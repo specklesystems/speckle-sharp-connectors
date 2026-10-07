@@ -89,9 +89,12 @@ public sealed class VolumetricDisplayValueExtractor
       }
 
       var insertion = ReadInsertion(frameObj, frame.Name, section.Outline, localFrame.Value);
-      if (insertion is null)
+      var template = ReferenceEquals(insertion.Outline, section.Outline)
+        ? section.Template
+        : PrismBuilder.TryBuildUnitPrism(insertion.Outline);
+      if (template is null)
       {
-        return Fallback(ModelObjectType.FRAME, "mirrored-section");
+        return Fallback(ModelObjectType.FRAME, $"{section.ShapeKey}/tessellation-failed");
       }
 
       var physicalStart = start + insertion.StartOffset;
@@ -108,7 +111,7 @@ public sealed class VolumetricDisplayValueExtractor
 
       return ToMesh(
         PrismBuilder.Place(
-          section.Template,
+          template,
           placement.Value.Start,
           placement.Value.Frame,
           placement.Value.Length,
@@ -206,14 +209,9 @@ public sealed class VolumetricDisplayValueExtractor
     }
   }
 
-  private sealed record Insertion(Vector3 StartOffset, Vector3 EndOffset, Vector2 CardinalShift);
+  private sealed record Insertion(ProfileOutline Outline, Vector3 StartOffset, Vector3 EndOffset, Vector2 CardinalShift);
 
-  private static Insertion? ReadInsertion(
-    cFrameObj frameObj,
-    string frameName,
-    ProfileOutline outline,
-    LocalFrame frame
-  )
+  private static Insertion ReadInsertion(cFrameObj frameObj, string frameName, ProfileOutline outline, LocalFrame frame)
   {
     int cardinalPoint = CARDINAL_POINT_CENTROID;
     bool mirror2 = false,
@@ -232,13 +230,13 @@ public sealed class VolumetricDisplayValueExtractor
     );
     if (mirror2)
     {
-      return null;
+      outline = outline.MirrorAboutDepth();
     }
 
     var cardinalShift = CardinalPointShift(outline, cardinalPoint);
     var startJoint = ToWorldOffset(jointOffset1, offsetSystem, frame);
     var endJoint = ToWorldOffset(jointOffset2, offsetSystem, frame);
-    return new Insertion(startJoint, endJoint, cardinalShift);
+    return new Insertion(outline, startJoint, endJoint, cardinalShift);
   }
 
   // CSi cardinal points 1-9 sit on the section's bounding box (rows bottom/middle/top along local 2, columns
