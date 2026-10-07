@@ -330,6 +330,32 @@ public class CircularFramePathTests
     Assert.That(fixture.Fallbacks.Total, Is.Zero);
   }
 
+  [Test]
+  public void Extrude_ShallowArcAtLargeGlobalCoordinatesKeepsOrderedAnchors()
+  {
+    var center = new Vector3(1000000, 2000000, 3000000);
+    var first = center + new Vector3(-10000 * Math.Sin(0.1), 10000 * Math.Cos(0.1), 0);
+    var last = center + new Vector3(10000 * Math.Sin(0.1), 10000 * Math.Cos(0.1), 0);
+    var source = new Source([first, last, center + new Vector3(0, 10000, 0)]);
+    var fixture = CreateFixture(source);
+
+    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(source));
+
+    Assert.That(mesh, Is.Not.Null);
+    var vertices = Vertices(mesh!).ToArray();
+    Assert.That((vertices.Take(4).Aggregate(Vector3.Zero, (a, b) => a + b) / 4 - first).Length(), Is.LessThan(1e-6));
+    Assert.That((vertices.TakeLast(4).Aggregate(Vector3.Zero, (a, b) => a + b) / 4 - last).Length(), Is.LessThan(1e-6));
+    foreach (var vertex in vertices)
+    {
+      var relative = vertex - center;
+      Assert.That(Math.Sqrt(relative.X * relative.X + relative.Y * relative.Y), Is.InRange(9980 - 1e-6, 10020 + 1e-6));
+      Assert.That(relative.Z, Is.InRange(-40 - 1e-6, 40 + 1e-6));
+    }
+    Assert.That(vertices.Max(p => p.Y), Is.GreaterThan(center.Y + 9999));
+    AssertClosed(mesh!);
+    Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
   private static Line Axis() =>
     new()
     {
@@ -459,9 +485,9 @@ public class CircularFramePathTests
           {
             curveType = source.Type;
             count = source.Controls.Length;
-            x = source.Controls.Select(p => p.X).ToArray();
-            y = source.Controls.Select(p => p.Y).ToArray();
-            z = source.Controls.Select(p => p.Z).ToArray();
+            x = source.Controls.Length == 0 ? null! : source.Controls.Select(p => p.X).ToArray();
+            y = source.Controls.Length == 0 ? null! : source.Controls.Select(p => p.Y).ToArray();
+            z = source.Controls.Length == 0 ? null! : source.Controls.Select(p => p.Z).ToArray();
             return source.ReturnCode;
           }
         )
