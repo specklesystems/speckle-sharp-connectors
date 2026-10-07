@@ -55,5 +55,13 @@
       Link="VolumetricDisplayValueExtractor.cs"
     />
     <Compile Include="../Speckle.Converters.CSiShared/Utils/Constants.cs" Link="Constants.cs" />
+    <Compile
+      Include="../Speckle.Converters.CSiShared/ToSpeckle/Helpers/ShellGeometryAssignmentReader.cs"
+      Link="ShellGeometryAssignmentReader.cs"
+    />
+    <Compile
+      Include="../Speckle.Converters.CSiShared/ToSpeckle/Helpers/ShellMeshBuilder.cs"
+      Link="ShellMeshBuilder.cs"
+    />
   </ItemGroup>
 </Project>

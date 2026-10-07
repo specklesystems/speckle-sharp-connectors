@@ -23,6 +23,7 @@ public sealed class VolumetricDisplayValueExtractor
   private readonly FrameSectionProfileResolver _profileResolver;
   private readonly IShellThicknessResolver _thicknessResolver;
   private readonly ExtrusionFallbackTracker _fallbacks;
+  private readonly ShellGeometryAssignmentReader _shellAssignments;
 
   public VolumetricDisplayValueExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
@@ -35,6 +36,7 @@ public sealed class VolumetricDisplayValueExtractor
     _profileResolver = profileResolver;
     _thicknessResolver = thicknessResolver;
     _fallbacks = fallbacks;
+    _shellAssignments = new ShellGeometryAssignmentReader(settingsStore);
   }
 
   public Mesh? TryExtrudeFrame(CsiFrameWrapper frame, Line axis)
@@ -141,7 +143,55 @@ public sealed class VolumetricDisplayValueExtractor
         points.Add(new Vector3(outline.vertices[i], outline.vertices[i + 1], outline.vertices[i + 2]));
       }
 
-      var prism = PrismBuilder.TryExtrudeOutline(points, thickness);
+      int count = 0;
+      double[] offsets = [],
+        matrix = [];
+      if (
+        areaObj.GetOffsets3(shell.Name, ref count, ref offsets) != 0
+        || count != points.Count
+        || offsets.Length != count
+        || offsets.Any(offset => double.IsNaN(offset) || double.IsInfinity(offset))
+      )
+      {
+        return Fallback(ModelObjectType.SHELL, "invalid-insertion");
+      }
+      if (
+        areaObj.GetTransformationMatrix(shell.Name, ref matrix, true) != 0
+        || matrix.Length != 9
+        || matrix.Any(value => double.IsNaN(value) || double.IsInfinity(value))
+      )
+      {
+        return Fallback(ModelObjectType.SHELL, "invalid-axes");
+      }
+      var normal = new Vector3(matrix[2], matrix[5], matrix[8]);
+      if (normal.LengthSquared() < 1e-12)
+      {
+        return Fallback(ModelObjectType.SHELL, "invalid-axes");
+      }
+      normal = Vector3.Normalize(normal);
+      var assignments = _shellAssignments.Read(shell.Name, offsets, matrix, thickness);
+      PrismMesh? prism;
+      if (
+        assignments.Displacements.All(displacement => displacement == assignments.Displacements[0])
+        && assignments.Thicknesses.All(value => value == thickness)
+      )
+      {
+        prism = PrismBuilder.TryExtrudeOutline(points, thickness);
+        if (prism is not null)
+        {
+          var shift = assignments.Displacements[0];
+          for (int i = 0; i < prism.Vertices.Count; i += 3)
+          {
+            prism.Vertices[i] += shift.X;
+            prism.Vertices[i + 1] += shift.Y;
+            prism.Vertices[i + 2] += shift.Z;
+          }
+        }
+      }
+      else
+      {
+        prism = ShellMeshBuilder.TryBuild(points, normal, assignments);
+      }
       return prism is null ? Fallback(ModelObjectType.SHELL, "degenerate-outline") : ToMesh(prism);
     }
     catch (Exception ex) when (!ex.IsFatal())
