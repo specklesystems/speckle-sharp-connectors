@@ -110,6 +110,20 @@ public class CurvedShellTests
     AssertClosed(mesh!);
   }
 
+  [TestCase(2999)]
+  [TestCase(3001)]
+  [TestCase(4000)]
+  public void Extrude_CrossingCurveWithUniformAssignmentsFallsBack(double throughY)
+  {
+    Vector3[] corners = [new(0, 0, 0), new(4000, 0, 0), new(4000, 3000, 0), new(0, 3000, 0)];
+    var fixture = CreateFixture([1, 0, 0, 0], [3, 0, 0, 0], [corners[0], corners[1], new(2000, throughY, 0)]);
+
+    var mesh = fixture.Extractor.TryExtrudeShell(new CsiShellWrapper { Name = SHELL }, Outline(corners));
+
+    Assert.That(mesh, Is.Null);
+    Assert.That(fixture.Fallbacks.Counts["SHELL/degenerate-outline"], Is.EqualTo(1));
+  }
+
   [Test]
   public void Extrude_StraightControlRetainsPreviousGeometry()
   {

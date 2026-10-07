@@ -219,7 +219,8 @@ public sealed class VolumetricDisplayValueExtractor
       );
       PrismMesh? prism;
       if (
-        assignments.Displacements.All(displacement => displacement == assignments.Displacements[0])
+        boundary.Points.Count == points.Count
+        && assignments.Displacements.All(displacement => displacement == assignments.Displacements[0])
         && assignments.Thicknesses.All(value => value == thickness)
       )
       {
