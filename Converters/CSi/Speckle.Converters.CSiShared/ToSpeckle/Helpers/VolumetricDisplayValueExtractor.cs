@@ -297,12 +297,7 @@ public sealed class VolumetricDisplayValueExtractor
     return path is null ? "degenerate-curve-controls" : null;
   }
 
-  private static Insertion ReadInsertion(
-    cFrameObj frameObj,
-    string frameName,
-    ProfileOutline outline,
-    LocalFrame frame
-  )
+  private static Insertion ReadInsertion(cFrameObj frameObj, string frameName, ProfileOutline outline, LocalFrame frame)
   {
     int cardinalPoint = CARDINAL_POINT_CENTROID;
     bool mirror2 = false,
