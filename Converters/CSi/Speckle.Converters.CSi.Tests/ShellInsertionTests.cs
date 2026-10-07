@@ -18,6 +18,16 @@ public class ShellInsertionTests
   private delegate int ReadProperty(string name, ref string section);
   private delegate int ReadOffsets(string name, ref int count, ref double[] offsets);
   private delegate int ReadMatrix(string name, ref double[] matrix, bool global);
+  private delegate int ReadCurves(
+    string name,
+    ref int count,
+    ref int[] types,
+    ref double[] tension,
+    ref int[] points,
+    ref double[] x,
+    ref double[] y,
+    ref double[] z
+  );
   private delegate int ReadTables(
     ref int count,
     ref string[] keys,
@@ -111,6 +121,98 @@ public class ShellInsertionTests
     }
     AssertClosed(mesh!);
     Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
+  [TestCase(false)]
+  [TestCase(true)]
+  public void Extrude_CurvedTopWithCornerVectorsAndThickness_InterpolatesSourceAssignments(bool reverse)
+  {
+    Vector3[] points = [new(0, 0, 0), new(4000, 0, 0), new(4000, 3000, 0), new(0, 3000, 0)];
+    if (reverse)
+    {
+      Array.Reverse(points);
+    }
+    var insertionRows = new TableRows(
+      ["UniqueName", "PointNumber", "CoordSys", "Offset1", "Offset2", "Offset3"],
+      [
+        SHELL,
+        "1",
+        "Global",
+        "5",
+        "7",
+        "11",
+        SHELL,
+        "2",
+        "",
+        "10",
+        "14",
+        "22",
+        SHELL,
+        "3",
+        "",
+        "15",
+        "21",
+        "33",
+        SHELL,
+        "4",
+        "",
+        "20",
+        "28",
+        "44",
+      ]
+    );
+    var thicknessRows = new TableRows(
+      ["UniqueName", "PointNumber", "Thickness"],
+      [SHELL, "1", "100", SHELL, "2", "0", SHELL, "3", "300", SHELL, "4", "400"]
+    );
+    var fixture = CreateFixture(
+      [-89, -78, -67, -56],
+      [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      insertionRows,
+      thicknessRows,
+      curve: new CurveData(3, [points[3], points[0], new(-1500, 1500, 0)])
+    );
+    var analytical = MeshOf(points);
+    var originalVertices = analytical.vertices.ToArray();
+    var originalFaces = analytical.faces.ToArray();
+
+    var mesh = fixture.Extractor.TryExtrudeShell(new CsiShellWrapper { Name = SHELL }, analytical);
+
+    Assert.That(mesh, Is.Not.Null);
+    Assert.That(fixture.Fallbacks.Total, Is.Zero);
+    Assert.That(analytical.vertices, Is.EqualTo(originalVertices));
+    Assert.That(analytical.faces, Is.EqualTo(originalFaces));
+    var vertices = Vertices(mesh!);
+    int ringCount = vertices.Length / 2;
+    Assert.That(ringCount, Is.GreaterThan(50));
+    double[] lower = [-139, -178, -217, -256];
+    double[] upper = [-39, 22, 83, 144];
+    for (int i = 0; i < 4; i++)
+    {
+      var shift = new Vector3(5 * (i + 1), 7 * (i + 1), 0);
+      Assert.That((vertices[i] - points[i] - shift - lower[i] * Vector3.UnitZ).Length(), Is.LessThan(1e-7));
+      Assert.That((vertices[ringCount + i] - points[i] - shift - upper[i] * Vector3.UnitZ).Length(), Is.LessThan(1e-7));
+    }
+    AssertVertex(mesh!, new Vector3(-1487.5, 1517.5, -197.5));
+    AssertVertex(mesh!, new Vector3(-1487.5, 1517.5, 52.5));
+    for (int i = 4; i < ringCount; i++)
+    {
+      double fraction = (vertices[i].Z + 256) / 117;
+      Assert.That(fraction, Is.InRange(0.0, 1.0));
+      double angle = Math.PI * fraction;
+      double y = 1500 + (reverse ? -1500 : 1500) * Math.Cos(angle);
+      var expectedLower = new Vector3(
+        -1500 * Math.Sin(angle) + 20 - 15 * fraction,
+        y + 28 - 21 * fraction,
+        -256 + 117 * fraction
+      );
+      var expectedUpper = new Vector3(expectedLower.X, expectedLower.Y, 144 - 183 * fraction);
+      Assert.That((vertices[i] - expectedLower).Length(), Is.LessThan(1e-6));
+      Assert.That((vertices[ringCount + i] - expectedUpper).Length(), Is.LessThan(1e-6));
+      Assert.That(vertices[ringCount + i].Z - vertices[i].Z, Is.EqualTo(400 - 300 * fraction).Within(1e-6));
+    }
+    AssertClosed(mesh!);
+    Assert.That(mesh!.units, Is.EqualTo("mm"));
   }
 
   [TestCase("Global")]
@@ -257,6 +359,8 @@ public class ShellInsertionTests
 
   private sealed record TableRows(string[] Fields, string[] Data);
 
+  private sealed record CurveData(int Edge, Vector3[] Controls);
+
   private sealed record Fixture(
     VolumetricDisplayValueExtractor Extractor,
     ExtrusionFallbackTracker Fallbacks,
@@ -269,7 +373,8 @@ public class ShellInsertionTests
     TableRows? insertionRows = null,
     TableRows? thicknessRows = null,
     int offsetResult = 0,
-    int? offsetCount = null
+    int? offsetCount = null,
+    CurveData? curve = null
   )
   {
     var areas = new Mock<cAreaObj>();
@@ -303,6 +408,56 @@ public class ShellInsertionTests
           (string _, ref double[] value, bool global) =>
           {
             value = matrix;
+            return 0;
+          }
+        )
+      );
+    areas
+      .Setup(x =>
+        x.GetCurvedEdges(
+          SHELL,
+          ref It.Ref<int>.IsAny,
+          ref It.Ref<int[]>.IsAny,
+          ref It.Ref<double[]>.IsAny,
+          ref It.Ref<int[]>.IsAny,
+          ref It.Ref<double[]>.IsAny,
+          ref It.Ref<double[]>.IsAny,
+          ref It.Ref<double[]>.IsAny
+        )
+      )
+      .Returns(
+        new ReadCurves(
+          (
+            string _,
+            ref int count,
+            ref int[] types,
+            ref double[] tension,
+            ref int[] counts,
+            ref double[] x,
+            ref double[] y,
+            ref double[] z
+          ) =>
+          {
+            if (curve is null)
+            {
+              count = offsets.Length;
+              types = new int[count];
+              tension = new double[count];
+              counts = new int[count];
+              x = [];
+              y = [];
+              z = [];
+              return 0;
+            }
+            count = offsets.Length;
+            types = new int[count];
+            types[curve.Edge] = 1;
+            tension = new double[count];
+            counts = new int[count];
+            counts[curve.Edge] = curve.Controls.Length;
+            x = curve.Controls.Select(p => p.X).ToArray();
+            y = curve.Controls.Select(p => p.Y).ToArray();
+            z = curve.Controls.Select(p => p.Z).ToArray();
             return 0;
           }
         )

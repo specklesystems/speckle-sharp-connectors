@@ -18,6 +18,13 @@ public class CurvedShellTests
   private delegate int ReadProperty(string name, ref string property);
   private delegate int ReadOffsets(string name, ref int count, ref double[] offsets);
   private delegate int ReadMatrix(string name, ref double[] matrix, bool global);
+  private delegate int ReadTables(
+    ref int count,
+    ref string[] keys,
+    ref string[] names,
+    ref int[] importTypes,
+    ref bool[] empty
+  );
   private delegate int ReadCurves(
     string name,
     ref int count,
@@ -116,6 +123,20 @@ public class CurvedShellTests
     Assert.That(actual!.vertices, Is.EqualTo(expected.Vertices));
     Assert.That(actual.faces, Is.EqualTo(expected.Faces));
     Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
+  [TestCase(0, "invalid-curve-data")]
+  [TestCase(1, "curve-read-failed")]
+  [TestCase(2, "curve-read-failed")]
+  public void Extrude_EmptyCurveResponseFallsBack(int result, string reason)
+  {
+    Vector3[] corners = [new(0, 0, 0), new(4000, 0, 0), new(4000, 3000, 0), new(0, 3000, 0)];
+    var fixture = CreateFixture([], [], [], curveResult: result);
+
+    var actual = fixture.Extractor.TryExtrudeShell(new CsiShellWrapper { Name = SHELL }, Outline(corners));
+
+    Assert.That(actual, Is.Null);
+    Assert.That(fixture.Fallbacks.Counts["SHELL/" + reason], Is.EqualTo(1));
   }
 
   [Test]
@@ -405,19 +426,27 @@ public class CurvedShellTests
     var areas = new Mock<cAreaObj>();
     areas
       .Setup(x => x.GetOffsets3(SHELL, ref It.Ref<int>.IsAny, ref It.Ref<double[]>.IsAny))
-      .Returns(new ReadOffsets((string _, ref int count, ref double[] offsets) =>
-      {
-        count = 4;
-        offsets = new double[4];
-        return 0;
-      }));
+      .Returns(
+        new ReadOffsets(
+          (string _, ref int count, ref double[] offsets) =>
+          {
+            count = 4;
+            offsets = new double[4];
+            return 0;
+          }
+        )
+      );
     areas
       .Setup(x => x.GetTransformationMatrix(SHELL, ref It.Ref<double[]>.IsAny, true))
-      .Returns(new ReadMatrix((string _, ref double[] matrix, bool global) =>
-      {
-        matrix = sloped ? [1, 0, 0, 0, 0.8, -0.6, 0, 0.6, 0.8] : [1, 0, 0, 0, 1, 0, 0, 0, 1];
-        return 0;
-      }));
+      .Returns(
+        new ReadMatrix(
+          (string _, ref double[] matrix, bool global) =>
+          {
+            matrix = sloped ? [1, 0, 0, 0, 0.8, -0.6, 0, 0.6, 0.8] : [1, 0, 0, 0, 1, 0, 0, 0, 1];
+            return 0;
+          }
+        )
+      );
     areas
       .Setup(x => x.GetOpening(SHELL, ref It.Ref<bool>.IsAny))
       .Returns(new ReadOpening((string _, ref bool opening) => 0));
@@ -471,7 +500,31 @@ public class CurvedShellTests
       );
     var model = new Mock<cSapModel>();
     model.SetupGet(x => x.AreaObj).Returns(areas.Object);
-    model.SetupGet(x => x.DatabaseTables).Returns(new Mock<cDatabaseTables>().Object);
+    var tables = new Mock<cDatabaseTables>();
+    tables
+      .Setup(x =>
+        x.GetAllTables(
+          ref It.Ref<int>.IsAny,
+          ref It.Ref<string[]>.IsAny,
+          ref It.Ref<string[]>.IsAny,
+          ref It.Ref<int[]>.IsAny,
+          ref It.Ref<bool[]>.IsAny
+        )
+      )
+      .Returns(
+        new ReadTables(
+          (ref int count, ref string[] keys, ref string[] names, ref int[] types, ref bool[] empty) =>
+          {
+            count = 2;
+            keys = ["Area Assignments - Insertion Point", "Area Assignments - Thickness Overwrites"];
+            names = keys;
+            types = [1, 1];
+            empty = [true, true];
+            return 0;
+          }
+        )
+      );
+    model.SetupGet(x => x.DatabaseTables).Returns(tables.Object);
     var store = new ConverterSettingsStore<CsiConversionSettings>();
     store.Initialize(new CsiConversionSettings(model.Object, units, SendVolumetricGeometry: true));
     var cache = new CsiToSpeckleCacheSingleton();

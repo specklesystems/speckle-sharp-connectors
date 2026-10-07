@@ -68,7 +68,7 @@ internal static class ShellBoundaryReader
       return null;
     }
     double tolerance = CHORD_TOLERANCE_MM / Units.GetConversionFactor(units, Units.Millimeters);
-    if (!double.IsFinite(tolerance) || tolerance <= 0 || units == Units.None)
+    if (!Finite(tolerance) || tolerance <= 0 || units == Units.None)
     {
       failure = "curve-units-unsupported";
       return null;
@@ -119,7 +119,7 @@ internal static class ShellBoundaryReader
       double firstSegments = Math.Ceiling(Math.Abs(arc.Sweep * arc.ThroughFraction) / step);
       double secondSegments = Math.Ceiling(Math.Abs(arc.Sweep * (1 - arc.ThroughFraction)) / step);
       double segments = firstSegments + secondSegments;
-      if (!double.IsFinite(segments) || segments < 1 || segments > MAX_EDGE_SEGMENTS)
+      if (!Finite(segments) || segments < 1 || segments > MAX_EDGE_SEGMENTS)
       {
         failure = "curve-tessellation-limit";
         return null;
@@ -148,7 +148,9 @@ internal static class ShellBoundaryReader
     return new ShellBoundary(points, sources, count);
   }
 
-  private static bool Finite(Vector3 p) => double.IsFinite(p.X) && double.IsFinite(p.Y) && double.IsFinite(p.Z);
+  private static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+
+  private static bool Finite(Vector3 p) => Finite(p.X) && Finite(p.Y) && Finite(p.Z);
 
   private static bool Planar(IReadOnlyList<Vector3> corners, Vector3 through, double tolerance)
   {
@@ -158,7 +160,7 @@ internal static class ShellBoundaryReader
       normal += Vector3.Cross(corners[i] - corners[0], corners[(i + 1) % corners.Count] - corners[0]);
     }
     double length = normal.Length();
-    return double.IsFinite(length)
+    return Finite(length)
       && length > 0
       && corners.Append(through).All(p => Math.Abs(Vector3.Dot(p - corners[0], normal / length)) <= tolerance);
   }
@@ -197,7 +199,7 @@ internal static class ShellBoundaryReader
     {
       var chord = end - start;
       double length = chord.Length();
-      if (!double.IsFinite(length) || length <= 0)
+      if (!Finite(length) || length <= 0)
       {
         return null;
       }
@@ -205,7 +207,7 @@ internal static class ShellBoundaryReader
       var delta = through - start;
       var perpendicular = delta - Vector3.Dot(delta, xAxis) * xAxis;
       double height = perpendicular.Length();
-      if (!double.IsFinite(height) || height <= length * 1e-12)
+      if (!Finite(height) || height <= length * 1e-12)
       {
         return null;
       }
@@ -215,7 +217,7 @@ internal static class ShellBoundaryReader
       var centre = start + length / 2 * xAxis + centreY * yAxis;
       var radius = start - centre;
       var tangent = Vector3.Cross(normal, radius);
-      if (!Finite(centre) || !double.IsFinite(radius.Length()) || radius.Length() <= 0)
+      if (!Finite(centre) || !Finite(radius.Length()) || radius.Length() <= 0)
       {
         return null;
       }
@@ -224,7 +226,7 @@ internal static class ShellBoundaryReader
       double sweep = throughAngle < endAngle ? endAngle : endAngle - 2 * Math.PI;
       double throughSweep = sweep > 0 ? throughAngle : throughAngle - 2 * Math.PI;
       double fraction = throughSweep / sweep;
-      return double.IsFinite(fraction) && fraction > 0 && fraction < 1
+      return Finite(fraction) && fraction > 0 && fraction < 1
         ? new CircularArc(centre, radius, tangent, sweep, fraction)
         : null;
 
