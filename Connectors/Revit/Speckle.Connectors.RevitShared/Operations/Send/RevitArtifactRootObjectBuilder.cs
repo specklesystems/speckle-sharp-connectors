@@ -805,11 +805,11 @@ public class RevitArtifactRootObjectBuilder(
     EmitFittingCenterline(pipeline, objK, appId, revitElement);
   }
 
-  // Connector-derived branches for a fitting, ord = branch index so a tee's three stay ordered. See
-  // MepCenterlineExtractor for why it is one segment per connector.
+  // A fitting's centerline pieces, ord = piece index so they stay ordered. See MepCenterlineExtractor for where they
+  // come from: the family's own path curves, else one segment per connector.
   private void EmitFittingCenterline(ObjectsArtifactPipeline pipeline, int objK, string appId, Element revitElement)
   {
-    IReadOnlyList<SOG.Line> branches;
+    IReadOnlyList<Base> branches;
     try
     {
       branches = mepCenterlineExtractor.GetCenterlineBranches(revitElement);

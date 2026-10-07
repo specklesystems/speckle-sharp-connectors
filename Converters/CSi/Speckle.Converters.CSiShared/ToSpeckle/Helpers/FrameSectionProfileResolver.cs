@@ -1,5 +1,6 @@
 using Speckle.Common.StructuralExtrusion;
 using Speckle.Converters.Common;
+using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
@@ -54,13 +55,18 @@ public sealed class FrameSectionProfileResolver
     }
 
     string shape = type.ToString();
-    var profile = ReadProfile(propFrame, sectionName, type);
+    var profile = ReadProfile(propFrame, sectionName, type, out bool mirrorAbout2);
     if (profile is null)
     {
       return new(null, null, shape);
     }
 
     var outline = SectionProfileCatalog.TryBuild(profile);
+    if (outline is not null && type == eFramePropType.Channel && !mirrorAbout2)
+    {
+      // ENG-10468: an unmirrored CSI channel has its web on positive local 3.
+      outline = MirrorChannelAboutLocal2(outline);
+    }
     if (outline is null)
     {
       return new(null, null, $"{shape}/invalid-dimensions");
@@ -80,8 +86,17 @@ public sealed class FrameSectionProfileResolver
     return prism is null ? new(null, null, $"{shape}/tessellation-failed") : new(prism, outline, shape);
   }
 
-  private static SectionProfile? ReadProfile(cPropFrame propFrame, string name, eFramePropType type)
+  private static ProfileOutline? MirrorChannelAboutLocal2(ProfileOutline outline) =>
+    ProfileOutline.TryCreate(outline.Outer.Select(point => new Vector2(point.X, -point.Y)).ToArray());
+
+  private static SectionProfile? ReadProfile(
+    cPropFrame propFrame,
+    string name,
+    eFramePropType type,
+    out bool mirrorAbout2
+  )
   {
+    mirrorAbout2 = false;
     string fileName = string.Empty,
       material = string.Empty,
       notes = string.Empty,
@@ -129,7 +144,7 @@ public sealed class FrameSectionProfileResolver
         return new ISectionProfile(t3, t2, tf, tw, t2b > 0 ? t2b : t2, tfb > 0 ? tfb : tf);
       case eFramePropType.Channel:
         return
-          propFrame.GetChannel(
+          propFrame.GetChannel_1(
             name,
             ref fileName,
             ref material,
@@ -137,6 +152,7 @@ public sealed class FrameSectionProfileResolver
             ref t2,
             ref tf,
             ref tw,
+            ref mirrorAbout2,
             ref color,
             ref notes,
             ref guid
