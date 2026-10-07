@@ -6,6 +6,10 @@
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
+    <Compile
+      Include="../Speckle.Converters.CSiShared/ToSpeckle/Helpers/FramePhysicalPlacement.cs"
+      Link="FramePhysicalPlacement.cs"
+    />
     <PackageReference Include="altcover" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Moq" />

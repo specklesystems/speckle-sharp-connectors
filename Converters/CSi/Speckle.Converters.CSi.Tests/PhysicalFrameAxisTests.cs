@@ -70,11 +70,14 @@ public class PhysicalFrameAxisTests
     Assert.That(fixture.Fallbacks.Total, Is.Zero);
     Assert.That(new Vector3(axis.start.x, axis.start.y, axis.start.z), Is.EqualTo(sourceStart));
     Assert.That(new Vector3(axis.end.x, axis.end.y, axis.end.z), Is.EqualTo(sourceEnd));
-    TestContext.Out.WriteLine($"angle={angle}, reversed={reversed}, vertical={vertical}, local={local}: both caps perpendicular; ordered anchors and 800 x 400 mm profile verified");
+    TestContext.Out.WriteLine(
+      $"angle={angle}, reversed={reversed}, vertical={vertical}, local={local}: both caps perpendicular; ordered anchors and 800 x 400 mm profile verified"
+    );
 
-    Vector3 Offset(double[] values) => local
-      ? values[0] * analyticalZ + values[1] * rotated2 + values[2] * rotated3
-      : new Vector3(values[0], values[1], values[2]);
+    Vector3 Offset(double[] values) =>
+      local
+        ? values[0] * analyticalZ + values[1] * rotated2 + values[2] * rotated3
+        : new Vector3(values[0], values[1], values[2]);
   }
 
   [TestCase(0)]
@@ -86,11 +89,36 @@ public class PhysicalFrameAxisTests
     var widthAxis = new Vector3(0, -Math.Cos(radians), -Math.Sin(radians));
     var fixture = CreateFixture(angle, 10, [50, 80, -30], [50, 80, -30], "Global");
 
-    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(Vector3.Zero, new Vector3(1500, 0, 0)));
+    var mesh = fixture.Extractor.TryExtrudeFrame(
+      new CsiFrameWrapper { Name = FRAME },
+      Axis(Vector3.Zero, new Vector3(1500, 0, 0))
+    );
 
     Assert.That(mesh, Is.Not.Null);
-    AssertCap(mesh!, 0, new Vector3(50, 80, -30), depthAxis, widthAxis, Vector3.UnitX, -DEPTH / 2, DEPTH / 2, -WIDTH / 2, WIDTH / 2);
-    AssertCap(mesh!, 4, new Vector3(1550, 80, -30), depthAxis, widthAxis, Vector3.UnitX, -DEPTH / 2, DEPTH / 2, -WIDTH / 2, WIDTH / 2);
+    AssertCap(
+      mesh!,
+      0,
+      new Vector3(50, 80, -30),
+      depthAxis,
+      widthAxis,
+      Vector3.UnitX,
+      -DEPTH / 2,
+      DEPTH / 2,
+      -WIDTH / 2,
+      WIDTH / 2
+    );
+    AssertCap(
+      mesh!,
+      4,
+      new Vector3(1550, 80, -30),
+      depthAxis,
+      widthAxis,
+      Vector3.UnitX,
+      -DEPTH / 2,
+      DEPTH / 2,
+      -WIDTH / 2,
+      WIDTH / 2
+    );
     Assert.That(SignedVolume(mesh!), Is.EqualTo(DEPTH * WIDTH * 1500).Within(1e-3));
   }
 
@@ -99,13 +127,27 @@ public class PhysicalFrameAxisTests
   {
     var fixture = CreateFixture(0, 10, [], [-1500, 0, 0], "Global");
 
-    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(Vector3.Zero, new Vector3(1500, 0, 0)));
+    var mesh = fixture.Extractor.TryExtrudeFrame(
+      new CsiFrameWrapper { Name = FRAME },
+      Axis(Vector3.Zero, new Vector3(1500, 0, 0))
+    );
 
     Assert.That(mesh, Is.Null);
     Assert.That(fixture.Fallbacks.Counts["FRAME/zero-length"], Is.EqualTo(1));
   }
 
-  private static void AssertCap(Mesh mesh, int first, Vector3 anchor, Vector3 depthAxis, Vector3 widthAxis, Vector3 physicalZ, double minDepth, double maxDepth, double minWidth, double maxWidth)
+  private static void AssertCap(
+    Mesh mesh,
+    int first,
+    Vector3 anchor,
+    Vector3 depthAxis,
+    Vector3 widthAxis,
+    Vector3 physicalZ,
+    double minDepth,
+    double maxDepth,
+    double minWidth,
+    double maxWidth
+  )
   {
     var cap = Enumerable.Range(first, 4).Select(index => Vertex(mesh, index) - anchor).ToArray();
     var axial = cap.Select(point => Vector3.Dot(point, physicalZ)).ToArray();
@@ -117,7 +159,8 @@ public class PhysicalFrameAxisTests
     Assert.That(cap.Max(point => Vector3.Dot(point, widthAxis)), Is.EqualTo(maxWidth).Within(TOLERANCE));
   }
 
-  private static Vector3 Vertex(Mesh mesh, int index) => new(mesh.vertices[3 * index], mesh.vertices[3 * index + 1], mesh.vertices[3 * index + 2]);
+  private static Vector3 Vertex(Mesh mesh, int index) =>
+    new(mesh.vertices[3 * index], mesh.vertices[3 * index + 1], mesh.vertices[3 * index + 2]);
 
   private static double SignedVolume(Mesh mesh)
   {
@@ -125,50 +168,104 @@ public class PhysicalFrameAxisTests
     for (int i = 0; i < mesh.faces.Count; i += 4)
     {
       Assert.That(mesh.faces[i], Is.EqualTo(3));
-      volume += Vector3.Dot(Vertex(mesh, mesh.faces[i + 1]), Vector3.Cross(Vertex(mesh, mesh.faces[i + 2]), Vertex(mesh, mesh.faces[i + 3]))) / 6;
+      volume +=
+        Vector3.Dot(
+          Vertex(mesh, mesh.faces[i + 1]),
+          Vector3.Cross(Vertex(mesh, mesh.faces[i + 2]), Vertex(mesh, mesh.faces[i + 3]))
+        ) / 6;
     }
     return volume;
   }
 
-  private static Line Axis(Vector3 start, Vector3 end) => new()
-  {
-    start = new Point(start.X, start.Y, start.Z, "mm"),
-    end = new Point(end.X, end.Y, end.Z, "mm"),
-    units = "mm",
-  };
+  private static Line Axis(Vector3 start, Vector3 end) =>
+    new()
+    {
+      start = new Point(start.X, start.Y, start.Z, "mm"),
+      end = new Point(end.X, end.Y, end.Z, "mm"),
+      units = "mm",
+    };
 
   private sealed record Fixture(VolumetricDisplayValueExtractor Extractor, ExtrusionFallbackTracker Fallbacks);
 
-  private static Fixture CreateFixture(double angle, int cardinal, double[] startOffset, double[] endOffset, string system)
+  private static Fixture CreateFixture(
+    double angle,
+    int cardinal,
+    double[] startOffset,
+    double[] endOffset,
+    string system
+  )
   {
     var frames = new Mock<cFrameObj>();
-    frames.Setup(x => x.GetSection(FRAME, ref It.Ref<string>.IsAny, ref It.Ref<string>.IsAny)).Returns(new ReadSection((string _, ref string section, ref string autoSelect) =>
-    {
-      section = SECTION;
-      return 0;
-    }));
-    frames.Setup(x => x.GetLocalAxes(FRAME, ref It.Ref<double>.IsAny, ref It.Ref<bool>.IsAny)).Returns(new ReadAxes((string _, ref double result, ref bool advanced) =>
-    {
-      result = angle;
-      return 0;
-    }));
-    frames.Setup(x => x.GetInsertionPoint(FRAME, ref It.Ref<int>.IsAny, ref It.Ref<bool>.IsAny, ref It.Ref<bool>.IsAny, ref It.Ref<double[]>.IsAny, ref It.Ref<double[]>.IsAny, ref It.Ref<string>.IsAny)).Returns(new ReadInsertion((string _, ref int resultCardinal, ref bool mirror, ref bool stiff, ref double[] start, ref double[] end, ref string resultSystem) =>
-    {
-      resultCardinal = cardinal;
-      start = startOffset;
-      end = endOffset;
-      resultSystem = system;
-      return 0;
-    }));
+    frames
+      .Setup(x => x.GetSection(FRAME, ref It.Ref<string>.IsAny, ref It.Ref<string>.IsAny))
+      .Returns(
+        new ReadSection(
+          (string _, ref string section, ref string autoSelect) =>
+          {
+            section = SECTION;
+            return 0;
+          }
+        )
+      );
+    frames
+      .Setup(x => x.GetLocalAxes(FRAME, ref It.Ref<double>.IsAny, ref It.Ref<bool>.IsAny))
+      .Returns(
+        new ReadAxes(
+          (string _, ref double result, ref bool advanced) =>
+          {
+            result = angle;
+            return 0;
+          }
+        )
+      );
+    frames
+      .Setup(x =>
+        x.GetInsertionPoint(
+          FRAME,
+          ref It.Ref<int>.IsAny,
+          ref It.Ref<bool>.IsAny,
+          ref It.Ref<bool>.IsAny,
+          ref It.Ref<double[]>.IsAny,
+          ref It.Ref<double[]>.IsAny,
+          ref It.Ref<string>.IsAny
+        )
+      )
+      .Returns(
+        new ReadInsertion(
+          (
+            string _,
+            ref int resultCardinal,
+            ref bool mirror,
+            ref bool stiff,
+            ref double[] start,
+            ref double[] end,
+            ref string resultSystem
+          ) =>
+          {
+            resultCardinal = cardinal;
+            start = startOffset;
+            end = endOffset;
+            resultSystem = system;
+            return 0;
+          }
+        )
+      );
     var model = new Mock<cSapModel>();
     model.SetupGet(x => x.FrameObj).Returns(frames.Object);
     var store = new ConverterSettingsStore<CsiConversionSettings>();
     store.Initialize(new CsiConversionSettings(model.Object, "mm"));
     var outline = SectionProfileCatalog.TryBuild(new RectangleProfile(DEPTH, WIDTH))!;
     var cache = new CsiToSpeckleCacheSingleton();
-    cache.FramePrismCache[SECTION] = new FrameSectionPrism(PrismBuilder.TryBuildUnitPrism(outline), outline, "Rectangular");
+    cache.FramePrismCache[SECTION] = new FrameSectionPrism(
+      PrismBuilder.TryBuildUnitPrism(outline),
+      outline,
+      "Rectangular"
+    );
     var resolver = new FrameSectionProfileResolver(store, cache, new FrameSectionAreaResolver(store, cache));
     var fallbacks = new ExtrusionFallbackTracker();
-    return new Fixture(new VolumetricDisplayValueExtractor(store, resolver, Mock.Of<IShellThicknessResolver>(), fallbacks), fallbacks);
+    return new Fixture(
+      new VolumetricDisplayValueExtractor(store, resolver, Mock.Of<IShellThicknessResolver>(), fallbacks),
+      fallbacks
+    );
   }
 }

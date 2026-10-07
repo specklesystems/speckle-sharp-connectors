@@ -151,24 +151,29 @@ public class ChannelHandednessTests
     double minDepth = cardinal == 10 ? -DEPTH / 2 : -(cardinal - 1) / 3 * DEPTH / 2;
     double minWidth =
       cardinal == 10 ? -WIDTH / 2 + (mirrored ? centroid : -centroid) : ((cardinal - 1) % 3 - 2) * WIDTH / 2;
-    var start = ProjectEnd(mesh!, Vector3.UnitZ, -Vector3.UnitY, false);
-    var end = ProjectEnd(mesh!, Vector3.UnitZ, -Vector3.UnitY, true);
-    Assert.That(start.Min(p => p.X), Is.EqualTo(minDepth + 7).Within(1e-6));
-    Assert.That(start.Min(p => p.Y), Is.EqualTo(minWidth + 11).Within(1e-6));
-    Assert.That(end.Min(p => p.X), Is.EqualTo(minDepth - 3).Within(1e-6));
-    Assert.That(end.Min(p => p.Y), Is.EqualTo(minWidth + 17).Within(1e-6));
+    var startAnchor = new Vector3(5, -11, 7);
+    var endAnchor = new Vector3(1009, -17, -3);
+    var physicalAxis = Vector3.Normalize(endAnchor - startAnchor);
+    var horizontal = Vector3.Normalize(Vector3.Cross(Vector3.UnitZ, physicalAxis));
+    var depthAxis = Vector3.Cross(physicalAxis, horizontal);
+    var widthAxis = -horizontal;
+    var start = ProjectEnd(mesh!, depthAxis, widthAxis, false, startAnchor);
+    var end = ProjectEnd(mesh!, depthAxis, widthAxis, true, endAnchor);
+    Assert.That(start.Min(p => p.X), Is.EqualTo(minDepth).Within(1e-6));
+    Assert.That(start.Min(p => p.Y), Is.EqualTo(minWidth).Within(1e-6));
+    Assert.That(end.Min(p => p.X), Is.EqualTo(minDepth).Within(1e-6));
+    Assert.That(end.Min(p => p.Y), Is.EqualTo(minWidth).Within(1e-6));
     double webMin = mirrored ? minWidth : minWidth + WIDTH - WEB;
     double webMax = mirrored ? minWidth + WEB : minWidth + WIDTH;
     var startWeb = WebWidths(start);
     var endWeb = WebWidths(end);
     Assert.That(startWeb, Has.Length.EqualTo(2));
     Assert.That(endWeb, Has.Length.EqualTo(2));
-    Assert.That(startWeb[0], Is.EqualTo(webMin + 11).Within(1e-6));
-    Assert.That(startWeb[1], Is.EqualTo(webMax + 11).Within(1e-6));
-    Assert.That(endWeb[0], Is.EqualTo(webMin + 17).Within(1e-6));
-    Assert.That(endWeb[1], Is.EqualTo(webMax + 17).Within(1e-6));
-    Assert.That(mesh!.vertices.Where((_, index) => index % 3 == 0).Min(), Is.EqualTo(5).Within(1e-6));
-    Assert.That(mesh.vertices.Where((_, index) => index % 3 == 0).Max(), Is.EqualTo(1009).Within(1e-6));
+    Assert.That(startWeb[0], Is.EqualTo(webMin).Within(1e-6));
+    Assert.That(startWeb[1], Is.EqualTo(webMax).Within(1e-6));
+    Assert.That(endWeb[0], Is.EqualTo(webMin).Within(1e-6));
+    Assert.That(endWeb[1], Is.EqualTo(webMax).Within(1e-6));
+    Assert.That(SignedVolume(mesh!), Is.EqualTo(area * (endAnchor - startAnchor).Length()).Within(1e-6));
   }
 
   [Test]
@@ -280,13 +285,13 @@ public class ChannelHandednessTests
     return volume;
   }
 
-  private static List<Vector2> ProjectEnd(Mesh mesh, Vector3 local2, Vector3 local3, bool end)
+  private static List<Vector2> ProjectEnd(Mesh mesh, Vector3 local2, Vector3 local3, bool end, Vector3 anchor)
   {
     var points = new List<Vector2>();
     int first = end ? mesh.vertices.Count / 2 : 0;
     for (int i = first; i < first + mesh.vertices.Count / 2; i += 3)
     {
-      var point = new Vector3(mesh.vertices[i], mesh.vertices[i + 1], mesh.vertices[i + 2]);
+      var point = new Vector3(mesh.vertices[i], mesh.vertices[i + 1], mesh.vertices[i + 2]) - anchor;
       points.Add(new Vector2(Vector3.Dot(point, local2), Vector3.Dot(point, local3)));
     }
     return points;
