@@ -67,7 +67,7 @@ public class Plant3dDataExtractor
         }
       }
 
-      AddDataManagerProperties(dlm, entity, result);
+      AddDataManagerProperties(dlm, entity, rowId, result);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -90,11 +90,12 @@ public class Plant3dDataExtractor
   private void AddDataManagerProperties(
     PPDL.DataLinksManager dataLinksManager,
     ADB.Entity entity,
+    int rowId,
     Dictionary<string, object?> result
   )
   {
     var classHierarchy = _classHierarchyResolver.Resolve(dataLinksManager, entity.ObjectId);
-    var hasGroup = _lineGroupResolver.TryGetGroupInfo(dataLinksManager, entity, out var groupInfo);
+    var hasGroup = _lineGroupResolver.TryGetGroupInfo(dataLinksManager, entity, rowId, out var groupInfo);
 
     if (classHierarchy is null && (!hasGroup || groupInfo is null))
     {
@@ -117,6 +118,7 @@ public class Plant3dDataExtractor
     {
       properties["Group Id"] = groupInfo.GroupId;
       properties["Group Type"] = groupInfo.GroupType;
+      properties["Line Number"] = groupInfo.LineNumber;
     }
   }
 }

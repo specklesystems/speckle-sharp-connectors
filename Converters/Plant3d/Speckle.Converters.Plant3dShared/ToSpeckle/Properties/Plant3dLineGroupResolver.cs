@@ -1,118 +1,123 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+using Autodesk.ProcessPower.DataObjects;
 using Autodesk.ProcessPower.PnIDObjects;
+using Autodesk.ProcessPower.ProjectManager;
 using Microsoft.Extensions.Logging;
 using Speckle.Sdk;
-using AR = Autodesk.AutoCAD.Runtime;
 
 namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 
-public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> logger) : IDisposable
+public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> logger)
 {
-  private LineGroupManagerContext? _context;
-  private InitState _initState = InitState.Uninitialized;
-
-  private bool Initialize(PPDL.DataLinksManager dataLinksManager)
+  private enum DocType
   {
-    _initState = InitState.Failed;
+    PnID,
+    Piping,
+    Other,
+  };
 
-    // Initialize and validate the LineGroupManager by calling a method that will throw if not available
-    var context = new LineGroupManagerContext(dataLinksManager);
-    if (!Validate(context))
+  private sealed record PnpGroupConfig(string RelationshipTable, string GroupType, string PartType, string LineNumber);
+
+  private readonly PnpGroupConfig _pipingConfig = new("P3dLineGroupPartRelationship", "LineGroup", "Part", "Number");
+  private readonly PnpGroupConfig _pnidPipeConfig = new(
+    "PipeLineGroupRelationship",
+    "PipeLineGroup",
+    "PipeLine",
+    "LineNumber"
+  );
+  private readonly PnpGroupConfig _pnidSignalConfig = new(
+    "SignalLineGroupRelationship",
+    "SignalLineGroup",
+    "SignalLine",
+    "Number"
+  );
+
+  private static DocType GetDocumentType() =>
+    Enum.TryParse<DocType>(PnPProjectUtils.GetActiveDocumentType(), true, out var docType) ? docType : DocType.Other;
+
+  private object? GetRowValue(PnPRow row, string column)
+  {
+    if (row.Table.Columns.Contains(column))
     {
-      context.Dispose();
+      return row[column];
+    }
+    else
+    {
+      logger.LogDebug("The PnP database table {table} does not contain column {column}", row.Table.Name, column);
+      return null;
+    }
+  }
+
+  private bool TryGetGroupInfo(
+    PPDL.DataLinksManager dataLinksManager,
+    int rowId,
+    PnpGroupConfig config,
+    out LineGroupInfo? groupInfo
+  )
+  {
+    groupInfo = null;
+
+    var groupId = dataLinksManager
+      .GetRelatedRowIds(config.RelationshipTable, config.PartType, rowId, config.GroupType)
+      .FirstOrDefault();
+    if (groupId == 0)
+    {
       return false;
     }
 
-    _context = context;
-    _initState = InitState.Success;
+    var database = dataLinksManager.GetPnPDatabase();
+    var groupRow = database.GetRow(groupId);
+    if (groupRow is null)
+    {
+      logger.LogDebug("Failed to find group row for group ID {GroupId}", groupId);
+      return false;
+    }
+
+    string lineNumber = GetRowValue(groupRow, config.LineNumber)?.ToString() ?? "";
+    groupInfo = new LineGroupInfo(config.GroupType, groupId, lineNumber);
     return true;
   }
 
-  private bool Validate(LineGroupManagerContext context)
+  /// <summary>
+  /// Gets the group ID, line number and type for objects that participate in a line group.
+  /// Supports 2D pipe line and signal line groups, and 3D piping line groups.
+  /// </summary>
+  public bool TryGetGroupInfo(
+    PPDL.DataLinksManager dataLinksManager,
+    ADB.Entity entity,
+    int rowId,
+    out LineGroupInfo? groupInfo
+  )
   {
+    groupInfo = null;
+
+    if (rowId <= 0)
+    {
+      return false;
+    }
+
     try
     {
-      context.Validate();
-      return true;
+      return GetDocumentType() switch
+      {
+        // Groups are only supported for LineSegments in PnID, but for Piping, any entity can be part of a group.
+        DocType.PnID => entity is LineSegment
+          && (
+            TryGetGroupInfo(dataLinksManager, rowId, _pnidPipeConfig, out groupInfo)
+            || TryGetGroupInfo(dataLinksManager, rowId, _pnidSignalConfig, out groupInfo)
+          ),
+        DocType.Piping => TryGetGroupInfo(dataLinksManager, rowId, _pipingConfig, out groupInfo),
+        DocType.Other => false,
+        _ => throw new UnreachableException(),
+      };
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      logger.LogDebug("Failed to validate the LineGroupManager (2D drawings only)");
-      return false;
+      logger.LogWarning(ex, "Failed to read PnP group relationship for object {HandleValue}", entity.Handle.Value);
     }
-  }
 
-  [MemberNotNullWhen(true, nameof(_context))]
-  private bool EnsureInitialized(PPDL.DataLinksManager dataLinksManager) =>
-    _initState switch
-    {
-      InitState.Success => true,
-      InitState.Failed => false,
-      InitState.Uninitialized => Initialize(dataLinksManager),
-      InitState.Disposed => throw new ObjectDisposedException(nameof(Plant3dLineGroupResolver)),
-      _ => throw new UnreachableException(),
-    };
-
-  /// <summary>
-  /// Gets the group ID and Type for objects that participate in a line group.
-  /// The dataLinksManager is used to initialize the LineGroupManager the first time this method is called.
-  /// Subsequent calls will use the cached LineGroupManager.
-  /// </summary>
-  public bool TryGetGroupInfo(PPDL.DataLinksManager dataLinksManager, ADB.Entity entity, out LineGroupInfo? groupInfo)
-  {
-    try
-    {
-      if (entity is LineSegment && EnsureInitialized(dataLinksManager))
-      {
-        var groupId = _context.LineGroupManager.GroupId(entity.ObjectId);
-        if (groupId > 0)
-        {
-          var groupType = _context.LineGroupManager.Type(groupId).ToString();
-          groupInfo = new LineGroupInfo(groupId, groupType);
-          return true;
-        }
-      }
-    }
-    // The call to GroupId will raise an exception with the message "eNotImplementedYet" if the object can not participate in a group.
-    catch (AR.Exception ex) when (ex.ErrorStatus == AR.ErrorStatus.NotImplementedYet) { }
-
-    groupInfo = null;
     return false;
-  }
-
-  public void Dispose()
-  {
-    if (_initState is not InitState.Disposed)
-    {
-      _context?.Dispose();
-      _initState = InitState.Disposed;
-    }
-  }
-
-  private enum InitState
-  {
-    Uninitialized,
-    Success,
-    Failed,
-    Disposed,
-  }
-
-  /// <summary>
-  /// Provides access to a LineGroupManager with validation and disposal ownership.
-  /// </summary>
-  private sealed class LineGroupManagerContext(PPDL.DataLinksManager dataLinksManager) : IDisposable
-  {
-    public LineGroupManager LineGroupManager { get; } = new LineGroupManager(dataLinksManager);
-
-    /// <summary>
-    /// Validates the LineGroupManager by calling a method that will throw if not available (e.g., in 3D drawings).
-    /// </summary>
-    /// <exception cref="Autodesk.AutoCAD.Runtime.Exception"></exception>
-    public void Validate() => LineGroupManager.GroupIds(GroupType.PipeLineGroup);
-
-    public void Dispose() => LineGroupManager.Dispose();
   }
 }
 
-public record LineGroupInfo(int GroupId, string GroupType);
+public record LineGroupInfo(string GroupType, int GroupId, string LineNumber);
