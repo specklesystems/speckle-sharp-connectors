@@ -4,6 +4,7 @@ using Speckle.Converters.CSiShared.Utils;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
@@ -95,6 +96,28 @@ public sealed class VolumetricDisplayValueExtractor
       if (template is null)
       {
         return Fallback(ModelObjectType.FRAME, $"{section.ShapeKey}/tessellation-failed");
+      }
+
+      double millimeter = Units.GetConversionFactor(Units.Millimeters, _settingsStore.Current.SpeckleUnits);
+      string? curveDiagnostic = ReadCurve(frameObj, frame.Name, start, end, 1e-6 * millimeter, out var circularPath);
+      if (curveDiagnostic is not null)
+      {
+        return Fallback(ModelObjectType.FRAME, curveDiagnostic);
+      }
+      if (circularPath is not null)
+      {
+        if ((insertion.StartOffset - insertion.EndOffset).Length() > 1e-6 * millimeter)
+        {
+          return Fallback(ModelObjectType.FRAME, "unsupported-curve-offsets");
+        }
+        var swept = circularPath.TrySweep(
+          template,
+          localFrame.Value,
+          insertion.StartOffset,
+          insertion.CardinalShift,
+          0.25 * millimeter
+        );
+        return swept is null ? Fallback(ModelObjectType.FRAME, "degenerate-curve-sweep") : ToMesh(swept);
       }
 
       var physicalStart = start + insertion.StartOffset;
@@ -216,7 +239,70 @@ public sealed class VolumetricDisplayValueExtractor
     Vector2 CardinalShift
   );
 
-  private static Insertion ReadInsertion(cFrameObj frameObj, string frameName, ProfileOutline outline, LocalFrame frame)
+  private static string? ReadCurve(
+    cFrameObj frameObj,
+    string name,
+    Vector3 start,
+    Vector3 end,
+    double tolerance,
+    out CircularFramePath? path
+  )
+  {
+    path = null;
+    int type = 0,
+      count = 0;
+    double tension = 0;
+    double[] x = [],
+      y = [],
+      z = [];
+    int result = frameObj.GetCurved_2(name, ref type, ref tension, ref count, ref x, ref y, ref z);
+    if (
+      type == 0
+      && count == 0
+      && (x is null || x.Length == 0)
+      && (y is null || y.Length == 0)
+      && (z is null || z.Length == 0)
+    )
+    {
+      // ENG-10486: ETABS reports return code 1 with empty curve data for ordinary straight frames.
+      return result is 0 or 1 ? null : "curve-read-failed";
+    }
+    if (result != 0)
+    {
+      return "curve-read-failed";
+    }
+    if (type != 1)
+    {
+      return "unsupported-curve";
+    }
+    if (
+      count != 3
+      || x is null
+      || y is null
+      || z is null
+      || x.Length != count
+      || y.Length != count
+      || z.Length != count
+    )
+    {
+      return "invalid-curve-controls";
+    }
+    var first = new Vector3(x[0], y[0], z[0]);
+    var last = new Vector3(x[1], y[1], z[1]);
+    if (!((first - start).Length() <= tolerance) || !((last - end).Length() <= tolerance))
+    {
+      return "curve-endpoint-mismatch";
+    }
+    path = CircularFramePath.TryCreate(first, last, new Vector3(x[2], y[2], z[2]));
+    return path is null ? "degenerate-curve-controls" : null;
+  }
+
+  private static Insertion ReadInsertion(
+    cFrameObj frameObj,
+    string frameName,
+    ProfileOutline outline,
+    LocalFrame frame
+  )
   {
     int cardinalPoint = CARDINAL_POINT_CENTROID;
     bool mirror2 = false,
