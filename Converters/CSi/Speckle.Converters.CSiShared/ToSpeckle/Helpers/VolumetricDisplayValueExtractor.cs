@@ -4,6 +4,7 @@ using Speckle.Converters.CSiShared.Utils;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
@@ -23,6 +24,7 @@ public sealed class VolumetricDisplayValueExtractor
   private readonly FrameSectionProfileResolver _profileResolver;
   private readonly IShellThicknessResolver _thicknessResolver;
   private readonly ExtrusionFallbackTracker _fallbacks;
+  private readonly ShellGeometryAssignmentReader _shellAssignments;
 
   public VolumetricDisplayValueExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
@@ -35,6 +37,7 @@ public sealed class VolumetricDisplayValueExtractor
     _profileResolver = profileResolver;
     _thicknessResolver = thicknessResolver;
     _fallbacks = fallbacks;
+    _shellAssignments = new ShellGeometryAssignmentReader(settingsStore);
   }
 
   public Mesh? TryExtrudeFrame(CsiFrameWrapper frame, Line axis)
@@ -87,25 +90,56 @@ public sealed class VolumetricDisplayValueExtractor
       }
 
       var insertion = ReadInsertion(frameObj, frame.Name, section.Outline, localFrame.Value);
-      if (insertion is null)
+      var template = ReferenceEquals(insertion.Outline, section.Outline)
+        ? section.Template
+        : PrismBuilder.TryBuildUnitPrism(insertion.Outline);
+      if (template is null)
       {
-        return Fallback(ModelObjectType.FRAME, "mirrored-section");
+        return Fallback(ModelObjectType.FRAME, $"{section.ShapeKey}/tessellation-failed");
       }
 
-      double physicalLength = length + insertion.EndAxial - insertion.StartAxial;
-      if (physicalLength <= 0)
+      double millimeter = Units.GetConversionFactor(Units.Millimeters, _settingsStore.Current.SpeckleUnits);
+      string? curveDiagnostic = ReadCurve(frameObj, frame.Name, start, end, 1e-6 * millimeter, out var circularPath);
+      if (curveDiagnostic is not null)
+      {
+        return Fallback(ModelObjectType.FRAME, curveDiagnostic);
+      }
+      if (circularPath is not null)
+      {
+        if ((insertion.StartOffset - insertion.EndOffset).Length() > 1e-6 * millimeter)
+        {
+          return Fallback(ModelObjectType.FRAME, "unsupported-curve-offsets");
+        }
+        var swept = circularPath.TrySweep(
+          template,
+          localFrame.Value,
+          insertion.StartOffset,
+          insertion.CardinalShift,
+          0.25 * millimeter
+        );
+        return swept is null ? Fallback(ModelObjectType.FRAME, "degenerate-curve-sweep") : ToMesh(swept);
+      }
+
+      var physicalStart = start + insertion.StartOffset;
+      var physicalEnd = end + insertion.EndOffset;
+      if ((physicalEnd - physicalStart).LengthSquared() < 1e-12)
       {
         return Fallback(ModelObjectType.FRAME, "zero-length");
+      }
+      var placement = FramePhysicalPlacement.TryCreate(physicalStart, physicalEnd, localFrame.Value);
+      if (placement is null)
+      {
+        return Fallback(ModelObjectType.FRAME, "degenerate-axes");
       }
 
       return ToMesh(
         PrismBuilder.Place(
-          section.Template,
-          start + insertion.StartAxial * localFrame.Value.ZAxis,
-          localFrame.Value,
-          physicalLength,
-          insertion.StartOffset,
-          insertion.EndOffset
+          template,
+          placement.Value.Start,
+          placement.Value.Frame,
+          placement.Value.Length,
+          insertion.CardinalShift,
+          insertion.CardinalShift
         )
       );
     }
@@ -141,7 +175,55 @@ public sealed class VolumetricDisplayValueExtractor
         points.Add(new Vector3(outline.vertices[i], outline.vertices[i + 1], outline.vertices[i + 2]));
       }
 
-      var prism = PrismBuilder.TryExtrudeOutline(points, thickness);
+      int count = 0;
+      double[] offsets = [],
+        matrix = [];
+      if (
+        areaObj.GetOffsets3(shell.Name, ref count, ref offsets) != 0
+        || count != points.Count
+        || offsets.Length != count
+        || offsets.Any(offset => double.IsNaN(offset) || double.IsInfinity(offset))
+      )
+      {
+        return Fallback(ModelObjectType.SHELL, "invalid-insertion");
+      }
+      if (
+        areaObj.GetTransformationMatrix(shell.Name, ref matrix, true) != 0
+        || matrix.Length != 9
+        || matrix.Any(value => double.IsNaN(value) || double.IsInfinity(value))
+      )
+      {
+        return Fallback(ModelObjectType.SHELL, "invalid-axes");
+      }
+      var normal = new Vector3(matrix[2], matrix[5], matrix[8]);
+      if (normal.LengthSquared() < 1e-12)
+      {
+        return Fallback(ModelObjectType.SHELL, "invalid-axes");
+      }
+      normal = Vector3.Normalize(normal);
+      var assignments = _shellAssignments.Read(shell.Name, offsets, matrix, thickness);
+      PrismMesh? prism;
+      if (
+        assignments.Displacements.All(displacement => displacement == assignments.Displacements[0])
+        && assignments.Thicknesses.All(value => value == thickness)
+      )
+      {
+        prism = PrismBuilder.TryExtrudeOutline(points, thickness);
+        if (prism is not null)
+        {
+          var shift = assignments.Displacements[0];
+          for (int i = 0; i < prism.Vertices.Count; i += 3)
+          {
+            prism.Vertices[i] += shift.X;
+            prism.Vertices[i + 1] += shift.Y;
+            prism.Vertices[i + 2] += shift.Z;
+          }
+        }
+      }
+      else
+      {
+        prism = ShellMeshBuilder.TryBuild(points, normal, assignments);
+      }
       return prism is null ? Fallback(ModelObjectType.SHELL, "degenerate-outline") : ToMesh(prism);
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -150,15 +232,72 @@ public sealed class VolumetricDisplayValueExtractor
     }
   }
 
-  /// <summary>Profile shifts in the section plane and axial shifts per end, in the profile frame; null when mirrored.</summary>
-  private sealed record Insertion(Vector2 StartOffset, Vector2 EndOffset, double StartAxial, double EndAxial);
+  private sealed record Insertion(
+    ProfileOutline Outline,
+    Vector3 StartOffset,
+    Vector3 EndOffset,
+    Vector2 CardinalShift
+  );
 
-  private static Insertion? ReadInsertion(
+  private static string? ReadCurve(
     cFrameObj frameObj,
-    string frameName,
-    ProfileOutline outline,
-    LocalFrame frame
+    string name,
+    Vector3 start,
+    Vector3 end,
+    double tolerance,
+    out CircularFramePath? path
   )
+  {
+    path = null;
+    int type = 0,
+      count = 0;
+    double tension = 0;
+    double[] x = [],
+      y = [],
+      z = [];
+    int result = frameObj.GetCurved_2(name, ref type, ref tension, ref count, ref x, ref y, ref z);
+    if (
+      type == 0
+      && count == 0
+      && (x is null || x.Length == 0)
+      && (y is null || y.Length == 0)
+      && (z is null || z.Length == 0)
+    )
+    {
+      // ENG-10486: ETABS reports return code 1 with empty curve data for ordinary straight frames.
+      return result is 0 or 1 ? null : "curve-read-failed";
+    }
+    if (result != 0)
+    {
+      return "curve-read-failed";
+    }
+    if (type != 1)
+    {
+      return "unsupported-curve";
+    }
+    if (
+      count != 3
+      || x is null
+      || y is null
+      || z is null
+      || x.Length != count
+      || y.Length != count
+      || z.Length != count
+    )
+    {
+      return "invalid-curve-controls";
+    }
+    var first = new Vector3(x[0], y[0], z[0]);
+    var last = new Vector3(x[1], y[1], z[1]);
+    if (!((first - start).Length() <= tolerance) || !((last - end).Length() <= tolerance))
+    {
+      return "curve-endpoint-mismatch";
+    }
+    path = CircularFramePath.TryCreate(first, last, new Vector3(x[2], y[2], z[2]));
+    return path is null ? "degenerate-curve-controls" : null;
+  }
+
+  private static Insertion ReadInsertion(cFrameObj frameObj, string frameName, ProfileOutline outline, LocalFrame frame)
   {
     int cardinalPoint = CARDINAL_POINT_CENTROID;
     bool mirror2 = false,
@@ -177,18 +316,13 @@ public sealed class VolumetricDisplayValueExtractor
     );
     if (mirror2)
     {
-      return null;
+      outline = outline.MirrorAboutDepth();
     }
 
     var cardinalShift = CardinalPointShift(outline, cardinalPoint);
-    var startJoint = ToLocalOffset(jointOffset1, offsetSystem, frame);
-    var endJoint = ToLocalOffset(jointOffset2, offsetSystem, frame);
-    return new Insertion(
-      cardinalShift + new Vector2(startJoint.X, startJoint.Y),
-      cardinalShift + new Vector2(endJoint.X, endJoint.Y),
-      startJoint.Z,
-      endJoint.Z
-    );
+    var startJoint = ToWorldOffset(jointOffset1, offsetSystem, frame);
+    var endJoint = ToWorldOffset(jointOffset2, offsetSystem, frame);
+    return new Insertion(outline, startJoint, endJoint, cardinalShift);
   }
 
   // CSi cardinal points 1-9 sit on the section's bounding box (rows bottom/middle/top along local 2, columns
@@ -219,9 +353,7 @@ public sealed class VolumetricDisplayValueExtractor
     return new Vector2(-depth, -width);
   }
 
-  // Joint offsets come as (1, 2, 3) components in the local system or (X, Y, Z) in a global one; returned as
-  // (depth, width, axial) to match the profile frame.
-  private static Vector3 ToLocalOffset(double[] offset, string coordinateSystem, LocalFrame frame)
+  private static Vector3 ToWorldOffset(double[] offset, string coordinateSystem, LocalFrame frame)
   {
     if (offset.Length < 3)
     {
@@ -229,15 +361,10 @@ public sealed class VolumetricDisplayValueExtractor
     }
     if (string.Equals(coordinateSystem, LOCAL_COORDINATE_SYSTEM, StringComparison.OrdinalIgnoreCase))
     {
-      return new Vector3(offset[1], offset[2], offset[0]);
+      return offset[0] * frame.ZAxis + offset[1] * frame.XAxis + offset[2] * frame.YAxis;
     }
 
-    var global = new Vector3(offset[0], offset[1], offset[2]);
-    return new Vector3(
-      Vector3.Dot(global, frame.XAxis),
-      Vector3.Dot(global, frame.YAxis),
-      Vector3.Dot(global, frame.ZAxis)
-    );
+    return new Vector3(offset[0], offset[1], offset[2]);
   }
 
   private Mesh? Fallback(ModelObjectType elementType, string reason)

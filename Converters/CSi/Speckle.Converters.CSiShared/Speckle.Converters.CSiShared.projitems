@@ -40,8 +40,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\FrameSectionAreaResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\FrameSectionProfileResolver.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\FramePhysicalPlacement.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CircularFramePath.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IShellThicknessResolver.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\ShellGeometryAssignmentReader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\ShellMeshBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\VolumetricDisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CsiObjectToSpeckleConverterBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\Constants.cs" />
