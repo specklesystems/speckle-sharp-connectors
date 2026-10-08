@@ -94,20 +94,26 @@ public sealed class VolumetricDisplayValueExtractor
         return Fallback(ModelObjectType.FRAME, "mirrored-section");
       }
 
-      double physicalLength = length + insertion.EndAxial - insertion.StartAxial;
-      if (physicalLength <= 0)
+      var physicalStart = start + insertion.StartOffset;
+      var physicalEnd = end + insertion.EndOffset;
+      if ((physicalEnd - physicalStart).LengthSquared() < 1e-12)
       {
         return Fallback(ModelObjectType.FRAME, "zero-length");
+      }
+      var placement = FramePhysicalPlacement.TryCreate(physicalStart, physicalEnd, localFrame.Value);
+      if (placement is null)
+      {
+        return Fallback(ModelObjectType.FRAME, "degenerate-axes");
       }
 
       return ToMesh(
         PrismBuilder.Place(
           section.Template,
-          start + insertion.StartAxial * localFrame.Value.ZAxis,
-          localFrame.Value,
-          physicalLength,
-          insertion.StartOffset,
-          insertion.EndOffset
+          placement.Value.Start,
+          placement.Value.Frame,
+          placement.Value.Length,
+          insertion.CardinalShift,
+          insertion.CardinalShift
         )
       );
     }
@@ -200,8 +206,7 @@ public sealed class VolumetricDisplayValueExtractor
     }
   }
 
-  /// <summary>Profile shifts in the section plane and axial shifts per end, in the profile frame; null when mirrored.</summary>
-  private sealed record Insertion(Vector2 StartOffset, Vector2 EndOffset, double StartAxial, double EndAxial);
+  private sealed record Insertion(Vector3 StartOffset, Vector3 EndOffset, Vector2 CardinalShift);
 
   private static Insertion? ReadInsertion(
     cFrameObj frameObj,
@@ -231,14 +236,9 @@ public sealed class VolumetricDisplayValueExtractor
     }
 
     var cardinalShift = CardinalPointShift(outline, cardinalPoint);
-    var startJoint = ToLocalOffset(jointOffset1, offsetSystem, frame);
-    var endJoint = ToLocalOffset(jointOffset2, offsetSystem, frame);
-    return new Insertion(
-      cardinalShift + new Vector2(startJoint.X, startJoint.Y),
-      cardinalShift + new Vector2(endJoint.X, endJoint.Y),
-      startJoint.Z,
-      endJoint.Z
-    );
+    var startJoint = ToWorldOffset(jointOffset1, offsetSystem, frame);
+    var endJoint = ToWorldOffset(jointOffset2, offsetSystem, frame);
+    return new Insertion(startJoint, endJoint, cardinalShift);
   }
 
   // CSi cardinal points 1-9 sit on the section's bounding box (rows bottom/middle/top along local 2, columns
@@ -269,9 +269,7 @@ public sealed class VolumetricDisplayValueExtractor
     return new Vector2(-depth, -width);
   }
 
-  // Joint offsets come as (1, 2, 3) components in the local system or (X, Y, Z) in a global one; returned as
-  // (depth, width, axial) to match the profile frame.
-  private static Vector3 ToLocalOffset(double[] offset, string coordinateSystem, LocalFrame frame)
+  private static Vector3 ToWorldOffset(double[] offset, string coordinateSystem, LocalFrame frame)
   {
     if (offset.Length < 3)
     {
@@ -279,15 +277,10 @@ public sealed class VolumetricDisplayValueExtractor
     }
     if (string.Equals(coordinateSystem, LOCAL_COORDINATE_SYSTEM, StringComparison.OrdinalIgnoreCase))
     {
-      return new Vector3(offset[1], offset[2], offset[0]);
+      return offset[0] * frame.ZAxis + offset[1] * frame.XAxis + offset[2] * frame.YAxis;
     }
 
-    var global = new Vector3(offset[0], offset[1], offset[2]);
-    return new Vector3(
-      Vector3.Dot(global, frame.XAxis),
-      Vector3.Dot(global, frame.YAxis),
-      Vector3.Dot(global, frame.ZAxis)
-    );
+    return new Vector3(offset[0], offset[1], offset[2]);
   }
 
   private Mesh? Fallback(ModelObjectType elementType, string reason)
