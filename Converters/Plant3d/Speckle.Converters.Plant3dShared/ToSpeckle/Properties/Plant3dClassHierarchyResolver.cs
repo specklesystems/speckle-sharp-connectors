@@ -48,7 +48,6 @@ public class Plant3dClassHierarchyResolver
   {
     List<string> levels = [];
 
-    // Traverse the class hierarchy until we reach the base class (PnPBase) or an empty class name.
     while (
       !string.IsNullOrWhiteSpace(className)
       && !string.Equals(className, PNP_BASE_CLASS_NAME, StringComparison.OrdinalIgnoreCase)
