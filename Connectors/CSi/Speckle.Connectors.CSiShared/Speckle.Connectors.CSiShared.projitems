@@ -17,6 +17,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\CsiSharedEverythingFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\CsiSharedSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\CsiResultsExtractorFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\IApplicationMaterialPropertyExtractor.cs" />
