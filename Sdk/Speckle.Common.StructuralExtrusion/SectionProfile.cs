@@ -16,7 +16,8 @@ public sealed record ISectionProfile(
   double TopFlangeThickness,
   double WebThickness,
   double BottomFlangeWidth,
-  double BottomFlangeThickness
+  double BottomFlangeThickness,
+  double RootRadius = 0
 ) : SectionProfile;
 
 public sealed record ChannelProfile(double Depth, double FlangeWidth, double FlangeThickness, double WebThickness)

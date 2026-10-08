@@ -80,6 +80,35 @@ public class ChannelHandednessTests
     ref string notes,
     ref string guid
   );
+  private delegate int ReadISection(
+    string name,
+    ref string file,
+    ref string material,
+    ref double depth,
+    ref double width,
+    ref double flange,
+    ref double web,
+    ref double bottomWidth,
+    ref double bottomFlange,
+    ref double radius,
+    ref int color,
+    ref string notes,
+    ref string guid
+  );
+  private delegate int ReadLegacyISection(
+    string name,
+    ref string file,
+    ref string material,
+    ref double depth,
+    ref double width,
+    ref double flange,
+    ref double web,
+    ref double bottomWidth,
+    ref double bottomFlange,
+    ref int color,
+    ref string notes,
+    ref string guid
+  );
 
   [TestCase(false, false, false, 0)]
   [TestCase(false, true, false, 0)]
@@ -201,15 +230,198 @@ public class ChannelHandednessTests
     Assert.That(section.ShapeKey, Is.EqualTo("Channel/invalid-dimensions"));
   }
 
-  [Test]
-  public void Extrude_FrameInsertionMirrorKeepsFallback()
+  [TestCase(false, false, 8)]
+  [TestCase(false, true, 8)]
+  [TestCase(true, false, 8)]
+  [TestCase(true, true, 8)]
+  [TestCase(false, false, 10)]
+  [TestCase(false, true, 10)]
+  [TestCase(true, false, 10)]
+  [TestCase(true, true, 10)]
+  public void Extrude_FrameInsertionMirrorReflectsAsymmetricSection(bool sectionMirror, bool frameMirror, int cardinal)
   {
-    var fixture = CreateFixture(false, frameMirrored: true);
+    var fixture = CreateFixture(sectionMirror, cardinal: cardinal, frameMirrored: frameMirror);
+    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(new Vector3(1000, 0, 0)));
+    Assert.That(mesh, Is.Not.Null);
+    var points = ProjectStart(mesh!, Vector3.Zero, Vector3.UnitZ, -Vector3.UnitY);
+    double area = 2 * WIDTH * FLANGE + (DEPTH - 2 * FLANGE) * WEB;
+    double centroid = WEB * (DEPTH - 2 * FLANGE) * (WIDTH - WEB) / (2 * area);
+    bool reflected = sectionMirror != frameMirror;
+    double minWidth = -WIDTH / 2 + (cardinal == 10 ? (reflected ? centroid : -centroid) : 0);
+    var web = WebWidths(points);
+    Assert.That(web[0], Is.EqualTo(reflected ? minWidth : minWidth + WIDTH - WEB).Within(1e-6));
+    Assert.That(web[1], Is.EqualTo(reflected ? minWidth + WEB : minWidth + WIDTH).Within(1e-6));
+    Assert.That(SignedVolume(mesh!), Is.EqualTo(area * 1000).Within(1e-6));
+    AssertClosed(mesh!);
+    Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
+  [TestCase(false)]
+  [TestCase(true)]
+  public void Extrude_RootFilletedISectionPreservesSurfaceAndVolume(bool mirrored)
+  {
+    var fixture = CreateFixture(
+      false,
+      cardinal: 10,
+      frameMirrored: mirrored,
+      iSection: new ISectionProfile(190, 200, 10, 6.5, 200, 10, 18),
+      hostArea: 5380,
+      sectionName: "HEA200"
+    );
+    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(new Vector3(1000, 0, 0)));
+    Assert.That(mesh, Is.Not.Null);
+    var points = ProjectStart(mesh!, Vector3.Zero, Vector3.UnitZ, -Vector3.UnitY);
+    Assert.That(points.Min(p => p.X), Is.EqualTo(-95).Within(1e-6));
+    Assert.That(points.Max(p => p.X), Is.EqualTo(95).Within(1e-6));
+    Assert.That(points.Min(p => p.Y), Is.EqualTo(-100).Within(1e-6));
+    Assert.That(points.Max(p => p.Y), Is.EqualTo(100).Within(1e-6));
+    var filletPoints = points.Where(p => p.X > 67 && p.X < 85 && p.Y > 3.25 && p.Y < 21.25).ToArray();
+    Assert.That(filletPoints.Length, Is.GreaterThan(5));
+    foreach (var point in filletPoints)
+    {
+      Assert.That(Vector2.Distance(point, new Vector2(67, 21.25)), Is.EqualTo(18).Within(1e-6));
+    }
+    for (int i = 0; i + 1 < filletPoints.Length; i++)
+    {
+      var midpoint = (filletPoints[i] + filletPoints[i + 1]) / 2;
+      Assert.That(Math.Abs(18 - Vector2.Distance(midpoint, new Vector2(67, 21.25))), Is.LessThan(0.1));
+    }
+    double exactArea = 5105 + 4 * 18 * 18 * (1 - Math.PI / 4);
+    Assert.That(SignedVolume(mesh!), Is.EqualTo(exactArea * 1000).Within(3000));
+    AssertClosed(mesh!);
+    Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
+  [Test]
+  public void Extrude_TypedISectionWinsOverChannelName()
+  {
+    var fixture = CreateFixture(
+      false,
+      cardinal: 10,
+      frameMirrored: true,
+      iSection: new ISectionProfile(500, 430, 90, 56, 430, 90, 15),
+      hostArea: 95500,
+      sectionName: "U 220"
+    );
+    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(new Vector3(1000, 0, 0)));
+    Assert.That(mesh, Is.Not.Null);
+    var points = ProjectStart(mesh!, Vector3.Zero, Vector3.UnitZ, -Vector3.UnitY);
+    Assert.That(points.Max(p => p.X) - points.Min(p => p.X), Is.EqualTo(500).Within(1e-6));
+    Assert.That(points.Max(p => p.Y) - points.Min(p => p.Y), Is.EqualTo(430).Within(1e-6));
+    Assert.That(SignedVolume(mesh!), Is.EqualTo((95320 + 4 * 225 * (1 - Math.PI / 4)) * 1000).Within(2100));
+    AssertClosed(mesh!);
+    Assert.That(fixture.Resolver.Resolve("U 220").ShapeKey, Is.EqualTo("I"));
+    Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
+  [TestCase(4000)]
+  [TestCase(7000)]
+  public void Resolve_RootFilletDoesNotBypassInvalidSourceArea(double area)
+  {
+    var fixture = CreateFixture(false, iSection: new ISectionProfile(190, 200, 10, 6.5, 200, 10, 18), hostArea: area);
+    Assert.That(fixture.Resolver.Resolve(SECTION).ShapeKey, Is.EqualTo("I/area-mismatch"));
     Assert.That(
       fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(new Vector3(1000, 0, 0))),
       Is.Null
     );
-    Assert.That(fixture.Fallbacks.Counts["FRAME/mirrored-section"], Is.EqualTo(1));
+    Assert.That(fixture.Fallbacks.Counts["FRAME/I/area-mismatch"], Is.EqualTo(1));
+  }
+
+  [TestCase(-1)]
+  [TestCase(90)]
+  [TestCase(double.NaN)]
+  public void Resolve_InvalidRootRadiusKeepsDimensionFallback(double radius)
+  {
+    var fixture = CreateFixture(
+      false,
+      iSection: new ISectionProfile(190, 200, 10, 6.5, 200, 10, radius),
+      hostArea: 5380
+    );
+    Assert.That(fixture.Resolver.Resolve(SECTION).ShapeKey, Is.EqualTo("I/invalid-dimensions"));
+  }
+
+  [TestCase(0)]
+  [TestCase(-99)]
+  public void Extrude_UnfilletedISectionKeepsLegacyGetterCompatibility(int getterResult)
+  {
+    var fixture = CreateFixture(
+      false,
+      cardinal: 10,
+      getterResult: getterResult,
+      iSection: new ISectionProfile(190, 200, 10, 6.5, 200, 10),
+      hostArea: 5105
+    );
+    var mesh = fixture.Extractor.TryExtrudeFrame(new CsiFrameWrapper { Name = FRAME }, Axis(new Vector3(1000, 0, 0)));
+    Assert.That(mesh, Is.Not.Null);
+    Assert.That(SignedVolume(mesh!), Is.EqualTo(5105000).Within(1e-6));
+    AssertClosed(mesh!);
+    Assert.That(fixture.Fallbacks.Total, Is.Zero);
+  }
+
+  [Test]
+  public void Mirror_HollowOutlinePreservesVoidAndOutwardWinding()
+  {
+    var outline = ProfileOutline.TryCreate(
+      [new(-2, -4), new(2, -4), new(2, 4), new(-2, 4)],
+      [
+        [new(-1, -3), new(1, -3), new(1, -1), new(-1, -1)],
+      ]
+    )!;
+    var mirrored = outline.MirrorAboutDepth();
+    Assert.That(mirrored.Area, Is.EqualTo(28).Within(1e-6));
+    Assert.That(mirrored.Holes[0].Min(p => p.Y), Is.GreaterThan(0));
+    var prism = PrismBuilder.TryBuildUnitPrism(mirrored)!;
+    var mesh = new Mesh
+    {
+      vertices = prism.LocalVertices.ToList(),
+      faces = prism.Faces.ToList(),
+      units = "mm",
+    };
+    Assert.That(SignedVolume(mesh), Is.EqualTo(28).Within(1e-6));
+    AssertClosed(mesh);
+  }
+
+  private static void AssertClosed(Mesh mesh)
+  {
+    var positions = new List<Vector3>();
+    var vertexMap = new List<int>();
+    for (int i = 0; i < mesh.vertices.Count; i += 3)
+    {
+      var point = new Vector3(mesh.vertices[i], mesh.vertices[i + 1], mesh.vertices[i + 2]);
+      int index = positions.FindIndex(p => Vector3.Distance(p, point) < 1e-5);
+      if (index < 0)
+      {
+        index = positions.Count;
+        positions.Add(point);
+      }
+      vertexMap.Add(index);
+    }
+    var edges = new Dictionary<(int, int), (int Count, int Winding)>();
+    for (int i = 0; i < mesh.faces.Count; i += 4)
+    {
+      for (int j = 0; j < 3; j++)
+      {
+        int a = vertexMap[mesh.faces[i + 1 + j]],
+          b = vertexMap[mesh.faces[i + 1 + (j + 1) % 3]];
+        var direction = positions[b] - positions[a];
+        var split = positions
+          .Select((p, index) => (p, index, t: Vector3.Dot(p - positions[a], direction) / direction.LengthSquared()))
+          .Where(p => p.t >= -1e-8 && p.t <= 1 + 1e-8 && Vector3.Distance(p.p, positions[a] + p.t * direction) < 1e-5)
+          .OrderBy(p => p.t)
+          .Select(p => p.index)
+          .ToArray();
+        for (int k = 0; k + 1 < split.Length; k++)
+        {
+          int first = split[k],
+            second = split[k + 1];
+          var edge = (Math.Min(first, second), Math.Max(first, second));
+          var previous = edges.GetValueOrDefault(edge);
+          edges[edge] = (previous.Count + 1, previous.Winding + (first < second ? 1 : -1));
+        }
+      }
+    }
+    Assert.That(edges.Values.Select(e => e.Count), Is.All.EqualTo(2));
+    Assert.That(edges.Values.Select(e => e.Winding), Is.All.Zero);
   }
 
   [Test]
@@ -348,17 +560,114 @@ public class ChannelHandednessTests
     int getterResult = 0,
     double depth = DEPTH,
     bool frameMirrored = false,
-    bool rectangle = false
+    bool rectangle = false,
+    ISectionProfile? iSection = null,
+    double? hostArea = null,
+    string sectionName = SECTION
   )
   {
     var properties = new Mock<cPropFrame>(MockBehavior.Strict);
     properties
-      .Setup(x => x.GetTypeOAPI(SECTION, ref It.Ref<eFramePropType>.IsAny))
+      .Setup(x => x.GetTypeOAPI(sectionName, ref It.Ref<eFramePropType>.IsAny))
       .Returns(
         new ReadType(
           (string _, ref eFramePropType type) =>
           {
-            type = rectangle ? eFramePropType.Rectangular : eFramePropType.Channel;
+            type =
+              rectangle ? eFramePropType.Rectangular
+              : iSection is null ? eFramePropType.Channel
+              : eFramePropType.I;
+            return 0;
+          }
+        )
+      );
+    properties
+      .Setup(x =>
+        x.GetISection_1(
+          sectionName,
+          ref It.Ref<string>.IsAny,
+          ref It.Ref<string>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<int>.IsAny,
+          ref It.Ref<string>.IsAny,
+          ref It.Ref<string>.IsAny
+        )
+      )
+      .Returns(
+        new ReadISection(
+          (
+            string _,
+            ref string file,
+            ref string material,
+            ref double depth,
+            ref double width,
+            ref double flange,
+            ref double web,
+            ref double bottomWidth,
+            ref double bottomFlange,
+            ref double radius,
+            ref int color,
+            ref string notes,
+            ref string guid
+          ) =>
+          {
+            depth = iSection!.Depth;
+            width = iSection.TopFlangeWidth;
+            flange = iSection.TopFlangeThickness;
+            web = iSection.WebThickness;
+            bottomWidth = iSection.BottomFlangeWidth;
+            bottomFlange = iSection.BottomFlangeThickness;
+            radius = iSection.RootRadius;
+            return getterResult;
+          }
+        )
+      );
+    properties
+      .Setup(x =>
+        x.GetISection(
+          sectionName,
+          ref It.Ref<string>.IsAny,
+          ref It.Ref<string>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<double>.IsAny,
+          ref It.Ref<int>.IsAny,
+          ref It.Ref<string>.IsAny,
+          ref It.Ref<string>.IsAny
+        )
+      )
+      .Returns(
+        new ReadLegacyISection(
+          (
+            string _,
+            ref string file,
+            ref string material,
+            ref double depth,
+            ref double width,
+            ref double flange,
+            ref double web,
+            ref double bottomWidth,
+            ref double bottomFlange,
+            ref int color,
+            ref string notes,
+            ref string guid
+          ) =>
+          {
+            depth = iSection!.Depth;
+            width = iSection.TopFlangeWidth;
+            flange = iSection.TopFlangeThickness;
+            web = iSection.WebThickness;
+            bottomWidth = iSection.BottomFlangeWidth;
+            bottomFlange = iSection.BottomFlangeThickness;
             return 0;
           }
         )
@@ -366,7 +675,7 @@ public class ChannelHandednessTests
     properties
       .Setup(x =>
         x.GetChannel(
-          SECTION,
+          sectionName,
           ref It.Ref<string>.IsAny,
           ref It.Ref<string>.IsAny,
           ref It.Ref<double>.IsAny,
@@ -404,7 +713,7 @@ public class ChannelHandednessTests
     properties
       .Setup(x =>
         x.GetChannel_1(
-          SECTION,
+          sectionName,
           ref It.Ref<string>.IsAny,
           ref It.Ref<string>.IsAny,
           ref It.Ref<double>.IsAny,
@@ -445,7 +754,7 @@ public class ChannelHandednessTests
     properties
       .Setup(x =>
         x.GetRectangle(
-          SECTION,
+          sectionName,
           ref It.Ref<string>.IsAny,
           ref It.Ref<string>.IsAny,
           ref It.Ref<double>.IsAny,
@@ -477,7 +786,7 @@ public class ChannelHandednessTests
     properties
       .Setup(x =>
         x.GetSectProps(
-          SECTION,
+          sectionName,
           ref It.Ref<double>.IsAny,
           ref It.Ref<double>.IsAny,
           ref It.Ref<double>.IsAny,
@@ -510,7 +819,7 @@ public class ChannelHandednessTests
             ref double r33
           ) =>
           {
-            area = rectangle ? DEPTH * WIDTH : 1703.2;
+            area = hostArea ?? (rectangle ? DEPTH * WIDTH : 1703.2);
             return 0;
           }
         )
@@ -522,7 +831,7 @@ public class ChannelHandednessTests
         new ReadSection(
           (string _, ref string section, ref string autoSelect) =>
           {
-            section = SECTION;
+            section = sectionName;
             return 0;
           }
         )
