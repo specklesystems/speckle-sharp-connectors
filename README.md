@@ -60,9 +60,9 @@ Make sure to also check and ⭐️ these other Speckle next generation repositor
 
 ## Developing
 
-To build solutions in this repo, [10.0.2xx of the .NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) is required.
+To build solutions in this repo, [10.0.4xx of the .NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) is required.
 
-It is recommended to use Jetbrains Rider (version 2025.3 or greater) or Visual Studio 2026 (version 18.4 or greater)
+It is recommended to use Jetbrains Rider (version 2026.1 or greater) or Visual Studio 2026 (version 18.4 or greater)
 
 From there you can open the main `Speckle.Connectors.slnx` solution and build the project.
 
