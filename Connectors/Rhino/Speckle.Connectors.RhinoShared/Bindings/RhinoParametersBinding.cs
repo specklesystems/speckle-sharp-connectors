@@ -37,8 +37,10 @@ internal sealed class RhinoParametersBinding : IParametersBinding
     _logger = logger;
   }
 
-  public async Task Update(string payload)
+  public async Task<ParameterUpdateSummary> Update(string payload)
   {
+    int successCount = 0;
+    List<string> errors = [];
     try
     {
       var wrapper = _jsonSerializer.Deserialize<ParameterChangesWrapper>(payload);
@@ -46,13 +48,10 @@ internal sealed class RhinoParametersBinding : IParametersBinding
 
       if (requests is null || requests.Count == 0)
       {
-        return;
+        return new ParameterUpdateSummary(0, 0, []);
       }
 
       var doc = RhinoDoc.ActiveDoc ?? throw new SpeckleException("Unable to retrieve active Rhino document");
-
-      int successCount = 0;
-      List<string> errors = [];
 
       uint undoRecord = doc.BeginUndoRecord("Speckle: Apply Parameter Changes");
       try
@@ -115,12 +114,16 @@ internal sealed class RhinoParametersBinding : IParametersBinding
           $"Successfully applied {successCount} updates."
         );
       }
+
+      return new ParameterUpdateSummary(successCount, errors.Count, errors);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _topLevelExceptionHandler.CatchUnhandled(() =>
         throw new SpeckleException("Failed to apply parameter updates", ex)
       );
+      errors.Add(ex.Message);
+      return new ParameterUpdateSummary(successCount, errors.Count, errors);
     }
   }
 
