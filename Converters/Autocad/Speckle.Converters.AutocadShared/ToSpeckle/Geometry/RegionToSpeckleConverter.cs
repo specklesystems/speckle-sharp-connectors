@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad.ToSpeckle.Raw;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
@@ -9,7 +10,7 @@ namespace Speckle.Converters.Autocad.Geometry;
 [NameAndRankValue(typeof(ADB.Region), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<ADB.Region, SOG.Region>
 {
-  private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
+  private readonly INonVolumetricBrepConverter _brepConverter;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<ADB.Curve, ICurve> _nurbConverter;
@@ -18,7 +19,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public RegionToSpeckleConverter(
-    ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter,
+    INonVolumetricBrepConverter brepConverter,
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
     ITypedConverter<ADB.Curve, ICurve> nurbConverter,
