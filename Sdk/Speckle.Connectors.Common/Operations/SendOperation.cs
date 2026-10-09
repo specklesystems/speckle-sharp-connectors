@@ -138,22 +138,7 @@ public sealed class SendOperation<T>(
       throw new InvalidOperationException("rootContinuousTraversalBuilder cannot be null");
     }
 
-    ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
-      new(
-        sendInfo.ModelId,
-        sendInfo.ProjectId,
-        $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(
-          speckleApplication.Slug,
-          speckleApplication.HostApplicationVersion,
-          fileName,
-          fileSizeBytes,
-          connectorVersion: speckleApplication.SpeckleVersion
-        ),
-        600
-      ),
-      cancellationToken
-    );
+    ModelIngestion ingestion = await CreateIngestion(sendInfo, fileName, fileSizeBytes, cancellationToken);
     using var ingestionScope = ActivityScope.SetTag("modelIngestion.Id", ingestion.id);
 
     var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
@@ -280,22 +265,7 @@ public sealed class SendOperation<T>(
       throw new InvalidOperationException("artifactRootObjectBuilder cannot be null");
     }
 
-    ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
-      new(
-        sendInfo.ModelId,
-        sendInfo.ProjectId,
-        $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(
-          speckleApplication.Slug,
-          speckleApplication.HostApplicationVersion,
-          fileName,
-          fileSizeBytes,
-          connectorVersion: speckleApplication.SpeckleVersion
-        ),
-        600
-      ),
-      cancellationToken
-    );
+    ModelIngestion ingestion = await CreateIngestion(sendInfo, fileName, fileSizeBytes, cancellationToken);
     using var ingestionScope = ActivityScope.SetTag("modelIngestion.Id", ingestion.id);
 
     // The artefact pipeline bakes the version id into the artefact filenames and uses it as the commit PK
@@ -366,22 +336,7 @@ public sealed class SendOperation<T>(
     CancellationToken cancellationToken
   )
   {
-    ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
-      new(
-        sendInfo.ModelId,
-        sendInfo.ProjectId,
-        $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(
-          speckleApplication.Slug,
-          speckleApplication.HostApplicationVersion,
-          fileName,
-          fileSizeBytes,
-          connectorVersion: speckleApplication.SpeckleVersion
-        ),
-        600
-      ),
-      cancellationToken
-    );
+    ModelIngestion ingestion = await CreateIngestion(sendInfo, fileName, fileSizeBytes, cancellationToken);
     using var ingestionScope = ActivityScope.SetTag("modelIngestionId", ingestion.id);
 
     var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
@@ -540,6 +495,45 @@ public sealed class SendOperation<T>(
   /// </ul>
   /// </summary>
   /// <param name="sendInfo"></param>
+  private async Task<ModelIngestion> CreateIngestion(
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+    CancellationToken cancellationToken
+  )
+  {
+    ModelIngestionCreateInput input = new(
+      sendInfo.ModelId,
+      sendInfo.ProjectId,
+      $"Sending from {speckleApplication.ApplicationAndVersion}",
+      new(
+        speckleApplication.Slug,
+        speckleApplication.HostApplicationVersion,
+        fileName,
+        fileSizeBytes,
+        connectorVersion: speckleApplication.SpeckleVersion
+      ),
+      600
+    );
+    try
+    {
+      return await sendInfo.Client.Ingestion.Create(input, cancellationToken);
+    }
+    catch (AggregateException ex) when (ex.InnerExceptions.OfType<SpeckleGraphQLBadInputException>().Any())
+    {
+      // Servers before 2026.9.8 reject SourceDataInput.connectorVersion as bad input. Any bad-input error is
+      // retried without it rather than matching the message: the SDK omits a null from the request, so the retry
+      // sends exactly what 2026.9.0 connectors sent, and a genuinely bad input just fails the same way again (ENG-10524).
+      return await sendInfo.Client.Ingestion.Create(
+        input with
+        {
+          sourceData = input.sourceData with { connectorVersion = null },
+        },
+        cancellationToken
+      );
+    }
+  }
+
   /// <returns><see langword="true"/> if we should use model ingestion based send functions, false</returns>
   /// <exception cref="WorkspacePermissionException">Thrown if the server supports model ingestion, but for other reasons we won't beable to create an ingestion</exception>
   private static async Task<bool> CheckUseModelIngestionSend(SendInfo sendInfo)
