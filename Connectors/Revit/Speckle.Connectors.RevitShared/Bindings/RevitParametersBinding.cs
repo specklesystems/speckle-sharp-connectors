@@ -93,64 +93,8 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
           t.Start();
 
-          foreach (var request in requests)
+          void Record(UpdateResult result)
           {
-            if (request.IsCreation)
-            {
-              var paramName = ExtractCreationParamName(request.Path);
-              if (string.IsNullOrEmpty(paramName))
-              {
-                errors.Add($"Invalid path for new parameter: '{request.Path}'");
-                continue;
-              }
-
-              if (ContainsLinkedModelTransformHash(request.ApplicationId))
-              {
-                errors.Add("Cannot modify elements from a linked model");
-                continue;
-              }
-
-              var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
-              var creationElement = elementId is not null ? doc.GetElement(elementId) : null;
-              if (creationElement is null)
-              {
-                errors.Add($"Element not found: {request.ApplicationId}");
-                continue;
-              }
-
-              object? rawCreationValue = request.To is Newtonsoft.Json.Linq.JValue jv ? jv.Value : request.To;
-              var creationResult = _parameterCreator.CreateAndSet(doc, creationElement, paramName, rawCreationValue);
-
-              if (creationResult.IsSuccess)
-              {
-                successCount++;
-              }
-              else
-              {
-                errors.Add(creationResult.ErrorMessage ?? "Unknown error");
-              }
-              continue;
-            }
-
-            if (!TryValidateAndParseRequest(doc, request, out var element, out var parsedPath, out var errorMessage))
-            {
-              errors.Add(errorMessage!);
-              continue;
-            }
-
-            object? rawValue = request.To;
-            if (rawValue is Newtonsoft.Json.Linq.JValue jValue)
-            {
-              rawValue = jValue.Value;
-            }
-
-            var result = _parameterUpdater.Update(
-              element!,
-              parsedPath!.ToArray(),
-              rawValue,
-              request.InternalDefinitionName
-            );
-
             if (result.IsSuccess)
             {
               successCount++;
@@ -159,6 +103,49 @@ internal sealed class RevitParametersBinding : IParametersBinding
             {
               errors.Add(result.ErrorMessage ?? "Unknown error");
             }
+          }
+
+          foreach (var request in requests)
+          {
+            if (!TryResolveElement(doc, request, out var element, out var elementError))
+            {
+              errors.Add(elementError!);
+              continue;
+            }
+
+            object? rawValue = request.To is Newtonsoft.Json.Linq.JValue jValue ? jValue.Value : request.To;
+
+            // a creation flag only says the widget saw no value for this object; when the path resolves to a
+            // parameter the element does have it, so it is updated rather than shadowed by a new one
+            var hasParameterPath = TryParsePath(request.Path, out var parsedPath, out var pathError);
+            if (
+              hasParameterPath
+              && (
+                !request.IsCreation
+                || _parameterUpdater.Exists(element!, parsedPath!.ToArray(), request.InternalDefinitionName)
+              )
+            )
+            {
+              Record(
+                _parameterUpdater.Update(element!, parsedPath!.ToArray(), rawValue, request.InternalDefinitionName)
+              );
+              continue;
+            }
+
+            if (!request.IsCreation)
+            {
+              errors.Add(pathError!);
+              continue;
+            }
+
+            var paramName = ExtractCreationParamName(request.Path);
+            if (string.IsNullOrEmpty(paramName))
+            {
+              errors.Add($"Invalid path for new parameter: '{request.Path}'");
+              continue;
+            }
+
+            Record(_parameterCreator.CreateAndSet(doc, element!, paramName, rawValue));
           }
 
           t.Commit();
@@ -209,16 +196,14 @@ internal sealed class RevitParametersBinding : IParametersBinding
     }
   }
 
-  private bool TryValidateAndParseRequest(
+  private static bool TryResolveElement(
     Document doc,
     ParameterChangeRequest request,
     out Element? element,
-    out ParsedParameterPath? parsedPath,
     out string? errorMessage
   )
   {
     element = null;
-    parsedPath = null;
     errorMessage = null;
 
     if (string.IsNullOrEmpty(request.ApplicationId))
@@ -234,37 +219,29 @@ internal sealed class RevitParametersBinding : IParametersBinding
     }
 
     var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
-    if (elementId == null)
-    {
-      errorMessage = "Element(s) not found in document";
-      return false;
-    }
-
-    element = doc.GetElement(elementId);
+    element = elementId is not null ? doc.GetElement(elementId) : null;
     if (element == null)
     {
       errorMessage = "Element(s) not found in document";
       return false;
     }
 
-    var rawPath = request.Path;
-    if (string.IsNullOrEmpty(rawPath))
+    return true;
+  }
+
+  private bool TryParsePath(string? path, out ParsedParameterPath? parsedPath, out string? errorMessage)
+  {
+    parsedPath = null;
+    errorMessage = null;
+
+    if (string.IsNullOrEmpty(path))
     {
       _logger.LogError("Widget / DUI payload error: parameter path missing");
       errorMessage = "Parameter path is missing";
       return false;
     }
 
-    if (rawPath.StartsWith("properties.", StringComparison.InvariantCultureIgnoreCase))
-    {
-      rawPath = rawPath[11..];
-    }
-
-    if (rawPath.StartsWith("parameters.", StringComparison.InvariantCultureIgnoreCase))
-    {
-      rawPath = rawPath[11..];
-    }
-
+    var rawPath = StripPrefixes(path!);
     var pathParts = rawPath.Split(['.'], 3);
     if (pathParts.Length != 3)
     {
@@ -280,24 +257,42 @@ internal sealed class RevitParametersBinding : IParametersBinding
     return true;
   }
 
+  private static string StripPrefixes(string path)
+  {
+    if (path.StartsWith("properties.", StringComparison.OrdinalIgnoreCase))
+    {
+      path = path[11..];
+    }
+
+    if (path.StartsWith("parameters.", StringComparison.OrdinalIgnoreCase))
+    {
+      path = path[11..];
+    }
+
+    return path;
+  }
+
   private static bool ContainsLinkedModelTransformHash(string applicationId) =>
     // Evaluates if the ID contains the standard transform hash for linked elements
     System.Text.RegularExpressions.Regex.IsMatch(applicationId, @"_t[a-f0-9]+$");
 
   /// <summary>
-  /// Strips the "properties." or "parameters." prefix added by the widget and returns
-  /// the bare parameter name (e.g. "properties.SpeckleTag" → "SpeckleTag").
+  /// The name a created parameter gets: the bare name behind the widget's "properties." / "parameters." prefix
+  /// (e.g. "properties.SpeckleTag" → "SpeckleTag"), or the leaf of a full scope.group.name path, so a creation
+  /// request on an existing path is never named after the whole path.
   /// </summary>
   private static string ExtractCreationParamName(string path)
   {
-    if (path.StartsWith("properties.", StringComparison.OrdinalIgnoreCase))
+    var name = StripPrefixes(path).Trim();
+    var parts = name.Split(['.'], 3);
+    if (
+      parts.Length == 3
+      && parts[0] is ParameterScopes.INSTANCE or ParameterScopes.TYPE or ParameterScopes.SYSTEM_TYPE
+    )
     {
-      return path[11..].Trim();
+      return parts[2].Trim();
     }
-    if (path.StartsWith("parameters.", StringComparison.OrdinalIgnoreCase))
-    {
-      return path[11..].Trim();
-    }
-    return path.Trim();
+
+    return name;
   }
 }

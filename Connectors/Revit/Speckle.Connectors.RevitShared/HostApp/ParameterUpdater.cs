@@ -64,6 +64,20 @@ public class ParameterUpdater
     return SetParameterValue(parameter, newValue);
   }
 
+  /// <summary>
+  /// Whether the path resolves to a parameter on the element. Same lookup as <see cref="Update"/>, no write.
+  /// </summary>
+  public bool Exists(DB.Element element, string[] path, string? internalDefinitionName = null)
+  {
+    if (path.Length != 3)
+    {
+      return false;
+    }
+
+    var targetElement = GetTargetElement(element, path[0]);
+    return targetElement != null && FindParameter(targetElement, path[1], path[2], internalDefinitionName) != null;
+  }
+
   private DB.Element? GetTargetElement(DB.Element element, string scope) =>
     scope switch
     {

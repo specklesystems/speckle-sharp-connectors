@@ -69,71 +69,8 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
           using var docLock = doc.LockDocument();
           using var tr = doc.Database.TransactionManager.StartTransaction();
 
-          foreach (var request in requests)
+          void Record(UpdateResult result)
           {
-            if (request.IsCreation)
-            {
-              var paramName = ExtractCreationParamName(request.Path);
-              if (string.IsNullOrEmpty(paramName))
-              {
-                errors.Add($"Invalid path for new property: '{request.Path}'");
-                continue;
-              }
-
-              if (!long.TryParse(request.ApplicationId, out long handleValue))
-              {
-                errors.Add($"ApplicationId is not a valid handle: {request.ApplicationId}");
-                continue;
-              }
-
-              var handle = new ADB.Handle(handleValue);
-              if (!doc.Database.TryGetObjectId(handle, out ADB.ObjectId objectId))
-              {
-                errors.Add($"Entity not found: {request.ApplicationId}");
-                continue;
-              }
-
-              if (tr.GetObject(objectId, ADB.OpenMode.ForRead) is not ADB.Entity creationEntity)
-              {
-                errors.Add($"Object is not an entity: {request.ApplicationId}");
-                continue;
-              }
-
-              object? rawCreationValue = request.To is Newtonsoft.Json.Linq.JValue jv ? jv.Value : request.To;
-              var creationResult = _parameterCreator.CreateAndSet(
-                creationEntity,
-                tr,
-                doc.Database,
-                paramName,
-                rawCreationValue
-              );
-
-              if (creationResult.IsSuccess)
-              {
-                successCount++;
-              }
-              else
-              {
-                errors.Add(creationResult.ErrorMessage ?? "Unknown error");
-              }
-              continue;
-            }
-
-            if (!TryValidateAndParseRequest(doc, tr, request, out var entity, out var parsedPath, out var error))
-            {
-              errors.Add(error!);
-              continue;
-            }
-
-            object? rawValue = request.To is Newtonsoft.Json.Linq.JValue jValue ? jValue.Value : request.To;
-
-            var result = _propertyUpdater.Update(
-              entity!,
-              parsedPath!.ToArray(),
-              rawValue,
-              tr,
-              request.InternalDefinitionName
-            );
             if (result.IsSuccess)
             {
               successCount++;
@@ -142,6 +79,49 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
             {
               errors.Add(result.ErrorMessage ?? "Unknown error");
             }
+          }
+
+          foreach (var request in requests)
+          {
+            if (!TryResolveEntity(doc, tr, request, out var entity, out var entityError))
+            {
+              errors.Add(entityError!);
+              continue;
+            }
+
+            object? rawValue = request.To is Newtonsoft.Json.Linq.JValue jValue ? jValue.Value : request.To;
+
+            // a creation flag only says the widget saw no value for this object; when the path resolves to a
+            // property the entity does have it, so it is updated rather than shadowed by a new one
+            var hasPropertyPath = TryParsePath(request.Path, out var parsedPath, out var pathError);
+            if (
+              hasPropertyPath
+              && (
+                !request.IsCreation
+                || _propertyUpdater.Exists(entity!, parsedPath!.ToArray(), tr, request.InternalDefinitionName)
+              )
+            )
+            {
+              Record(
+                _propertyUpdater.Update(entity!, parsedPath!.ToArray(), rawValue, tr, request.InternalDefinitionName)
+              );
+              continue;
+            }
+
+            if (!request.IsCreation)
+            {
+              errors.Add(pathError!);
+              continue;
+            }
+
+            var paramName = ExtractCreationParamName(request.Path);
+            if (string.IsNullOrEmpty(paramName))
+            {
+              errors.Add($"Invalid path for new property: '{request.Path}'");
+              continue;
+            }
+
+            Record(_parameterCreator.CreateAndSet(entity!, tr, doc.Database, paramName, rawValue));
           }
 
           tr.Commit();
@@ -196,17 +176,15 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
     }
   }
 
-  private static bool TryValidateAndParseRequest(
+  private static bool TryResolveEntity(
     Document doc,
     ADB.Transaction tr,
     ParameterChangeRequest request,
     out ADB.Entity? entity,
-    out ParsedPropertyPath? parsedPath,
     out string? errorMessage
   )
   {
     entity = null;
-    parsedPath = null;
     errorMessage = null;
 
     if (string.IsNullOrEmpty(request.ApplicationId))
@@ -237,30 +215,27 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
       }
 
       entity = resolved;
+      return true;
     }
     catch (Autodesk.AutoCAD.Runtime.Exception e) when (e.ErrorStatus == Autodesk.AutoCAD.Runtime.ErrorStatus.WasErased)
     {
       errorMessage = $"Object was erased: {request.ApplicationId}";
       return false;
     }
+  }
 
-    var rawPath = request.Path;
-    if (string.IsNullOrEmpty(rawPath))
+  private static bool TryParsePath(string? path, out ParsedPropertyPath? parsedPath, out string? errorMessage)
+  {
+    parsedPath = null;
+    errorMessage = null;
+
+    if (string.IsNullOrEmpty(path))
     {
       errorMessage = "Parameter path is missing";
       return false;
     }
 
-    if (rawPath.StartsWith("properties.", StringComparison.InvariantCultureIgnoreCase))
-    {
-      rawPath = rawPath[11..];
-    }
-    else if (rawPath.StartsWith("parameters.", StringComparison.InvariantCultureIgnoreCase))
-    {
-      rawPath = rawPath[11..];
-    }
-
-    var pathParts = rawPath.Split(['.'], 3);
+    var pathParts = StripPrefix(path!).Split(['.'], 3);
     if (pathParts.Length != 3)
     {
       errorMessage = "Parameter path is incorrectly formatted";
@@ -271,20 +246,35 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
     return true;
   }
 
+  private static string StripPrefix(string path)
+  {
+    if (path.StartsWith("properties.", StringComparison.OrdinalIgnoreCase))
+    {
+      return path[11..];
+    }
+
+    if (path.StartsWith("parameters.", StringComparison.OrdinalIgnoreCase))
+    {
+      return path[11..];
+    }
+
+    return path;
+  }
+
   /// <summary>
   /// Strips the "properties." or "parameters." prefix added by the widget and returns
   /// the bare property name (e.g. "properties.SpeckleTag" → "SpeckleTag").
   /// </summary>
   private static string ExtractCreationParamName(string path)
   {
-    if (path.StartsWith("properties.", StringComparison.OrdinalIgnoreCase))
+    var name = StripPrefix(path).Trim();
+    var parts = name.Split(['.'], 3);
+    if (parts.Length == 3 && parts[0] == PropertyUpdater.PROPERTY_SETS_KEY)
     {
-      return path[11..].Trim();
+      // a creation on an existing property-set path that did not resolve is named after the property, not the path
+      return parts[2].Trim();
     }
-    if (path.StartsWith("parameters.", StringComparison.OrdinalIgnoreCase))
-    {
-      return path[11..].Trim();
-    }
-    return path.Trim();
+
+    return name;
   }
 }
