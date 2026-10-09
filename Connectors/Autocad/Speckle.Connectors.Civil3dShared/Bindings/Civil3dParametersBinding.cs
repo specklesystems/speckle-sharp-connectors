@@ -44,8 +44,10 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
     _parameterCreator = parameterCreator;
   }
 
-  public async Task Update(string payload)
+  public async Task<ParameterUpdateSummary> Update(string payload)
   {
+    int successCount = 0;
+    List<string> errors = new();
     try
     {
       var wrapper = _jsonSerializer.Deserialize<ParameterChangesWrapper>(payload);
@@ -53,15 +55,12 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
 
       if (requests is null || requests.Count == 0)
       {
-        return;
+        return new ParameterUpdateSummary(0, 0, []);
       }
 
       var doc =
         Application.DocumentManager.MdiActiveDocument
         ?? throw new SpeckleException("Unable to retrieve active document.");
-
-      int successCount = 0;
-      List<string> errors = new();
 
       await _threadContext
         .RunOnMainAsync(() =>
@@ -167,12 +166,16 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
           )
           .ConfigureAwait(false);
       }
+
+      return new ParameterUpdateSummary(successCount, errors.Count, errors);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _topLevelExceptionHandler.CatchUnhandled(() =>
         throw new SpeckleException("Failed to apply parameter updates", ex)
       );
+      errors.Add(ex.Message);
+      return new ParameterUpdateSummary(successCount, errors.Count, errors);
     }
   }
 
