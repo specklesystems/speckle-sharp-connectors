@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- DUI3 host for Rhino 8 Mac: Eto.Forms WebView (WKWebView) instead of WPF + WebView2. Eto ships inside the
+       RhinoCommon package; this project is only consumed by .NET Core Rhino heads on macOS. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <!-- CA2255: module initializer is deliberate — see MacNativeLibraryResolver -->
+    <NoWarn>$(NoWarn);CA2255</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+  </ItemGroup>
+</Project>
