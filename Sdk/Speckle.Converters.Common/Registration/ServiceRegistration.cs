@@ -1,6 +1,7 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk.Common;
@@ -102,11 +103,17 @@ public static class ServiceRegistration
     }
 
     var rawConversionInterfaces = type.GetInterfaces()
-      .Where(it => it.IsGenericType && it.GetGenericTypeDefinition() == typeof(ITypedConverter<,>));
+      .Where(it => IsTypedConverterInterface(it) || ImplementsTypedConverterInterface(it));
 
     foreach (var conversionInterface in rawConversionInterfaces)
     {
-      serviceCollection.Add(new ServiceDescriptor(conversionInterface, type, ServiceLifetime.Scoped));
+      serviceCollection.TryAdd(new ServiceDescriptor(conversionInterface, type, ServiceLifetime.Scoped));
     }
   }
+
+  private static bool IsTypedConverterInterface(Type type) =>
+    type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ITypedConverter<,>);
+
+  private static bool ImplementsTypedConverterInterface(Type type) =>
+    !type.IsGenericType && type.GetInterfaces().Any(IsTypedConverterInterface);
 }

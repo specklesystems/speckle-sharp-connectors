@@ -6,9 +6,9 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class Solid3dToSpeckleRawConverter : ITypedConverter<ADB.Solid3d, SOG.Mesh>
 {
-  private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
+  private readonly IVolumetricBrepConverter _brepConverter;
 
-  public Solid3dToSpeckleRawConverter(ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter)
+  public Solid3dToSpeckleRawConverter(IVolumetricBrepConverter brepConverter)
   {
     _brepConverter = brepConverter;
   }
