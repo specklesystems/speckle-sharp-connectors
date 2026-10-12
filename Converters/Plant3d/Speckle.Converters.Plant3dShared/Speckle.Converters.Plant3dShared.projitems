@@ -17,6 +17,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\Solid3dToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\Plant3dClassHierarchyResolver.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\Plant3dLineGroupResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\Plant3dDataExtractor.cs" />

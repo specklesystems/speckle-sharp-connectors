@@ -11,26 +11,53 @@ namespace Speckle.Converters.TSDShared;
 public sealed class TsdDisplayValueExtractor
 {
   private readonly ITsdModelDataProvider _applicationService;
+  private readonly TsdConversionSettings _settings;
+  private readonly TsdVolumetricDisplayValueExtractor _volumetricExtractor;
   private readonly MeshGenerator _meshGenerator = new(new BaseTransformer(), new LibTessTriangulator());
 
-  public TsdDisplayValueExtractor(ITsdModelDataProvider applicationService)
+  public TsdDisplayValueExtractor(
+    ITsdModelDataProvider applicationService,
+    TsdConversionSettings settings,
+    TsdVolumetricDisplayValueExtractor volumetricExtractor
+  )
   {
     _applicationService = applicationService;
+    _settings = settings;
+    _volumetricExtractor = volumetricExtractor;
   }
 
-  public async Task<List<Base>> GetMemberDisplayValueAsync(
+  /// <summary>
+  /// The member's display value, plus its analytical span lines as centerlines when volumetric geometry is requested
+  /// (empty otherwise) — one per span, in span order (ENG-9048).
+  /// </summary>
+  public async Task<(List<Base> Display, List<SOG.Line> Centerlines)> GetMemberDisplayValueAsync(
     IReadOnlyList<IMemberSpan> spans,
     IUnitBase? unit,
     string speckleUnits
   )
   {
-    var displayValue = new List<Base>();
-
     if (spans.Count == 0)
     {
-      return displayValue;
+      return (new List<Base>(), new List<SOG.Line>());
     }
 
+    var lines = await GetSpanLinesAsync(spans, unit, speckleUnits).ConfigureAwait(false);
+    if (!_settings.SendVolumetricGeometry)
+    {
+      return (lines.Cast<Base>().ToList(), new List<SOG.Line>());
+    }
+
+    var solids = await _volumetricExtractor.TryExtrudeMemberAsync(spans, unit, speckleUnits).ConfigureAwait(false);
+    return (solids ?? lines.Cast<Base>().ToList(), lines);
+  }
+
+  private async Task<List<SOG.Line>> GetSpanLinesAsync(
+    IReadOnlyList<IMemberSpan> spans,
+    IUnitBase? unit,
+    string speckleUnits
+  )
+  {
+    var lines = new List<SOG.Line>();
     var baseCoordinates = new List<double>();
     foreach (var span in spans)
     {
@@ -53,14 +80,14 @@ public sealed class TsdDisplayValueExtractor
 
     if (baseCoordinates.Count == 0)
     {
-      return displayValue;
+      return lines;
     }
 
     var coordinates = await ConvertFromBaseAsync(baseCoordinates, unit).ConfigureAwait(false);
 
     for (int i = 0; i + 5 < coordinates.Count; i += 6)
     {
-      displayValue.Add(
+      lines.Add(
         new SOG.Line
         {
           start = new SOG.Point(coordinates[i], coordinates[i + 1], coordinates[i + 2], speckleUnits),
@@ -70,11 +97,20 @@ public sealed class TsdDisplayValueExtractor
       );
     }
 
-    return displayValue;
+    return lines;
   }
 
   public async Task<List<Base>> GetSlabDisplayValueAsync(ISlabItem slabItem, IUnitBase? unit, string speckleUnits)
   {
+    if (_settings.SendVolumetricGeometry)
+    {
+      var solids = await _volumetricExtractor.TryExtrudeSlabAsync(slabItem, unit, speckleUnits).ConfigureAwait(false);
+      if (solids is not null)
+      {
+        return solids;
+      }
+    }
+
     var plane = slabItem.ElementPlane.Value;
     if (plane is null)
     {
@@ -92,13 +128,16 @@ public sealed class TsdDisplayValueExtractor
 
     foreach (var contour in contours)
     {
-      var outer = LiftRing(contour.Contour.Value, plane);
+      var outer = TsdRings.LiftRing(contour.Contour.Value, plane);
       if (outer.Count < 3)
       {
         continue;
       }
 
-      var holes = contour.Holes.Select(hole => LiftRing(hole.Value, plane)).Where(hole => hole.Count >= 3).ToList();
+      var holes = contour
+        .Holes.Select(hole => TsdRings.LiftRing(hole.Value, plane))
+        .Where(hole => hole.Count >= 3)
+        .ToList();
 
       if (holes.Count == 0)
       {
@@ -121,27 +160,25 @@ public sealed class TsdDisplayValueExtractor
     string speckleUnits
   )
   {
+    if (_settings.SendVolumetricGeometry)
+    {
+      var solids = await _volumetricExtractor.TryExtrudeWallAsync(panels, unit, speckleUnits).ConfigureAwait(false);
+      if (solids is not null)
+      {
+        return solids;
+      }
+    }
+
     var baseVertices = new List<double>();
     var faces = new List<int>();
 
     foreach (var panel in panels)
     {
-      var bottom = panel.BottomSegment.Value;
-      var top = panel.TopSegment.Value;
-      if (bottom is null || top is null)
+      var quad = TsdRings.WallPanelQuad(panel);
+      if (quad is null)
       {
         continue;
       }
-
-      var bottomStart = ToVector(bottom.GetPoint(Location.Start));
-      var bottomEnd = ToVector(bottom.GetPoint(Location.End));
-      var topA = ToVector(top.GetPoint(Location.Start));
-      var topB = ToVector(top.GetPoint(Location.End));
-
-      var (topNearStart, topNearEnd) =
-        (topA - bottomStart).Length() <= (topB - bottomStart).Length() ? (topA, topB) : (topB, topA);
-
-      var quad = new List<Vector3> { bottomStart, bottomEnd, topNearEnd, topNearStart };
 
       AddNgonFace(baseVertices, faces, quad);
     }
@@ -177,23 +214,6 @@ public sealed class TsdDisplayValueExtractor
   private async Task<IReadOnlyList<double>> ConvertFromBaseAsync(List<double> baseValues, IUnitBase? unit) =>
     unit is null ? baseValues : await _applicationService.ConvertFromBaseAsync(baseValues, unit).ConfigureAwait(false);
 
-  private static List<Vector3> LiftRing(IPolygon2D polygon, IPlane plane)
-  {
-    var ring = new List<Vector3>();
-    foreach (var vertex in polygon.Vertices)
-    {
-      var point = plane.Local2Global(vertex.Value);
-      ring.Add(new Vector3(point.X, point.Y, point.Z));
-    }
-
-    if (ring.Count > 1 && (ring[^1] - ring[0]).Length() < 1e-6)
-    {
-      ring.RemoveAt(ring.Count - 1);
-    }
-
-    return ring;
-  }
-
   private static void AddNgonFace(List<double> vertices, List<int> faces, List<Vector3> ring)
   {
     int start = vertices.Count / 3;
@@ -225,6 +245,4 @@ public sealed class TsdDisplayValueExtractor
       faces.Add(start + mesh.Triangles[i + 2]);
     }
   }
-
-  private static Vector3 ToVector(Point3D point) => new(point.X, point.Y, point.Z);
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Sdk;
@@ -12,7 +13,7 @@ namespace Speckle.Connectors.Civil3dShared.HostApp;
 /// </summary>
 public class PropertyUpdater
 {
-  private const string PROPERTY_SETS_KEY = "Property Sets";
+  public const string PROPERTY_SETS_KEY = "Property Sets";
 
   private readonly ILogger<PropertyUpdater> _logger;
 
@@ -41,28 +42,14 @@ public class PropertyUpdater
 
     try
     {
-      var propertySetIds = AAECPDB.PropertyDataServices.GetPropertySets(entity);
-      if (propertySetIds is not null)
+      if (
+        FindProperty(entity, targetSetName, targetPropName, tr, internalDefinitionName) is
+        ({ } propertySet, { } propDef)
+      )
       {
-        foreach (ADB.ObjectId psId in propertySetIds)
-        {
-          var propertySet = (AAECPDB.PropertySet)tr.GetObject(psId, ADB.OpenMode.ForRead);
-          var setDefinition = (AAECPDB.PropertySetDefinition)
-            tr.GetObject(propertySet.PropertySetDefinition, ADB.OpenMode.ForRead);
-
-          if (setDefinition.Name != targetSetName)
-          {
-            continue;
-          }
-
-          var propDef = FindPropertyDefinition(propertySet, setDefinition, targetPropName, internalDefinitionName);
-          if (propDef is not null)
-          {
-            propertySet.UpgradeOpen();
-            propertySet.SetAt(propDef.Id, CoerceValue(newValue, propDef.DataType));
-            return UpdateResult.Success();
-          }
-        }
+        propertySet.UpgradeOpen();
+        propertySet.SetAt(propDef.Id, CoerceValue(newValue, propDef.DataType));
+        return UpdateResult.Success();
       }
 
       return UpdateResult.Fail($"Property '{targetSetName}.{targetPropName}' not found on entity {entity.Handle}.");
@@ -78,6 +65,68 @@ public class PropertyUpdater
       );
       return UpdateResult.Fail($"API rejected: {ex.Message}");
     }
+  }
+
+  /// <summary>
+  /// Whether the path resolves to a property on the entity. Same lookup as <see cref="Update"/>, no write.
+  /// </summary>
+  public bool Exists(ADB.Entity entity, string[] path, ADB.Transaction tr, string? internalDefinitionName = null)
+  {
+    if (path.Length != 3 || path[0] != PROPERTY_SETS_KEY)
+    {
+      return false;
+    }
+
+    try
+    {
+      return FindProperty(entity, path[1], path[2], tr, internalDefinitionName) is not null;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(
+        ex,
+        "Failed to look up property set {Set}.{Property} on entity {Handle}",
+        path[1],
+        path[2],
+        entity.Handle
+      );
+      return false;
+    }
+  }
+
+  private static (AAECPDB.PropertySet, AAECPDB.PropertyDefinition)? FindProperty(
+    ADB.Entity entity,
+    string targetSetName,
+    string targetPropName,
+    ADB.Transaction tr,
+    string? internalDefinitionName
+  )
+  {
+    var propertySetIds = AAECPDB.PropertyDataServices.GetPropertySets(entity);
+    if (propertySetIds is null)
+    {
+      return null;
+    }
+
+    foreach (ADB.ObjectId psId in propertySetIds)
+    {
+      var propertySet = (AAECPDB.PropertySet)tr.GetObject(psId, ADB.OpenMode.ForRead);
+      var setDefinition = (AAECPDB.PropertySetDefinition)
+        tr.GetObject(propertySet.PropertySetDefinition, ADB.OpenMode.ForRead);
+
+      if (setDefinition.Name != targetSetName)
+      {
+        continue;
+      }
+
+      var propDef = FindPropertyDefinition(propertySet, setDefinition, targetPropName, internalDefinitionName);
+      if (propDef is not null)
+      {
+        return (propertySet, propDef);
+      }
+    }
+
+    return null;
   }
 
   private static AAECPDB.PropertyDefinition? FindPropertyDefinition(
@@ -147,12 +196,13 @@ public class PropertyUpdater
       return null;
     }
 
+    // the value comes from the web as text in JS notation; the host culture (de-DE reads "2.5" as 25) must not apply
     return dataType switch
     {
-      AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value),
-      AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(value),
-      AAEC.PropertyData.DataType.Real => Convert.ToDouble(value),
-      AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value),
+      AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+      AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+      AAEC.PropertyData.DataType.Real => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+      AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
       _ => value.ToString(),
     };
   }

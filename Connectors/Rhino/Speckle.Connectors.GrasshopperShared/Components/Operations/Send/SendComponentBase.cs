@@ -4,6 +4,7 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Analytics;
+using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -163,6 +164,27 @@ public abstract class SendComponentBase(
     da.GetData(runIndex, ref run);
 
     return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo);
+  }
+
+  /// <summary>
+  /// One warning for every relation the artefact builder could not write - a dangling target, a second parent - or
+  /// null when all of them went through. The builder reports them as <see cref="SpeckleRelation.SOURCE_TYPE"/>
+  /// results [ENG-9475].
+  /// </summary>
+  internal static string? DescribeDroppedRelations(IReadOnlyList<SendConversionResult> conversionResults)
+  {
+    var dropped = conversionResults
+      .Where(r => r.SourceType == SpeckleRelation.SOURCE_TYPE && r.Status != Status.SUCCESS)
+      .ToList();
+    if (dropped.Count == 0)
+    {
+      return null;
+    }
+
+    const int SHOWN = 10;
+    var lines = dropped.Take(SHOWN).Select(r => $"  {r.SourceId}: {r.Error?.Message ?? "not written"}");
+    string more = dropped.Count > SHOWN ? $"\n  … and {dropped.Count - SHOWN} more" : "";
+    return $"{dropped.Count} relation(s) not published:\n{string.Join("\n", lines)}{more}";
   }
 
   private SpeckleCollectionWrapper BuildRootCollection(List<IGH_Goo> inputGoos)
@@ -326,6 +348,11 @@ public abstract class SendComponentBase(
         UseArtifacts
       )
       .ConfigureAwait(false);
+
+    if (DescribeDroppedRelations(result.ConversionResults) is { } droppedRelations)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, droppedRelations);
+    }
 
     if (ingestionId != null)
     {

@@ -32,6 +32,14 @@ public static class ObjectPropertyKey
 }
 
 /// <summary>
+/// Sentinel names the CSi API returns for "no assignment" (section, material overwrite, ...)
+/// </summary>
+public static class CsiName
+{
+  public const string NONE = "None";
+}
+
+/// <summary>
 /// These strings are repeatedly used group properties (mimics the host app UI)
 /// </summary>
 public static class SectionPropertyCategory

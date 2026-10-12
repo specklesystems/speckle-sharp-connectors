@@ -9,6 +9,7 @@ using Speckle.Sdk.Models;
 using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
+using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
 
@@ -33,6 +34,10 @@ internal sealed class TsdEntitySnapshotBuilder
   private readonly TsdSlabPropertyExtractor _slabPropertyExtractor;
   private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
   private readonly ILogger<TsdEntitySnapshotBuilder> _logger;
+  private readonly Dictionary<string, IReadOnlyList<SOG.Line>> _centerlinesByAppId = new(StringComparer.Ordinal);
+
+  /// <summary>Analytical span lines per member application id, filled only for volumetric sends (ENG-9048).</summary>
+  public IReadOnlyDictionary<string, IReadOnlyList<SOG.Line>> CenterlinesByAppId => _centerlinesByAppId;
 
   public TsdEntitySnapshotBuilder(
     ITSDApplicationService applicationService,
@@ -94,7 +99,7 @@ internal sealed class TsdEntitySnapshotBuilder
     {
       var (displayValue, properties) = entity switch
       {
-        IMember member => await ConvertMemberAsync(member, unit, speckleUnits).ConfigureAwait(false),
+        IMember member => await ConvertMemberAsync(member, applicationId, unit, speckleUnits).ConfigureAwait(false),
         ISlabItem slabItem => await ConvertSlabAsync(slabItem, slabDataByIndex, unit, speckleUnits)
           .ConfigureAwait(false),
         IStructuralWall wall => await ConvertWallAsync(wall, unit, speckleUnits).ConfigureAwait(false),
@@ -182,14 +187,19 @@ internal sealed class TsdEntitySnapshotBuilder
 
   private async Task<(List<Base>, Dictionary<string, object?>)> ConvertMemberAsync(
     IMember member,
+    string applicationId,
     IUnitBase? unit,
     string speckleUnits
   )
   {
     var spans = (await member.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IMemberSpan>();
-    var displayValue = await _displayValueExtractor
+    var (displayValue, centerlines) = await _displayValueExtractor
       .GetMemberDisplayValueAsync(spans, unit, speckleUnits)
       .ConfigureAwait(false);
+    if (centerlines.Count > 0)
+    {
+      _centerlinesByAppId[applicationId] = centerlines;
+    }
     var properties = _memberPropertyExtractor.Extract(member, spans);
     return (displayValue, properties);
   }

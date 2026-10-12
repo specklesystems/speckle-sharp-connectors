@@ -4,8 +4,8 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
+using SpecCameraView = Speckle.Bundle.Spec.CameraView;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -18,7 +18,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// onto the viewport, add the named view from it, then restore the viewport. Going through a real viewport is what
 /// guarantees a valid screen port and frustum aspect; a bare <c>new ViewInfo()</c> has neither.</para>
 /// <para>Unlike the v1 baker this preserves the source projection: an artefact camera view records
-/// <see cref="ArtefactCameraView.IsOrtho"/>, so a parallel view stays parallel instead of being forced to
+/// <see cref="SpecCameraView.IsOrtho"/>, so a parallel view stays parallel instead of being forced to
 /// perspective. Lens length is applied through <c>Camera35mmLensLength</c> rather than the
 /// <c>ChangeToPerspectiveProjection</c> lens argument, which is documented to be ignored when the viewport is
 /// already perspective (as a cloned active viewport usually is).</para>
@@ -27,7 +27,7 @@ internal static class RhinoArtefactViewBaker
 {
   public static void BakeViews(
     RhinoDoc doc,
-    IReadOnlyList<ArtefactCameraView> views,
+    IReadOnlyList<SpecCameraView> views,
     string docUnits,
     ArtefactSessionLog session,
     ILogger logger
@@ -79,7 +79,7 @@ internal static class RhinoArtefactViewBaker
 
   // Retargets the viewport's camera onto one artefact view. Returns false when the recorded camera frame is
   // degenerate, so the caller skips it instead of adding a broken named view.
-  private static bool Apply(global::Rhino.Display.RhinoViewport viewport, ArtefactCameraView view, string docUnits)
+  private static bool Apply(global::Rhino.Display.RhinoViewport viewport, SpecCameraView view, string docUnits)
   {
     var forward = new RG.Vector3d(view.ForwardX, view.ForwardY, view.ForwardZ);
     var up = new RG.Vector3d(view.UpX, view.UpY, view.UpZ);
@@ -129,7 +129,7 @@ internal static class RhinoArtefactViewBaker
   // A parallel view's "zoom" is its frustum height, which the send side records as OrthoHeight. Rebuild a symmetric
   // frustum of that height, widened by the recorded aspect (falling back to the viewport's own) so the view frames
   // the same region it did in the source document.
-  private static void ApplyOrthoExtents(ViewportInfo vp, ArtefactCameraView view, double scale)
+  private static void ApplyOrthoExtents(ViewportInfo vp, SpecCameraView view, double scale)
   {
     if (view.OrthoHeight is not double orthoHeight || orthoHeight <= 0)
     {

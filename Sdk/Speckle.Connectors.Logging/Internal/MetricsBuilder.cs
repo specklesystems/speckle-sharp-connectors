@@ -30,7 +30,7 @@ internal static class MetricsBuilder
   private static void ProcessOptions(SpeckleOtelMetrics metrics, OtlpExporterOptions options)
   {
     options.Protocol = OtlpExportProtocol.HttpProtobuf;
-    var headers = string.Join(",", metrics.Headers?.Select(x => x.Key + "=" + x.Value) ?? []);
+    var headers = OtlpHeaders.Join(metrics.Headers);
     if (headers.Length != 0)
     {
       options.Headers = headers;

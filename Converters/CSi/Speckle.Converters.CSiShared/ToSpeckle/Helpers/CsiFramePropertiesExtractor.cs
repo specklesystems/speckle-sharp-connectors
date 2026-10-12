@@ -13,6 +13,7 @@ public sealed class CsiFramePropertiesExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
   private readonly DatabaseTableExtractor _databaseTableExtractor;
+  private readonly FrameSectionAreaResolver _areaResolver;
 
   private static readonly string[] s_releaseKeys =
   [
@@ -27,12 +28,14 @@ public sealed class CsiFramePropertiesExtractor
   public CsiFramePropertiesExtractor(
     CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    DatabaseTableExtractor databaseTableExtractor
+    DatabaseTableExtractor databaseTableExtractor,
+    FrameSectionAreaResolver areaResolver
   )
   {
     _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
     _settingsStore = settingsStore;
     _databaseTableExtractor = databaseTableExtractor;
+    _areaResolver = areaResolver;
   }
 
   public void ExtractProperties(CsiFrameWrapper frame, PropertyExtractionResult frameData)
@@ -58,7 +61,7 @@ public sealed class CsiFramePropertiesExtractor
 
     // CNX-2725 adds more numeric props for dashboard-ing
     double length = GetLength(frame);
-    double area = GetCrossSectionalArea(sectionId);
+    double area = _areaResolver.GetArea(sectionId);
 
     double volume = double.NaN;
     if (!double.IsNaN(length) && !double.IsNaN(area) && length > 0 && area > 0)
@@ -211,45 +214,5 @@ public sealed class CsiFramePropertiesExtractor
 
     // all database data is returned as strings
     return double.TryParse(length, out double result) ? result : double.NaN;
-  }
-
-  private double GetCrossSectionalArea(string sectionName)
-  {
-    if (_csiToSpeckleCacheSingleton.FrameSectionAreaCache.TryGetValue(sectionName, out double value))
-    {
-      return value;
-    }
-
-    double area = 0,
-      as2 = 0,
-      as3 = 0,
-      torsion = 0,
-      i22 = 0,
-      i33 = 0,
-      s22 = 0,
-      s33 = 0,
-      z22 = 0,
-      z33 = 0,
-      r22 = 0,
-      r33 = 0;
-    int result = _settingsStore.Current.SapModel.PropFrame.GetSectProps(
-      sectionName,
-      ref area,
-      ref as2,
-      ref as3,
-      ref torsion,
-      ref i22,
-      ref i33,
-      ref s22,
-      ref s33,
-      ref z22,
-      ref z33,
-      ref r22,
-      ref r33
-    );
-
-    double validatedArea = result == 0 ? area : double.NaN;
-    _csiToSpeckleCacheSingleton.FrameSectionAreaCache.Add(sectionName, validatedArea);
-    return validatedArea;
   }
 }

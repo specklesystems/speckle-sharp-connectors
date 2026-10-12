@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.CSiShared.Settings;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Newtonsoft.Json.Linq;
@@ -12,6 +13,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly ISendConversionCache _sendConversionCache;
   private readonly Dictionary<string, List<string>?> _loadCaseCombinationCache = new();
   private readonly Dictionary<string, List<string>?> _resultTypeCache = new();
+  private readonly Dictionary<string, bool> _sendVolumetricGeometryCache = new();
 
   public ToSpeckleSettingsManager(ISendConversionCache sendConversionCache)
   {
@@ -47,6 +49,22 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       }
     }
     _resultTypeCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  public bool GetSendVolumetricGeometry(SenderModelCard modelCard)
+  {
+    var setting = modelCard.Settings?.FirstOrDefault(s => s.Id == SendVolumetricGeometrySetting.SETTING_ID);
+    bool returnValue = setting?.Value as bool? ?? SendVolumetricGeometrySetting.DEFAULT_VALUE;
+
+    if (
+      _sendVolumetricGeometryCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool previousValue)
+      && previousValue != returnValue
+    )
+    {
+      EvictCacheForModelCard(modelCard);
+    }
+    _sendVolumetricGeometryCache[modelCard.ModelCardId] = returnValue;
     return returnValue;
   }
 

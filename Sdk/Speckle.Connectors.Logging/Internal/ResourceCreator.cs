@@ -36,8 +36,11 @@ internal static class ResourceCreator
       { Consts.CPU_COUNT, Environment.ProcessorCount },
       { Consts.SESSION_ID, Consts.StaticSessionId },
     };
+    // Detector first so OTEL_RESOURCE_ATTRIBUTES (k8s cluster/namespace/pod set on importer job specs) is honoured while
+    // the explicit service and attribute values below still win on key collisions.
     return ResourceBuilder
       .CreateEmpty()
+      .AddEnvironmentVariableDetector()
       .AddTelemetrySdk()
       .AddService(serviceName: serviceName, serviceVersion: connectorVersion, serviceInstanceId: Consts.StaticSessionId)
       .AddAttributes(resourceAttributes);

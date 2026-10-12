@@ -38,7 +38,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.2xx # Align with global.json (including roll forward rules)
+          dotnet-version: 10.0.4xx # Align with global.json (including roll forward rules)
 
       # we are purposefully not caching releases when publishing artefacts, see https://docs.zizmor.sh/audits/#cache-poisoning
 

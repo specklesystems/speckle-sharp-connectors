@@ -1,4 +1,4 @@
-using Speckle.Sdk.Pipelines.Receive.Artifacts;
+using SpecPropertySetField = Speckle.Bundle.Spec.PropertySetField;
 
 namespace Speckle.Connectors.Civil3dShared.HostApp;
 
@@ -39,7 +39,7 @@ public static class PropertySetDefinitionLadder
   /// <summary>Tier 1: schemas from the definitions file. Null when the bundle ships no file (→ try tier 2).
   /// Rows arrive in field order and are grouped by set_key (set_name when absent) — two same-named sets stay
   /// separate schemas here; the baker's name-keyed map takes the first and logs the collision.</summary>
-  public static IReadOnlyList<PropertySetSchema>? FromSpecRows(IReadOnlyList<ArtefactPropertySetField> rows)
+  public static IReadOnlyList<PropertySetSchema>? FromSpecRows(IReadOnlyList<SpecPropertySetField> rows)
   {
     if (rows.Count == 0)
     {

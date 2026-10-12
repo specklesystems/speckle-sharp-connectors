@@ -11,7 +11,6 @@ using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -28,7 +27,6 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
 using RhinoRenderMaterial = Rhino.Render.RenderMaterial;
-using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -321,7 +319,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     _lastDecodeFailure = null;
     var result = new List<DecodedGeometry>();
-    var sourceType = ObjectType(bundle, objK); // discriminates a point from a one-point cloud, see AsSourceType
+    var sourceType = ObjectType(bundle, objK); // tells a point from a one-point cloud
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
       foreach (var solidK in solidKs)
@@ -345,9 +343,6 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return result;
   }
 
-  // Decodes one geometry index to Rhino geometry, scaled to doc units (SGEO carries its own units; 3dm uses fallback).
-  // <paramref name="sourceType"/> is the owning object's source type, where the primitive alone is ambiguous about the
-  // native type to rebuild (see AsSourceType).
   private List<RG.GeometryBase> DecodeGeometryIndex(
     int geomK,
     ArtefactBundle bundle,
@@ -359,186 +354,39 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       return new List<RG.GeometryBase>();
     }
-
-    if (g.Type == RawEncodingFormats.RHINO_3DM)
+    var geoms = ArtefactGeometryToHost.Decode(
+      g.Content,
+      g.Type,
+      fallbackUnits,
+      _converterSettings.Current.SpeckleUnits,
+      sourceType,
+      ConvertSpeckleGeometry,
+      out var failure
+    );
+    if (failure is { } f)
     {
-      var geoms = RawEncodingToHost.Convert3dm(g.Content);
-      ApplyUnits(geoms, fallbackUnits);
-      return geoms;
+      _lastDecodeFailure = f.Exception is { } ex
+        ? $"geom {geomK} ({g.Type}) {f.Stage} failed — {ex.GetType().Name}: {ex.Message}"
+        : $"geom {geomK} ({g.Type}) {f.Stage} returned no native geometry";
+      _logger.LogWarning(
+        f.Exception,
+        "Skipped SGEO geometry {GeomK} (type '{Type}', {Bytes} bytes): {Reason}",
+        geomK,
+        g.Type,
+        g.Content.Length,
+        _lastDecodeFailure
+      );
     }
-    if (g.IsSgeo)
-    {
-      // The header routes the blob: it says whether this is a mesh at all, and whether that mesh carries per-vertex
-      // visualisation data. Read once up front rather than letting TryDecodeMesh read it again for a non-mesh.
-      var header = SgeoDecoder.ReadHeader(g.Content);
-      // Meshes take the fast hand-rolled path (no Base allocation), scaled here — but only when there are no authored
-      // normals or UVs to lose. SgeoMesh carries neither (TryDecodeMesh reads past them to reach the colours), so a
-      // mesh sent with "Add Mesh Visualization Properties" goes the long way round instead: the full decoder keeps
-      // them and MeshToHostConverter applies them to the Rhino mesh [ENG-9214].
-      if (IsFastPathMesh(header) && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
-      {
-        var mesh = BuildMesh(sm);
-        var list = new List<RG.GeometryBase> { mesh };
-        ApplyUnits(list, sm.Units);
-        return list;
-      }
-      // Curves, points, and other primitives: decode to a Speckle geometry object and convert via the Rhino ToHost
-      // converter, which already scales to doc units (so no ApplyUnits here). An unsupported primitive degrades to
-      // nothing rather than aborting the whole receive.
-      Base? decoded = null;
-      try
-      {
-        decoded = AsSourceType(SgeoDecoder.Decode(g.Content), sourceType);
-        var converted = ConvertSpeckleGeometry(decoded);
-        if (converted.Count == 0)
-        {
-          // decode + convert both ran without throwing, but produced no bakeable geometry (e.g. a converter returned an
-          // unhandled result shape). Record it so it isn't a silent drop.
-          _lastDecodeFailure =
-            $"geom {geomK} ({g.Type}, {decoded.speckle_type}): converter returned no native geometry";
-          _logger.LogWarning("Skipped SGEO geometry {GeomK}: {Reason}", geomK, _lastDecodeFailure);
-        }
-        return converted;
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
-        _lastDecodeFailure = $"geom {geomK} ({g.Type}) {stage} failed — {ex.GetType().Name}: {ex.Message}";
-        _logger.LogWarning(
-          ex,
-          "Skipped SGEO geometry {GeomK} (type '{Type}', {Bytes} bytes) at {Stage}: {Error}",
-          geomK,
-          g.Type,
-          g.Content.Length,
-          stage,
-          ex.Message
-        );
-      }
-    }
-    return new List<RG.GeometryBase>();
+    return geoms;
   }
 
-  /// <summary>Rhino's <c>ObjectType</c> for a single point object, as the send side stamps it on the object row
-  /// (<c>rhinoObject.ObjectType.ToString()</c>). A point cloud reports <c>PointSet</c> instead.</summary>
-  private const string RHINO_POINT_TYPE = "Point";
-
-  // SGEO encodes a single point and a whole point cloud under the same Points primitive, so Decode can only ever hand
-  // back a Pointcloud — and a native Rhino point came back as a one-point PointCloud, a different object type to every
-  // command, filter and script downstream [ENG-9215]. The object's source type is the discriminator the blob lacks:
-  // Rhino stamps its ObjectType on each object row, so a one-point cloud whose object called itself a "Point" is
-  // handed to the converter as a Point. A genuine one-point PointSet says "PointSet" and stays a point cloud.
-  private static Base AsSourceType(Base decoded, string? sourceType) =>
-    string.Equals(sourceType, RHINO_POINT_TYPE, StringComparison.Ordinal)
-    && decoded is SOG.Pointcloud { points.Count: 3 } cloud
-      ? new SOG.Point(cloud.points[0], cloud.points[1], cloud.points[2], cloud.units)
-      : decoded;
-
-  // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the ToHost converter. The top-level converter
-  // returns a single GeometryBase for primitives (curve/point/…) or a list for one-to-many cases; both are unwrapped.
-  private List<RG.GeometryBase> ConvertSpeckleGeometry(Base decoded)
-  {
-    var converted = _converter.Convert(decoded);
-    return converted switch
+  private IEnumerable<RG.GeometryBase> ConvertSpeckleGeometry(Base decoded) =>
+    _converter.Convert(decoded) switch
     {
-      RG.GeometryBase gb => new List<RG.GeometryBase> { gb },
-      IEnumerable<RG.GeometryBase> many => many.ToList(),
-      _ => new List<RG.GeometryBase>(),
+      RG.GeometryBase gb => new[] { gb },
+      IEnumerable<RG.GeometryBase> many => many,
+      _ => Enumerable.Empty<RG.GeometryBase>(),
     };
-  }
-
-  private static void ApplyUnits(List<RG.GeometryBase> geoms, string? units)
-  {
-    var settings = RhinoDoc.ActiveDoc;
-    if (settings is null || units is not { Length: > 0 } u)
-    {
-      return;
-    }
-    var docUnits = settings.ModelUnitSystem.ToSpeckleString();
-    if (string.Equals(u, docUnits, StringComparison.OrdinalIgnoreCase))
-    {
-      return;
-    }
-    var t = RG.Transform.Scale(RG.Point3d.Origin, Units.GetConversionFactor(u, docUnits));
-    foreach (var geom in geoms)
-    {
-      geom.Transform(t);
-    }
-  }
-
-  // True for a mesh blob the hand-rolled BuildMesh can rebuild losslessly: normals and UVs are the two things SgeoMesh
-  // doesn't carry, so a blob with either has to go through the full decoder instead [ENG-9214]. n-gons are safe here —
-  // they ride the face array, and BuildMesh rebuilds their MeshNgon records.
-  private static bool IsFastPathMesh(SgeoHeader header) =>
-    header.PrimitiveType == SgeoPrimitiveType.Mesh && (header.Flags & (SgeoFlags.HasNormals | SgeoFlags.HasUvs)) == 0;
-
-  // SGEO neutral mesh → Rhino mesh (Speckle count-prefixed face format; matches MeshToHostConverter).
-  private static RG.Mesh BuildMesh(SgeoMesh sm)
-  {
-    var mesh = new RG.Mesh();
-    var v = sm.Vertices;
-    for (int i = 0; i + 2 < v.Length; i += 3)
-    {
-      mesh.Vertices.Add(v[i], v[i + 1], v[i + 2]);
-    }
-
-    var f = sm.Faces;
-    int p = 0;
-    while (p < f.Length)
-    {
-      int n = f[p];
-      if (n < 3)
-      {
-        n += 3; // legacy 0 -> triangle, 1 -> quad
-      }
-      if (n == 3 && p + 3 < f.Length)
-      {
-        mesh.Faces.AddFace(f[p + 1], f[p + 2], f[p + 3]);
-      }
-      else if (n == 4 && p + 4 < f.Length)
-      {
-        mesh.Faces.AddFace(f[p + 1], f[p + 2], f[p + 3], f[p + 4]);
-      }
-      else if (n > 4 && p + n < f.Length)
-      {
-        // n-gon: fan-triangulate into the face table, then record the MeshNgon over exactly those faces so the source
-        // polygon survives as one face to Rhino's eyes (Explode, _SelNgon, re-send) instead of loose triangles
-        // [ENG-9214]. Same reconstruction MeshToHostConverter does on the Base path.
-        var ngonFaces = new List<int>(n - 2);
-        for (int k = 1; k < n - 1; k++)
-        {
-          ngonFaces.Add(mesh.Faces.AddFace(f[p + 1], f[p + 1 + k], f[p + 2 + k]));
-        }
-        var ngonVertices = new int[n];
-        for (int k = 0; k < n; k++)
-        {
-          ngonVertices[k] = f[p + 1 + k];
-        }
-        mesh.Ngons.AddNgon(RG.MeshNgon.Create(ngonVertices, ngonFaces));
-      }
-      else
-      {
-        break;
-      }
-      p += n + 1;
-    }
-
-    if (sm.Colors.Length == mesh.Vertices.Count && sm.Colors.Length > 0)
-    {
-      foreach (var argb in sm.Colors)
-      {
-        mesh.VertexColors.Add(Color.FromArgb(argb));
-      }
-    }
-    mesh.Normals.ComputeNormals();
-    // Compact() only trims capacity and culls unreferenced vertices — of which an SGEO mesh has none, its vertex array
-    // being exactly the source's. Skip it once n-gons are in play rather than run their fresh records through its
-    // reindex for no gain [ENG-9214].
-    if (mesh.Ngons.Count == 0)
-    {
-      mesh.Compact();
-    }
-    return mesh;
-  }
 
   private Guid BakeObject(
     RhinoDoc doc,

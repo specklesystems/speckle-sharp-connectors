@@ -12,6 +12,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)ITsdModelDataProvider.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TsdDisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TsdMemberPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdRings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdSectionPrismResolver.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdVolumetricDisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TsdSlabPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TsdWallPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Results\ITsdResultsExtractor.cs" />

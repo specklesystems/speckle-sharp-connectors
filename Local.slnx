@@ -81,6 +81,7 @@
     <Project Path="Converters/CSi/Speckle.Converters.ETABS23/Speckle.Converters.ETABS23.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/Shared/">
+    <Project Path="Converters\CSi\Speckle.Converters.CSi.Tests\Speckle.Converters.CSi.Tests.csproj" />
     <Project Path="Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.shproj" />
     <Project Path="Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.shproj" />
     <Project Path="Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.shproj" />
@@ -180,6 +181,7 @@
     <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <Project Path="Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
+    <Project Path="Sdk\Speckle.Common.StructuralExtrusion\Speckle.Common.StructuralExtrusion.csproj" />
     <Project Path="Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj" />
     <Project Path="Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
     <Project Path="Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />

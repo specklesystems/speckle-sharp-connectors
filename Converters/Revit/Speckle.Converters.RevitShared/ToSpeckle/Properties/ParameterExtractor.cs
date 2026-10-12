@@ -205,14 +205,21 @@ public class ParameterExtractor
 
         // NOTE: excepted behaviour is to use GetValue BUT if we have "SYMBOL_ID_PARAM", we just want id
         // see above comment and linked linear ticket / issue.
+        // an unset parameter still answers the As* accessors (0 for a double), HasValue is the only honest signal
         object? value =
-          internalDefinitionName == "SYMBOL_ID_PARAM" ? parameter.AsElementId().ToString() : GetValue(parameter);
+          !parameter.HasValue ? null
+          : internalDefinitionName == "SYMBOL_ID_PARAM" ? parameter.AsElementId().ToString()
+          : GetValue(parameter);
 
-        var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
-
-        if (!_settingsStore.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
+        if (value == null || (value is string s && string.IsNullOrEmpty(s)))
         {
-          continue;
+          if (!_settingsStore.Current.SendParameterNullOrEmptyStrings)
+          {
+            continue;
+          }
+
+          // the bundle keeps no null values, so "send empty" means an empty string
+          value = string.Empty;
         }
 
         if (value is (string typeName, string familyName)) // element type: same element, different expected values depending on the param definition
