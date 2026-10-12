@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>B2C3D4E5-F6A7-8901-BCDE-F12345678901</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Converters.MicroStation</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\MicroStationConverterServiceRegistration.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryMapper.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\SharedCellPlacement.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\MicroStationToSpeckleUnitConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettings.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettingsFactory.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Appearance\AppearanceResolver.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\DisplayValueExtractor.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\SharedCellInstanceSink.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\MeshExtraction\GraphicsCapture.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CivilPropertiesSource.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CivilQuantities.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CurveConverters.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PolyfaceConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TextConverter.cs"/>
+  </ItemGroup>
+</Project>
