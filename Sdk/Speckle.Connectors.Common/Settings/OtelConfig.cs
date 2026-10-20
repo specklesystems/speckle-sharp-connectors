@@ -4,16 +4,25 @@ public static class OtelConfig
 {
   private static readonly GlobalConfigHelper s_helper = new(null);
 
+  public static bool GetOtelEnabled(bool defaultValue)
+  {
+    if (s_helper.GetConfigBool("SPECKLE_OTEL_ENABLED", out bool value))
+    {
+      return value;
+    }
+    return defaultValue;
+  }
+
   public static Uri GetOtelLogsExporter(Uri defaultValue)
   {
-    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", out string? value))
+    if (s_helper.GetConfigUrl("SPECKLE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", out Uri? value))
     {
-      return new Uri(value);
+      return value;
     }
 
-    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_ENDPOINT", out value))
+    if (s_helper.GetConfigUrl("SPECKLE_OTEL_EXPORTER_OTLP_ENDPOINT", out value))
     {
-      return new Uri(new Uri(value), "/v1/logs");
+      return new Uri(value, "/v1/logs");
     }
 
     return defaultValue;
@@ -21,14 +30,14 @@ public static class OtelConfig
 
   public static Uri GetOtelTracesExporter(Uri defaultValue)
   {
-    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", out string? value))
+    if (s_helper.GetConfigUrl("SPECKLE_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", out Uri? value))
     {
-      return new Uri(value);
+      return value;
     }
 
-    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_ENDPOINT", out value))
+    if (s_helper.GetConfigUrl("SPECKLE_OTEL_EXPORTER_OTLP_ENDPOINT", out value))
     {
-      return new Uri(new Uri(value), "/v1/traces");
+      return new Uri(value, "/v1/traces");
     }
 
     return defaultValue;
@@ -36,32 +45,30 @@ public static class OtelConfig
 
   public static string? GetOtelTracesHeaders(string? defaultValue)
   {
-    _ = s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_HEADERS", out string? allHeaders);
-    _ = s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_TRACES_HEADERS", out string? traceHeaders);
+    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_TRACES_HEADERS", out string? traceHeaders))
+    {
+      return traceHeaders;
+    }
+    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_HEADERS", out string? generalHeaders))
+    {
+      return generalHeaders;
+    }
 
-    if (allHeaders is not null && traceHeaders is not null)
-    {
-      return $"{allHeaders},{traceHeaders}";
-    }
-    else
-    {
-      return allHeaders ?? traceHeaders ?? defaultValue;
-    }
+    return defaultValue;
   }
 
   public static string? GetOtelLogsHeaders(string? defaultValue)
   {
-    _ = s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_HEADERS", out string? allHeaders);
-    _ = s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_LOGS_HEADERS", out string? traceHeaders);
+    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_LOGS_HEADERS", out string? logHeaders))
+    {
+      return logHeaders;
+    }
+    if (s_helper.GetConfigValue("SPECKLE_OTEL_EXPORTER_OTLP_HEADERS", out string? generalHeaders))
+    {
+      return generalHeaders;
+    }
 
-    if (allHeaders is not null && traceHeaders is not null)
-    {
-      return $"{allHeaders},{traceHeaders}";
-    }
-    else
-    {
-      return allHeaders ?? traceHeaders ?? defaultValue;
-    }
+    return defaultValue;
   }
 
   public static string GetOtelServiceName(string defaultValue)

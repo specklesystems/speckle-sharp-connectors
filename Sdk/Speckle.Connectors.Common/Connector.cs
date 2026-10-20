@@ -50,6 +50,7 @@ public static class Connector
         [
           new(
             Endpoint: OtelConfig.GetOtelLogsExporter(new Uri("https://connectors.collector.speckle.dev/v1/logs")),
+            Enabled: OtelConfig.GetOtelEnabled(true),
             Headers: OtelConfig.GetOtelLogsHeaders($"authorization={CONNECTOR_GATEWAY_TOKEN}")
           ),
         ],
@@ -61,6 +62,7 @@ public static class Connector
         [
           new(
             Endpoint: OtelConfig.GetOtelTracesExporter(new Uri("https://connectors.collector.speckle.dev/v1/traces")),
+            Enabled: OtelConfig.GetOtelEnabled(true),
             Headers: OtelConfig.GetOtelTracesHeaders($"authorization={CONNECTOR_GATEWAY_TOKEN}")
           ),
         ]

@@ -11,7 +11,7 @@ using System.Runtime.Versioning;
 namespace Speckle.Connectors.Common.Settings;
 
 [GenerateAutoInterface]
-internal class GlobalConfigHelper(ILogger<GlobalConfigHelper>? logger)
+public class GlobalConfigHelper(ILogger<GlobalConfigHelper>? logger) : IGlobalConfigHelper
 {
   private const string REGISTRY_PATH = @"Software\Speckle\Connector Config\Global";
 
@@ -50,6 +50,44 @@ internal class GlobalConfigHelper(ILogger<GlobalConfigHelper>? logger)
     }
 
     return false;
+  }
+
+  public bool GetConfigUrl(string key, [NotNullWhen(true)] out Uri? value)
+  {
+    if (!GetConfigValue(key, out string? rawValue))
+    {
+      value = null;
+      return false;
+    }
+
+    if (!Uri.TryCreate(rawValue, UriKind.Absolute, out Uri? endpoint))
+    {
+      throw new UriFormatException(
+        $"Invalid Url in connector configuration {key}={rawValue}, please contact your IT administrator"
+      );
+    }
+    value = endpoint;
+    return true;
+  }
+
+  public bool GetConfigBool(string key, out bool value)
+  {
+    if (!GetConfigValue(key, out string? rawValue))
+    {
+      value = default;
+      return false;
+    }
+
+    value = rawValue.ToLowerInvariant() switch
+    {
+      "false" => false,
+      "true" => true,
+      _ => throw new InvalidOperationException(
+        $"Invalid boolean in connector configuration {key}={rawValue}, please contact your IT administrator"
+      ),
+    };
+
+    return true;
   }
 
 #if NET5_0_OR_GREATER

@@ -3,8 +3,8 @@ using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Common.Settings;
 
-[GenerateAutoInterface(VisibilityModifier = "public")]
-internal sealed class GlobalConfigResolver(IGlobalConfigHelper helper, ILogger<IGlobalConfigResolver>? logger)
+[GenerateAutoInterface]
+public sealed class GlobalConfigResolver(IGlobalConfigHelper helper, ILogger<IGlobalConfigResolver>? logger)
   : IGlobalConfigResolver
 {
   public GlobalConfig GetConfig() =>
@@ -46,21 +46,6 @@ internal sealed class GlobalConfigResolver(IGlobalConfigHelper helper, ILogger<I
   }
 
   public bool GetIsUpdateNotificationDisabled()
-  {
-    const string KEY = "SPECKLE_IS_UPDATE_NOTIFICATION_DISABLED";
-    if (helper.GetConfigValue(KEY, out string? value))
-    {
-      if (bool.TryParse(value, out bool boolean))
-      {
-        return boolean;
-      }
-      logger?.LogWarning("Failed to parse {Key} '{Value}'", KEY, value);
-    }
-
-    return false;
-  }
-
-  public bool Get()
   {
     const string KEY = "SPECKLE_IS_UPDATE_NOTIFICATION_DISABLED";
     if (helper.GetConfigValue(KEY, out string? value))
