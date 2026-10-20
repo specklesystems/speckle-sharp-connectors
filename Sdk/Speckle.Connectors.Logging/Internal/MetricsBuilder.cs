@@ -9,7 +9,7 @@ internal static class MetricsBuilder
   public static IDisposable Initialize(SpeckleMetrics? metricsConfiguration, ResourceBuilder resourceBuilder)
   {
     var metricsProviderBuilder = OpenTelemetry.Sdk.CreateMeterProviderBuilder().AddMeter(Consts.TRACING_SOURCE);
-    foreach (var metrics in metricsConfiguration?.Otel ?? [])
+    foreach (var metrics in (metricsConfiguration?.Otel ?? []).Where(o => o.Enabled))
     {
       metricsProviderBuilder = metricsProviderBuilder.AddOtlpExporter(x => ProcessOptions(metrics, x));
     }

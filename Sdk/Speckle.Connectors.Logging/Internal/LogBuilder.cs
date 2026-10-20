@@ -63,7 +63,7 @@ internal static class LogBuilder
         }
       }
 
-      foreach (var otel in speckleLogging?.Otel ?? [])
+      foreach (var otel in (speckleLogging?.Otel ?? []).Where(o => o.Enabled))
       {
         InitializeOtelLogging(loggingBuilder, otel, resourceBuilder);
       }
