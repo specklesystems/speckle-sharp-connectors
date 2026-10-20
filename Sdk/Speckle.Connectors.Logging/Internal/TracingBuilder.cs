@@ -36,11 +36,7 @@ internal static class TracingBuilder
   private static void ProcessOptions(SpeckleOtelTracing tracing, OtlpExporterOptions options)
   {
     options.Protocol = OtlpExportProtocol.HttpProtobuf;
-    var headers = OtlpHeaders.Join(tracing.Headers);
-    if (headers.Length != 0)
-    {
-      options.Headers = headers;
-    }
+    options.Headers = tracing.Headers;
 
     if (tracing.Endpoint is not null)
     {

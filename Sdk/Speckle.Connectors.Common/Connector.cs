@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Common;
+using Speckle.Connectors.Common.Settings;
 using Speckle.Connectors.Logging;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
@@ -39,7 +40,7 @@ public static class Connector
     );
 
     return serviceCollection.AddOpenTelemetry(
-      "Connector",
+      OtelConfig.GetOtelServiceName("Connector"),
       application,
       version,
       new SpeckleLogging(
@@ -48,8 +49,8 @@ public static class Connector
         Otel:
         [
           new(
-            Endpoint: new Uri("https://connectors.collector.speckle.dev/v1/logs"),
-            Headers: new() { { "authorization", CONNECTOR_GATEWAY_TOKEN } }
+            Endpoint: OtelConfig.GetOtelLogsExporter(new Uri("https://connectors.collector.speckle.dev/v1/logs")),
+            Headers: OtelConfig.GetOtelLogsHeaders($"authorization={CONNECTOR_GATEWAY_TOKEN}")
           ),
         ],
         MinimumLevel: SpeckleLogLevel.Information
@@ -59,8 +60,8 @@ public static class Connector
         Otel:
         [
           new(
-            Endpoint: new Uri("https://connectors.collector.speckle.dev/v1/traces"),
-            Headers: new() { { "authorization", CONNECTOR_GATEWAY_TOKEN } }
+            Endpoint: OtelConfig.GetOtelTracesExporter(new Uri("https://connectors.collector.speckle.dev/v1/traces")),
+            Headers: OtelConfig.GetOtelTracesHeaders($"authorization={CONNECTOR_GATEWAY_TOKEN}")
           ),
         ]
       ),

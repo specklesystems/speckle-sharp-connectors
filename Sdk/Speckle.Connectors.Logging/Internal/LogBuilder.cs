@@ -86,7 +86,7 @@ internal static class LogBuilder
           y.Endpoint = speckleOtelLogging.Endpoint is null
             ? throw new InvalidOperationException("Need a logging endpoint")
             : speckleOtelLogging.Endpoint;
-          y.Headers = OtlpHeaders.Join(speckleOtelLogging.Headers);
+          y.Headers = speckleOtelLogging.Headers;
         })
         .AddProcessor(new ActivityScopeLogProcessor())
         .SetResourceBuilder(resourceBuilder);
