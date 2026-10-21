@@ -12,7 +12,7 @@ internal static class TracingBuilder
     // HttpClient traffic (in prod, one machine's IDEA StatiCa health poll was 69 % of all Connector spans, all errors),
     // while Speckle's own calls are already spanned by the SDK's SpeckleHttpClientHandler ("Http Request").
     var tracerProviderBuilder = OpenTelemetry.Sdk.CreateTracerProviderBuilder().AddSource(Consts.TRACING_SOURCE);
-    foreach (var tracing in logConfiguration?.Otel ?? [])
+    foreach (var tracing in (logConfiguration?.Otel ?? []).Where(o => o.Enabled))
     {
       tracerProviderBuilder = tracerProviderBuilder.AddOtlpExporter(x => ProcessOptions(tracing, x));
     }
@@ -36,11 +36,7 @@ internal static class TracingBuilder
   private static void ProcessOptions(SpeckleOtelTracing tracing, OtlpExporterOptions options)
   {
     options.Protocol = OtlpExportProtocol.HttpProtobuf;
-    var headers = OtlpHeaders.Join(tracing.Headers);
-    if (headers.Length != 0)
-    {
-      options.Headers = headers;
-    }
+    options.Headers = tracing.Headers;
 
     if (tracing.Endpoint is not null)
     {

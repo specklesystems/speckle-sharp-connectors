@@ -9,7 +9,7 @@ internal static class MetricsBuilder
   public static IDisposable Initialize(SpeckleMetrics? metricsConfiguration, ResourceBuilder resourceBuilder)
   {
     var metricsProviderBuilder = OpenTelemetry.Sdk.CreateMeterProviderBuilder().AddMeter(Consts.TRACING_SOURCE);
-    foreach (var metrics in metricsConfiguration?.Otel ?? [])
+    foreach (var metrics in (metricsConfiguration?.Otel ?? []).Where(o => o.Enabled))
     {
       metricsProviderBuilder = metricsProviderBuilder.AddOtlpExporter(x => ProcessOptions(metrics, x));
     }
@@ -30,11 +30,8 @@ internal static class MetricsBuilder
   private static void ProcessOptions(SpeckleOtelMetrics metrics, OtlpExporterOptions options)
   {
     options.Protocol = OtlpExportProtocol.HttpProtobuf;
-    var headers = OtlpHeaders.Join(metrics.Headers);
-    if (headers.Length != 0)
-    {
-      options.Headers = headers;
-    }
+
+    options.Headers = metrics.Headers;
 
     if (metrics.Endpoint is not null)
     {
