@@ -132,9 +132,9 @@ public class ClassPropertiesExtractor
     return elementProperties;
   }
 
-  // ENG-10901, same shape as rvextract (ENG-10900): the main model is the context common to every option, so it
-  // carries only Name; an option that can't be fully read gets no group rather than passing as main model.
-  // Linked elements resolve against their own document, as rvextract converts each link on its own.
+  // Same shape as rvextract [ENG-10901, ENG-10900]. An option that can't be fully read gets no group rather than
+  // passing as main model. Linked elements resolve against their own document, as rvextract converts each link
+  // on its own.
   private Dictionary<string, object?>? GetDesignOption(DB.Element element)
   {
     DB.DesignOption? option;

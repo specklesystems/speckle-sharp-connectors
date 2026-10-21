@@ -525,43 +525,55 @@ public class RevitArtifactRootObjectBuilder(
 
   // Every set and option, empty ones included: an empty primary option carries no element, so this is the only place
   // it is named. Host document only and keyed by ElementId, as rvextract writes it [ENG-10901, ENG-10900].
-  private static void EmitDesignOptionCatalogue(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
+  // Sets come from their own elements, not from grouping options, so a set with no options is still listed, and a
+  // set with no primary still gets primaryOptionId = 0, as rvextract writes it.
+  private void EmitDesignOptionCatalogue(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
   {
     if (documentContext.Doc.IsLinked)
     {
       return;
     }
 
-    using var collector = new FilteredElementCollector(documentContext.Doc);
-    var sets = collector
-      .OfClass(typeof(DesignOption))
-      .Cast<DesignOption>()
-      .Select(option => (option, setId: DesignOptionData.SetId(option)))
-      .Where(x => x.setId != ElementId.InvalidElementId)
-      .GroupBy(x => DesignOptionData.IdValue(x.setId))
-      .OrderBy(g => g.Key);
-
-    foreach (var set in sets)
+    try
     {
-      if (documentContext.Doc.GetElement(set.First().setId) is not Element setElement)
-      {
-        continue;
-      }
+      using var optionCollector = new FilteredElementCollector(documentContext.Doc);
+      var optionsBySet = optionCollector
+        .OfClass(typeof(DesignOption))
+        .Cast<DesignOption>()
+        .ToLookup(option => DesignOptionData.IdValue(DesignOptionData.SetId(option)));
 
-      string setPath = $"designOptions.sets.{set.Key.ToString(CultureInfo.InvariantCulture)}";
-      pipeline.AddModelProperty($"{setPath}.name", setElement.Name);
-      if (set.FirstOrDefault(x => x.option.IsPrimary).option is DesignOption primary)
-      {
-        pipeline.AddModelProperty($"{setPath}.primaryOptionId", (double)DesignOptionData.IdValue(primary.Id));
-      }
+      using var setCollector = new FilteredElementCollector(documentContext.Doc);
+      var sets = setCollector
+        .OfCategory(BuiltInCategory.OST_DesignOptionSets)
+        .WhereElementIsNotElementType()
+        .OrderBy(set => DesignOptionData.IdValue(set.Id));
 
-      foreach (var (option, _) in set.OrderBy(x => DesignOptionData.IdValue(x.option.Id)))
+      foreach (Element set in sets)
       {
-        string optionPath =
-          $"{setPath}.options.{DesignOptionData.IdValue(option.Id).ToString(CultureInfo.InvariantCulture)}";
-        pipeline.AddModelProperty($"{optionPath}.name", DesignOptionData.OptionName(option));
-        pipeline.AddModelProperty($"{optionPath}.isPrimary", option.IsPrimary);
+        long setId = DesignOptionData.IdValue(set.Id);
+        var options = optionsBySet[setId].OrderBy(option => DesignOptionData.IdValue(option.Id)).ToList();
+        DesignOption? primary = options.FirstOrDefault(option => option.IsPrimary);
+
+        string setPath = $"designOptions.sets.{setId.ToString(CultureInfo.InvariantCulture)}";
+        pipeline.AddModelProperty($"{setPath}.name", set.Name);
+        pipeline.AddModelProperty(
+          $"{setPath}.primaryOptionId",
+          primary is null ? 0.0 : DesignOptionData.IdValue(primary.Id)
+        );
+
+        foreach (DesignOption option in options)
+        {
+          string optionPath =
+            $"{setPath}.options.{DesignOptionData.IdValue(option.Id).ToString(CultureInfo.InvariantCulture)}";
+          pipeline.AddModelProperty($"{optionPath}.name", DesignOptionData.OptionName(option));
+          pipeline.AddModelProperty($"{optionPath}.isPrimary", option.IsPrimary);
+        }
       }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      // The catalogue is descriptive; an unreadable design option never fails the send.
+      logger.LogWarning(ex, "Skipped the design option catalogue");
     }
   }
 

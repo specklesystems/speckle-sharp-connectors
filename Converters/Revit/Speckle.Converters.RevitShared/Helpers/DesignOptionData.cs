@@ -1,16 +1,15 @@
 namespace Speckle.Converters.RevitShared.Helpers;
 
 /// <summary>
-/// Design-option reads shared by the per-element `Design Option` property group and the model-table catalogue,
-/// so both say the same thing about an option. The shape matches rvextract (speckle-converters#305, ENG-10900):
-/// a desktop publish and a server conversion of the same file must be indistinguishable [ENG-10901].
+/// Values must match rvextract's (speckle-converters#305, ENG-10900): a desktop publish and a server conversion of
+/// the same file must be indistinguishable [ENG-10901].
 /// </summary>
 public static class DesignOptionData
 {
   public const string MAIN_MODEL_NAME = "Main Model";
 
-  // rvextract (ODA) reports the bare option name. Revit's Element.Name can carry a localised "(primary)" marker,
-  // so OPTION_NAME comes first and the suffix is only stripped, as a fallback, on the primary option.
+  // rvextract (ODA) reports the bare option name, so OPTION_NAME comes first. The fallback strips only the English
+  // " (primary)" marker Element.Name may carry; a localised marker would survive it.
   public static string OptionName(DB.DesignOption option)
   {
     string? name = option.get_Parameter(DB.BuiltInParameter.OPTION_NAME)?.AsString();
