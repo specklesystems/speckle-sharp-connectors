@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
@@ -260,6 +261,7 @@ public class RevitArtifactRootObjectBuilder(
       );
 
       EmitMainModelReferencePoint(pipeline, documentContext);
+      EmitDesignOptionCatalogue(pipeline, documentContext);
 
       using (
         converterSettings.Push(s =>
@@ -519,6 +521,48 @@ public class RevitArtifactRootObjectBuilder(
     }
 
     return objK;
+  }
+
+  // Every set and option, empty ones included: an empty primary option carries no element, so this is the only place
+  // it is named. Host document only and keyed by ElementId, as rvextract writes it [ENG-10901, ENG-10900].
+  private static void EmitDesignOptionCatalogue(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
+  {
+    if (documentContext.Doc.IsLinked)
+    {
+      return;
+    }
+
+    using var collector = new FilteredElementCollector(documentContext.Doc);
+    var sets = collector
+      .OfClass(typeof(DesignOption))
+      .Cast<DesignOption>()
+      .Select(option => (option, setId: DesignOptionData.SetId(option)))
+      .Where(x => x.setId != ElementId.InvalidElementId)
+      .GroupBy(x => DesignOptionData.IdValue(x.setId))
+      .OrderBy(g => g.Key);
+
+    foreach (var set in sets)
+    {
+      if (documentContext.Doc.GetElement(set.First().setId) is not Element setElement)
+      {
+        continue;
+      }
+
+      string setPath = $"designOptions.sets.{set.Key.ToString(CultureInfo.InvariantCulture)}";
+      pipeline.AddModelProperty($"{setPath}.name", setElement.Name);
+      if (set.FirstOrDefault(x => x.option.IsPrimary).option is DesignOption primary)
+      {
+        pipeline.AddModelProperty($"{setPath}.primaryOptionId", (double)DesignOptionData.IdValue(primary.Id));
+      }
+
+      foreach (var (option, _) in set.OrderBy(x => DesignOptionData.IdValue(x.option.Id)))
+      {
+        string optionPath =
+          $"{setPath}.options.{DesignOptionData.IdValue(option.Id).ToString(CultureInfo.InvariantCulture)}";
+        pipeline.AddModelProperty($"{optionPath}.name", DesignOptionData.OptionName(option));
+        pipeline.AddModelProperty($"{optionPath}.isPrimary", option.IsPrimary);
+      }
+    }
   }
 
   // Record the MAIN-model datum independently from the transform used by conversion. Linked-document transforms
