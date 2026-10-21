@@ -642,9 +642,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       else if (n > 4 && p + n < f.Length)
       {
-        for (int k = 1; k < n - 1; k++) // fan-triangulate n-gons (PolyFaceMesh faces are tri/quad only)
+        var triangles = MeshTriangulationHelper.TriangulateFace(p, f, v, includeIndicators: false);
+        for (int t = 0; t < triangles.Count; t += 3)
         {
-          AppendFace(mesh, tr, f[p + 1], f[p + 1 + k], f[p + 2 + k], null, vertexCount);
+          AppendFace(mesh, tr, triangles[t], triangles[t + 1], triangles[t + 2], null, vertexCount);
         }
       }
       else
