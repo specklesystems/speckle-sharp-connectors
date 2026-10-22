@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad.ToSpeckle.Raw;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
@@ -8,9 +9,9 @@ namespace Speckle.Converters.Autocad.Geometry;
 [NameAndRankValue(typeof(ADB.Surface), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class SurfaceToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<ADB.Surface, SOG.Mesh>
 {
-  private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
+  private readonly INonVolumetricBrepConverter _brepConverter;
 
-  public SurfaceToSpeckleConverter(ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter)
+  public SurfaceToSpeckleConverter(INonVolumetricBrepConverter brepConverter)
   {
     _brepConverter = brepConverter;
   }
