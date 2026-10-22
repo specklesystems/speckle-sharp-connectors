@@ -24,6 +24,7 @@ public class ToSpeckleSettingsManager(
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = [];
   private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = [];
   private readonly Dictionary<string, bool?> _sendAreasAsMeshCache = [];
+  private readonly Dictionary<string, bool?> _sendAllDesignOptionsCache = [];
   private readonly Dictionary<string, AppendRoomsAndAreasMode> _appendRoomsAndAreasCache = [];
 
   public DetailLevelType GetDetailLevelSetting(Document document, SenderModelCard modelCard) =>
@@ -149,6 +150,16 @@ public class ToSpeckleSettingsManager(
       modelCard,
       _sendAreasAsMeshCache,
       "Send areas as mesh"
+    );
+
+  public bool GetSendAllDesignOptions(Document document, SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      document,
+      SendAllDesignOptionsSetting.SETTING_ID,
+      SendAllDesignOptionsSetting.DEFAULT_VALUE,
+      modelCard,
+      _sendAllDesignOptionsCache,
+      "Send all design options"
     );
 
   public AppendRoomsAndAreasMode GetAppendRoomsAndAreas(Document document, SenderModelCard modelCard) =>

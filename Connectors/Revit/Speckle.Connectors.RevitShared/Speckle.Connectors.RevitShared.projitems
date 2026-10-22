@@ -32,6 +32,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitParameterCreator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RoomsAndAreasHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\DesignOptionsHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitSendChangeTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ParameterUpdater.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitFamilyBaker.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\AppendRoomsAndAreasSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\LinkedModelsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendAllDesignOptionsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendAreasAsMeshSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendApplyTransformSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsVolumetricSetting.cs" />

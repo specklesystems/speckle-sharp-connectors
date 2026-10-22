@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.RevitShared.Extensions;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
@@ -10,6 +11,9 @@ namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 public class ClassPropertiesExtractor
 {
   private readonly Dictionary<int, string> _worksetCache = new();
+
+  // Keyed by UniqueId, not ElementId: linked documents reuse ElementIds.
+  private readonly Dictionary<string, Dictionary<string, object?>?> _designOptionCache = new();
 
   public Dictionary<string, object?> GetClassProperties(DB.Element element)
   {
@@ -120,6 +124,61 @@ public class ClassPropertiesExtractor
       }
     }
 
+    if (GetDesignOption(element) is Dictionary<string, object?> designOption)
+    {
+      elementProperties.Add("Design Option", designOption);
+    }
+
     return elementProperties;
+  }
+
+  // Same shape as rvextract [ENG-10901, ENG-10900]. An option that can't be fully read gets no group rather than
+  // passing as main model. Linked elements resolve against their own document, as rvextract converts each link
+  // on its own.
+  private Dictionary<string, object?>? GetDesignOption(DB.Element element)
+  {
+    DB.DesignOption? option;
+    try
+    {
+      option = element.DesignOption;
+    }
+    catch (Exception e) when (!e.IsFatal())
+    {
+      return null;
+    }
+
+    if (option is null)
+    {
+      return new() { { "Name", DesignOptionData.MAIN_MODEL_NAME } };
+    }
+
+    if (_designOptionCache.TryGetValue(option.UniqueId, out var cached))
+    {
+      return cached;
+    }
+
+    Dictionary<string, object?>? group = null;
+    try
+    {
+      DB.ElementId setId = DesignOptionData.SetId(option);
+      if (option.Document.GetElement(setId) is DB.Element set)
+      {
+        group = new()
+        {
+          { "Name", DesignOptionData.OptionName(option) },
+          { "Set", set.Name },
+          { "Is Primary", option.IsPrimary },
+          { "Id", DesignOptionData.IdValue(option.Id) },
+          { "Set Id", DesignOptionData.IdValue(setId) },
+        };
+      }
+    }
+    catch (Exception e) when (!e.IsFatal())
+    {
+      group = null;
+    }
+
+    _designOptionCache[option.UniqueId] = group;
+    return group;
   }
 }
