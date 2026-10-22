@@ -65,7 +65,6 @@ public static class ArtefactGeometryToHost
     }
   }
 
-  // Speckle count-prefixed faces; n-gons are fan-triangulated and kept as MeshNgon records, as in MeshToHostConverter
   private static RG.Mesh BuildMesh(SgeoMesh sm)
   {
     var mesh = new RG.Mesh();
@@ -94,10 +93,11 @@ public static class ArtefactGeometryToHost
       }
       else if (n > 4 && p + n < f.Length)
       {
-        var ngonFaces = new List<int>(n - 2);
-        for (int k = 1; k < n - 1; k++)
+        var triangles = MeshTriangulationHelper.TriangulateFace(p, f, v, includeIndicators: false);
+        var ngonFaces = new List<int>(triangles.Count / 3);
+        for (int t = 0; t < triangles.Count; t += 3)
         {
-          ngonFaces.Add(mesh.Faces.AddFace(f[p + 1], f[p + 1 + k], f[p + 2 + k]));
+          ngonFaces.Add(mesh.Faces.AddFace(triangles[t], triangles[t + 1], triangles[t + 2]));
         }
         var ngonVertices = new int[n];
         for (int k = 0; k < n; k++)
