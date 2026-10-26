@@ -100,8 +100,8 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 
 ### Tekla — `TeklaArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (flat by type), DISPLAY, HAS_MATERIAL.
-- ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / sub-parts; was flattened) and component → the
-  children it created that are in the send.
+- ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / welds / sub-parts; was flattened, welds were excluded
+  until ENG-11153) and component → the children it created that are in the send.
 - ✅ **HOSTED_ON** — rebar (single, group, mesh, strand, set) and surface objects → the part they sit on, replacing
   the owner's SUBELEMENT edge: placement is not ownership (ENG-11152, aligned with teklaextract).
 - ✅ **IN_ASSEMBLY** — part → assembly from `Part.GetAssembly()` (main object ord 0, then `GetSecondaries()` and
@@ -114,8 +114,10 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
   model-wide query only when the send carries rebar). Components, connections, details, seams and splices are
   geometry-less objects with their properties (ENG-11152). Details and custom components connect nothing, like the
   SDK's macro rows.
-- 🔶 **CONNECTS_TO** — `Weld.MainObject / SecondaryObject` (welds are excluded from children today) → part
-  ↔ part connection (new walk).
+- ✅ **CONNECTS_TO** — weld main part → secondary part (`BaseWeld.MainObject / SecondaryObject`) and bolt group
+  main part → each bolted part (`PartToBoltTo` → `PartToBeBolted` + `OtherPartsToBolt`), one unscoped edge per part
+  pair however many welds or bolt groups join it; counts and sizes stay on the weld and bolt objects (ENG-11153).
+  This edge set is the oracle the tekla-db1-sdk has to reproduce (ENG-11154).
 
 ## ODA blueprint (how the native producers derive each relation)
 
@@ -159,7 +161,7 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
-- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla welds. ✅ Tekla assemblies + pour units (ENG-11151).
+- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL. ✅ Tekla assemblies + pour units (ENG-11151), rebar hosting + components (ENG-11152), welds + bolts (ENG-11153).
 - **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). 🔶 CSi groups; rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
 The 🔶 items all require **new host-API walks in the collect phase** (main-thread Revit/Plant3D/Tekla API);
