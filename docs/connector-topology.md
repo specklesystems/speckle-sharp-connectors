@@ -103,12 +103,20 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 
 ### Tekla — `TeklaArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (flat by type), DISPLAY, HAS_MATERIAL.
-- ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / rebar / sub-parts; was flattened).
+- ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / sub-parts; was flattened) and component → the
+  children it created that are in the send.
+- ✅ **HOSTED_ON** — rebar (single, group, mesh, strand, set) and surface objects → the part they sit on, replacing
+  the owner's SUBELEMENT edge: placement is not ownership (ENG-11152, aligned with teklaextract).
 - ✅ **IN_ASSEMBLY** — part → assembly from `Part.GetAssembly()` (main object ord 0, then `GetSecondaries()` and
   `GetSubAssemblies()` from 1; a sub-assembly points at its parent the same way) and pour object → pour unit from
   `Part.GetPours()` / `PourObject.GetFatherPourUnit()` (ord 0 for every member). Assemblies, pour objects and pour
   units are geometry-less objects with their report properties, in their own by-type collections; a selected assembly
   or pour unit stands for its members (ENG-11151, aligned with teklaextract).
+- ✅ **CONNECTS_TO** — connection / seam primary part → each secondary part (`GetPrimaryObject()` /
+  `GetSecondaryObjects()`, one unscoped edge per pair) and rebar splice → both bars (`RebarSplice.RebarGroup1/2`,
+  model-wide query only when the send carries rebar). Components, connections, details, seams and splices are
+  geometry-less objects with their properties (ENG-11152). Details and custom components connect nothing, like the
+  SDK's macro rows.
 - 🔶 **CONNECTS_TO** — `Weld.MainObject / SecondaryObject` (welds are excluded from children today) → part
   ↔ part connection (new walk).
 
