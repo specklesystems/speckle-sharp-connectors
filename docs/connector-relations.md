@@ -515,7 +515,7 @@ Every object (owner and child) lands in a flat by-type collection AND is wired i
 
 ---
 
-### CSi · ETABS · SAP — structural · analysis · emits 5 (+2 volumetric)
+### CSi · ETABS · SAP — structural · analysis · emits 7
 
 The analysis model as display-only geometry in a nested scene tree, plus a member↔joint connectivity graph, story and group membership, and a flat table of analysis result rows — the primary `structural_results` producer.
 

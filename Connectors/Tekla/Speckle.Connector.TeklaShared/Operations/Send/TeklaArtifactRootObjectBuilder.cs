@@ -162,7 +162,10 @@ public class TeklaArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    var relations = new RelationCollector(converter, teklaModel, logger, collected, results, session).Collect(expanded);
+    var relations = new RelationCollector(converter, teklaModel, logger, collected, results, session).Collect(
+      expanded,
+      cancellationToken
+    );
 
     // Render materials (Tekla visualisation colours), keyed by object applicationId — needs the Tekla API, so phase 1.
     var materials = materialUnpacker.UnpackRenderMaterial(expanded);
@@ -172,7 +175,7 @@ public class TeklaArtifactRootObjectBuilder(
 
   // A Tekla selection can hold assemblies and pour units themselves. They are membership targets here, not owners
   // (ENG-11151), so a selected one stands for its members; it still reaches the bundle through the membership walk.
-  private static List<TSM.ModelObject> ExpandSelection(IReadOnlyList<TSM.ModelObject> objects)
+  private List<TSM.ModelObject> ExpandSelection(IReadOnlyList<TSM.ModelObject> objects)
   {
     var expanded = new List<TSM.ModelObject>(objects.Count);
     var seen = new HashSet<Guid>();
@@ -184,27 +187,37 @@ public class TeklaArtifactRootObjectBuilder(
 
     void Add(TSM.ModelObject modelObject)
     {
-      switch (modelObject)
+      if (!seen.Add(modelObject.Identifier.GUID))
       {
-        case TSM.Assembly assembly:
-          foreach (TSM.ModelObject member in AssemblyMembers(assembly))
-          {
-            Add(member);
-          }
-          break;
-        case TSM.PourUnit pourUnit:
-          foreach (TSM.ModelObject member in pourUnit.GetObjects())
-          {
-            Add(member);
-          }
-          break;
-        default:
-          if (seen.Add(modelObject.Identifier.GUID))
-          {
-            expanded.Add(modelObject);
-          }
-          break;
+        return;
       }
+      try
+      {
+        switch (modelObject)
+        {
+          case TSM.Assembly assembly:
+            foreach (TSM.ModelObject member in AssemblyMembers(assembly))
+            {
+              Add(member);
+            }
+            return;
+          case TSM.PourUnit pourUnit:
+            foreach (TSM.ModelObject member in pourUnit.GetObjects())
+            {
+              Add(member);
+            }
+            return;
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(
+          ex,
+          "Could not expand the members of {Type}, sending it as selected",
+          modelObject.GetType().Name
+        );
+      }
+      expanded.Add(modelObject);
     }
   }
 
@@ -259,14 +272,23 @@ public class TeklaArtifactRootObjectBuilder(
     private readonly List<TSM.Part> _parts = new();
     private bool _anyRebar;
 
-    public RelationSet Collect(IReadOnlyList<TSM.ModelObject> roots)
+    public RelationSet Collect(IReadOnlyList<TSM.ModelObject> roots, CancellationToken cancellationToken)
     {
       foreach (TSM.ModelObject root in roots)
       {
-        Walk(root, null);
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+          Walk(root, null);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogWarning(ex, "Skipped the relations under {AppId}", root.GetSpeckleApplicationId());
+        }
       }
       foreach (TSM.Part part in _parts)
       {
+        cancellationToken.ThrowIfCancellationRequested();
         RecordPart(part);
       }
       if (_anyRebar)
@@ -282,6 +304,9 @@ public class TeklaArtifactRootObjectBuilder(
       {
         return;
       }
+      // A sent object that is also a relation target (a selected connection, pour object, splice) must not convert
+      // a second time through Derive.
+      _derived[modelObject.Identifier.GUID] = modelObject.GetSpeckleApplicationId();
       if (modelObject is TSM.Part part)
       {
         _parts.Add(part);
@@ -296,17 +321,24 @@ public class TeklaArtifactRootObjectBuilder(
         _hosted.Add(appId);
         _edges.Add(new Edge(EdgeKind.HostedOn, appId, host.GetSpeckleApplicationId(), 0));
       }
-      switch (modelObject)
+      try
       {
-        case TSM.BaseWeld weld:
-          RecordJoint(weld.MainObject, new[] { weld.SecondaryObject });
-          break;
-        case TSM.BoltGroup bolts:
-          RecordJoint(
-            bolts.PartToBoltTo,
-            bolts.OtherPartsToBolt.Cast<TSM.ModelObject?>().Prepend(bolts.PartToBeBolted)
-          );
-          break;
+        switch (modelObject)
+        {
+          case TSM.BaseWeld weld:
+            RecordJoint(weld.MainObject, new[] { weld.SecondaryObject });
+            break;
+          case TSM.BoltGroup bolts:
+            RecordJoint(
+              bolts.PartToBoltTo,
+              bolts.OtherPartsToBolt.Cast<TSM.ModelObject?>().Prepend(bolts.PartToBeBolted)
+            );
+            break;
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Skipped the joined parts of {AppId}", modelObject.GetSpeckleApplicationId());
       }
       foreach (TSM.ModelObject child in modelObject.GetSupportedChildren())
       {
@@ -510,7 +542,7 @@ public class TeklaArtifactRootObjectBuilder(
     }
 
     EmitMaterials(pipeline, model.Materials, geometryKsByAppId);
-    EmitEdges(pipeline, model.Edges, geometryKsByAppId);
+    session.SetStat("edgesDropped", EmitEdges(pipeline, model.Edges, geometryKsByAppId));
 
     // Default scene view: the flat by-type collections (IN_COLLECTION).
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -592,16 +624,19 @@ public class TeklaArtifactRootObjectBuilder(
 
   // Both ends must be objects of this send (every emitted object has a geometry list, empty or not), so a relation
   // never interns a phantom object for a part that was not sent.
-  private static void EmitEdges(
+  // An edge whose end was not sent is dropped, never invented; the count is the session's record of it.
+  private static int EmitEdges(
     ObjectsArtifactPipeline pipeline,
     IReadOnlyList<Edge> edges,
     Dictionary<string, List<int>> geometryKsByAppId
   )
   {
+    int dropped = 0;
     foreach (Edge edge in edges)
     {
       if (!geometryKsByAppId.ContainsKey(edge.SourceAppId) || !geometryKsByAppId.ContainsKey(edge.TargetAppId))
       {
+        dropped++;
         continue;
       }
       int sourceK = pipeline.InternObject(edge.SourceAppId);
@@ -622,6 +657,7 @@ public class TeklaArtifactRootObjectBuilder(
           break;
       }
     }
+    return dropped;
   }
 
   private static void EmitMaterials(
