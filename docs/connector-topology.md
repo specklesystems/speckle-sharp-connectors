@@ -30,8 +30,9 @@
 | BOUNDS (23) | object → object | — | bounding wall → room | `Bounds` |
 
 Node kinds: DEFINITION, INSTANCE, MATERIAL, COLOR, LEVEL, CONTAINER (subtype `Collection｜Group｜Model｜MEP System｜Network`).
-**Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), IN_ASSEMBLY(18),
-IN_SUBASSEMBLY(19), XREF(20), COLLECTION-node(6). (`IN_GROUP(17)` was **un-retired** post-v5 — see decision 1.)
+**Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), IN_SUBASSEMBLY(19), XREF(20),
+COLLECTION-node(6). (`IN_GROUP(17)` was **un-retired** post-v5 — see decision 1; `IN_ASSEMBLY(18)` is live in the
+catalog and carries Tekla assemblies and pour units — see decision 4.)
 
 **SUBELEMENT is ownership, HOSTED_ON is placement** — and they are not interchangeable. A curtain panel is a
 *component of* its curtain wall (SUBELEMENT); a door is *placed on* its wall (HOSTED_ON). Ownership takes
@@ -90,20 +91,36 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 
 ### CSi / ETABS / SAP2000 — `CsiArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (by-type / Level→Category tree), DISPLAY, structural_results (separate purpose file).
-- ✅ **CONNECTS_TO** — frame → I-/J-end joint objects (`Geometry["I-End Joint"|"J-End Joint"]` via
-  `nameToAppId`). The slab↔beam↔column graph through shared joints.
-- 🔶 **ON_LEVEL** — story from `GetLabelAndLevel` (currently only a collection segment) → LEVEL node + edge.
-- 🔶 **IN_SYSTEM / grouping** — `GetGroupAssign` groups + pier/spandrel/diaphragm
-  (`EtabsShellPropertiesExtractor`) → semantic CONTAINERs. (Aligns with "pier = named group of walls".)
+- ✅ **CONNECTS_TO** — frame → I-/J-end joint objects (`Geometry["I-End Joint"|"J-End Joint"]`) and shell →
+  corner joint objects (`Geometry["Joints"]`, ENG-11149) via `nameToAppId`, all ord 0 (ADR-0002 of the atlas spec).
+  The slab↔beam↔column graph through shared joints.
+- ✅ **ON_LEVEL** — story from `GetLabelAndLevel` → LEVEL node (elevation from `Story.GetElevation`) + edge;
+  no story, no edge (ENG-11148).
+- ✅ **IN_GROUP** — `GetGroupAssign` groups → CONTAINER `"Group"` + edge per membership (ENG-11148).
+- 🔶 **IN_SYSTEM** — pier/spandrel/diaphragm (`EtabsShellPropertiesExtractor`) → semantic CONTAINERs. Needs a
+  container subtype the spec does not have yet; stays eav (atlas spec 2026-10 enriching structural relationships).
 - 🔶 **HAS_MATERIAL / section** — `CsiToSpeckleCacheSingleton` section/material caches (two-tier proxy).
 
 ### Tekla — `TeklaArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (flat by type), DISPLAY, HAS_MATERIAL.
-- ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / rebar / sub-parts; was flattened).
-- 🔶 **Assemblies** — `Part.GetAssembly()` / `Assembly.GetMainPart()` / `GetSecondaries()` → SUBELEMENT
-  main→secondary (new walk; not extracted today).
-- 🔶 **CONNECTS_TO** — `Weld.MainObject / SecondaryObject` (welds are excluded from children today) → part
-  ↔ part connection (new walk).
+- ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / welds / sub-parts; was flattened, welds were excluded
+  until ENG-11153) and component → the children it created that are in the send.
+- ✅ **HOSTED_ON** — rebar (single, group, mesh, strand, set) and surface objects → the part they sit on, replacing
+  the owner's SUBELEMENT edge: placement is not ownership (ENG-11152, aligned with teklaextract).
+- ✅ **IN_ASSEMBLY** — part → assembly from `Part.GetAssembly()` (main object ord 0, then `GetSecondaries()` and
+  `GetSubAssemblies()` from 1; a sub-assembly points at its parent the same way) and pour object → pour unit from
+  `Part.GetPours()` / `PourObject.GetFatherPourUnit()` (ord 0 for every member). Assemblies, pour objects and pour
+  units are geometry-less objects with their report properties, in their own by-type collections; a selected assembly
+  or pour unit stands for its members (ENG-11151, aligned with teklaextract).
+- ✅ **CONNECTS_TO** — connection / seam primary part → each secondary part (`GetPrimaryObject()` /
+  `GetSecondaryObjects()`, one unscoped edge per pair) and rebar splice → both bars (`RebarSplice.RebarGroup1/2`,
+  model-wide query only when the send carries rebar). Components, connections, details, seams and splices are
+  geometry-less objects with their properties (ENG-11152). Details and custom components connect nothing, like the
+  SDK's macro rows.
+- ✅ **CONNECTS_TO** — weld main part → secondary part (`BaseWeld.MainObject / SecondaryObject`) and bolt group
+  main part → each bolted part (`PartToBoltTo` → `PartToBeBolted` + `OtherPartsToBolt`), one unscoped edge per part
+  pair however many welds or bolt groups join it; counts and sizes stay on the weld and bolt objects (ENG-11153).
+  This edge set is the oracle the tekla-db1-sdk has to reproduce (ENG-11154).
 
 ### TSD — `TsdArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (flat by member type, `Nodes` for construction points), DISPLAY, structural_results.
@@ -143,7 +160,9 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
    Folding them into one rel made a model's topology depend on whether it was published through the connector
    or extracted from an uploaded file [ENG-9081].
 3. **Civil pipe networks use CONTAINER subtype `Network`**; Revit MEP systems use `MEP System`.
-4. **Assemblies (Tekla) use SUBELEMENT** (main → secondary), avoiding a new CONTAINER subtype.
+4. **Assemblies (Tekla) use IN_ASSEMBLY** (member → assembly object, main member ord 0; pour object → pour unit,
+   ord 0 for all — ADR-0003 of the atlas spec `2026-10-enriching-structural-relationships`). The earlier
+   SUBELEMENT main→secondary idea contradicted the bundle spec and teklaextract, which already wrote IN_ASSEMBLY.
 
 ## Implementation status
 
@@ -151,8 +170,8 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
-- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO; TSD member/area → construction point CONNECTS_TO (ENG-11155). 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
-- **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). 🔶 CSi groups; rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
+- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO, story ON_LEVEL, group IN_GROUP (ENG-11148); TSD member/area → construction point CONNECTS_TO (ENG-11155). 🔶 pier-spandrel IN_SYSTEM / section HAS_MATERIAL. ✅ Tekla assemblies + pour units (ENG-11151), rebar hosting + components (ENG-11152), welds + bolts (ENG-11153).
+- **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). ✅ CSi groups (ENG-11148). 🔶 rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
 The 🔶 items all require **new host-API walks in the collect phase** (main-thread Revit/Plant3D/Tekla API);
 they were left as a **tested** follow-up rather than shipped blind, and each is wrapped/guarded so it can
