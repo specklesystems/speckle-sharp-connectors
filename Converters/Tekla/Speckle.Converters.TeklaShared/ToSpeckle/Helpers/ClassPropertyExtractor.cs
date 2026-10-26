@@ -42,9 +42,24 @@ public class ClassPropertyExtractor
       case TSM.RebarSplice splice:
         AddRebarSpliceProperties(splice, properties);
         break;
+      case TSM.BaseWeld weld:
+        AddWeldProperties(weld, properties);
+        break;
     }
 
     return properties;
+  }
+
+  private void AddWeldProperties(TSM.BaseWeld weld, Dictionary<string, object?> properties)
+  {
+    properties["typeAbove"] = weld.TypeAbove.ToString();
+    properties["sizeAbove"] = weld.SizeAbove;
+    properties["typeBelow"] = weld.TypeBelow.ToString();
+    properties["sizeBelow"] = weld.SizeBelow;
+    properties["shopWeld"] = weld.ShopWeld;
+    properties["aroundWeld"] = weld.AroundWeld;
+    properties["weldNumber"] = weld.WeldNumber;
+    properties["weldNumberPrefix"] = weld.WeldNumberPrefix;
   }
 
   private void AddComponentProperties(TSM.BaseComponent component, Dictionary<string, object?> properties)

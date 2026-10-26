@@ -477,7 +477,7 @@ geometry rel `ArtefactGraphCache` deliberately does not drop).
 
 ### Tekla Structures — structural · detailing · emits 7
 
-A flat by-type scene of tessellated detailing objects (parts, plates, bolts, rebar), with nested elements wired to their owner via SUBELEMENT, rebar and surface objects to the part they sit on via HOSTED_ON, parts pointing at their assembly (and pour objects at their pour unit) via IN_ASSEMBLY, connections joining their primary part to each secondary via CONNECTS_TO, and Tekla visualisation colours as materials.
+A flat by-type scene of tessellated detailing objects (parts, plates, bolts, welds, rebar), with nested elements wired to their owner via SUBELEMENT, rebar and surface objects to the part they sit on via HOSTED_ON, parts pointing at their assembly (and pour objects at their pour unit) via IN_ASSEMBLY, connections, welds and bolt groups joining their main part to each part they join via CONNECTS_TO, and Tekla visualisation colours as materials.
 
 **Assembly / part tree** — `IN_ASSEMBLY` · `SUBELEMENT` · `HOSTED_ON` · `CONNECTS_TO` · `DISPLAY` · `HAS_MATERIAL` · `IN_COLLECTION`
 
@@ -496,7 +496,7 @@ graph LR
   COL{{node · Collection · Beam}}:::nd
   PT -->|IN_ASSEMBLY ord 0 main| AS
   PO -->|IN_ASSEMBLY ord 0| PU
-  PT -->|CONNECTS_TO| P2
+  PT -->|CONNECTS_TO · connection, weld or bolts| P2
   CN -->|SUBELEMENT| BO
   RB -->|HOSTED_ON| PT
   PT -->|SUBELEMENT| BO
@@ -508,7 +508,7 @@ graph LR
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-Every object (owner and child) lands in a flat by-type collection AND is wired into a SUBELEMENT tree; each child is a first-class object with its own geometry + material. Rebar and surface objects are the exception: they sit on a part rather than belong to it, so they get `HOSTED_ON` → part and no SUBELEMENT (ENG-11152). Components, connections, details and seams come in as geometry-less objects from `Part.GetComponents()`: their created children in the send stay `SUBELEMENT` children of the component, and a connection or seam connects its primary part to each secondary with one unscoped `CONNECTS_TO` per pair (ADR-0002); rebar splices do the same to both bars. Material is the Tekla _visualisation colour_, per-mesh. Assemblies, pour objects and pour units are derived from the sent parts (`Part.GetAssembly()`, `Part.GetPours()`), sent once each as geometry-less objects with their report properties, and pointed at with `IN_ASSEMBLY`: the main object ord 0, secondaries and sub-assemblies from 1 in Tekla's order, a nested assembly → its parent the same way, pour object → pour unit ord 0 for all (ADR-0003 of the atlas spec, ENG-11151). A selected assembly or pour unit stands for its members.
+Every object (owner and child) lands in a flat by-type collection AND is wired into a SUBELEMENT tree; each child is a first-class object with its own geometry + material. Rebar and surface objects are the exception: they sit on a part rather than belong to it, so they get `HOSTED_ON` → part and no SUBELEMENT (ENG-11152). Components, connections, details and seams come in as geometry-less objects from `Part.GetComponents()`: their created children in the send stay `SUBELEMENT` children of the component, and a connection or seam connects its primary part to each secondary with one unscoped `CONNECTS_TO` per pair (ADR-0002); rebar splices do the same to both bars, welds (`MainObject` → `SecondaryObject`) and bolt groups (`PartToBoltTo` → every bolted part) to the parts they join — ten welds between two plates are still one edge, the counts and sizes stay on the weld and bolt objects (ENG-11153). Welds are children of their main part like bolts, with their weld solid as `DISPLAY`. Material is the Tekla _visualisation colour_, per-mesh. Assemblies, pour objects and pour units are derived from the sent parts (`Part.GetAssembly()`, `Part.GetPours()`), sent once each as geometry-less objects with their report properties, and pointed at with `IN_ASSEMBLY`: the main object ord 0, secondaries and sub-assemblies from 1 in Tekla's order, a nested assembly → its parent the same way, pour object → pour unit ord 0 for all (ADR-0003 of the atlas spec, ENG-11151). A selected assembly or pour unit stands for its members.
 
 - **Nodes:** CONTAINER `"Collection"` (by object type — Beam, ContourPlate, Assembly, PourUnit, Connection…) · MATERIAL
 - **Receive:** send-only

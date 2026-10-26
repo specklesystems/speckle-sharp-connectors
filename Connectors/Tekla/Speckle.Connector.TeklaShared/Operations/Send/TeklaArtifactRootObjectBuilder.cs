@@ -47,8 +47,9 @@ namespace Speckle.Connectors.TeklaShared.Operations.Send;
 /// parts: every part points at its assembly with <c>IN_ASSEMBLY</c> (main part ord 0, the rest in Tekla's member
 /// order from 1, nested assemblies the same way), every pour object at its pour unit (ord 0 for all, ADR-0003 of the
 /// atlas spec, ENG-11151); a component keeps its created children in the send as <c>SUBELEMENT</c>, a connection or
-/// seam connects its primary part to each secondary and a splice connects to both bars (<c>CONNECTS_TO</c>, ord 0,
-/// ADR-0002). Tekla sends no analysis results.</para>
+/// seam connects its primary part to each secondary, a splice connects to both bars, and a weld or bolt group connects
+/// its main part to each part it joins (<c>CONNECTS_TO</c>, ord 0, one edge per part pair, ADR-0002; ENG-11153).
+/// Welds are children of their main part like bolts. Tekla sends no analysis results.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the Tekla API (<c>GetSolid</c>/report properties/visualisation) is
 /// main-thread-affine, so phase 1 converts on the host thread → a pure-Speckle snapshot; phase 2 builds the parquet
 /// bundle on a worker (the pipeline's sync-over-async IO deadlocks on a UI SynchronizationContext).</para>
@@ -236,8 +237,9 @@ public class TeklaArtifactRootObjectBuilder(
   // assemblies, pour objects and pour units (IN_ASSEMBLY); host parts of rebar and surface objects (HOSTED_ON, which
   // replaces the owner's SUBELEMENT: placement on a part is not ownership); components (geometry-less objects whose
   // created children in the send stay SUBELEMENT; a connection or seam connects its primary to each secondary); rebar
-  // splices (CONNECTS_TO to both bars). Each derived object converts once and is collected like a sent object; edges
-  // are resolved by application id in phase 2. Host thread only.
+  // splices (CONNECTS_TO to both bars); welds and bolt groups (CONNECTS_TO main part → each joined part). Each derived
+  // object converts once and is collected like a sent object; edges are resolved by application id in phase 2. Host
+  // thread only.
   private sealed class RelationCollector(
     IRootToSpeckleConverter converter,
     TSM.Model teklaModel,
@@ -293,6 +295,18 @@ public class TeklaArtifactRootObjectBuilder(
         string appId = modelObject.GetSpeckleApplicationId();
         _hosted.Add(appId);
         _edges.Add(new Edge(EdgeKind.HostedOn, appId, owner.GetSpeckleApplicationId(), 0));
+      }
+      switch (modelObject)
+      {
+        case TSM.BaseWeld weld:
+          RecordJoint(weld.MainObject, new[] { weld.SecondaryObject });
+          break;
+        case TSM.BoltGroup bolts:
+          RecordJoint(
+            bolts.PartToBoltTo,
+            bolts.OtherPartsToBolt.Cast<TSM.ModelObject?>().Prepend(bolts.PartToBeBolted)
+          );
+          break;
       }
       foreach (TSM.ModelObject child in modelObject.GetSupportedChildren())
       {
@@ -393,7 +407,24 @@ public class TeklaArtifactRootObjectBuilder(
       }
     }
 
-    // One CONNECTS_TO per pair, unscoped (ADR-0002), however many components or splices join it.
+    // A weld or bolt group joins its main part to each other part; a single-part weld or a null slot joins nothing.
+    private void RecordJoint(TSM.ModelObject? main, IEnumerable<TSM.ModelObject?> joined)
+    {
+      if (main is null)
+      {
+        return;
+      }
+      string mainId = main.GetSpeckleApplicationId();
+      foreach (TSM.ModelObject? other in joined)
+      {
+        if (other is not null && other.Identifier.GUID != main.Identifier.GUID)
+        {
+          Connect(mainId, other.GetSpeckleApplicationId());
+        }
+      }
+    }
+
+    // One CONNECTS_TO per pair, unscoped (ADR-0002), however many components, splices, welds or bolts join it.
     private void Connect(string sourceAppId, string targetAppId)
     {
       if (_pairs.Add((sourceAppId, targetAppId)))
