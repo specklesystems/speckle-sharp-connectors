@@ -197,42 +197,27 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           // Type Parameters / System Type Parameters, deduped once per type on send (ENG-9136) — resolved here
           // alongside the instance-scoped properties above.
           var objTypeProps = bundle.TypeProperties(objK);
-          var ids = new List<Guid>();
-          ConversionException? firstRejection = null;
-          foreach (var (geomK, geom) in geometries)
+          var ids = geometries.AddAcceptedOrThrow(g =>
           {
-            if (geom is RG.Hatch hatch)
+            if (g.Geometry is RG.Hatch hatch)
             {
               // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
               RhinoHatchStyler.Apply(doc, hatch, objProps, _converterSettings.Current.SpeckleUnits);
             }
-            try
-            {
-              ids.Add(
-                BakeObject(
-                  doc,
-                  geom,
-                  geomK,
-                  layerIndex,
-                  materialByObject,
-                  materialByGeometry,
-                  colorByObject,
-                  appId,
-                  name,
-                  objProps,
-                  objTypeProps
-                )
-              );
-            }
-            catch (ConversionException ex)
-            {
-              firstRejection ??= ex;
-            }
-          }
-          if (ids.Count == 0 && firstRejection is not null)
-          {
-            throw firstRejection;
-          }
+            return BakeObject(
+              doc,
+              g.Geometry,
+              g.GeomK,
+              layerIndex,
+              materialByObject,
+              materialByGeometry,
+              colorByObject,
+              appId,
+              name,
+              objProps,
+              objTypeProps
+            );
+          });
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           if (rels.GroupsByObject.ContainsKey(objK))
           {

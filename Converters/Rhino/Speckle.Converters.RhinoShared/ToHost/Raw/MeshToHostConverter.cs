@@ -30,17 +30,6 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
       }
     }
 
-    RG.Vector3f[]? vertexNormals = null;
-    List<int> unusableNormals = new();
-    if (target.vertexNormals.Count != 0)
-    {
-      vertexNormals = ConvertVertexNormals(target.vertexNormals, unusableNormals);
-      if (!m.Normals.SetNormals(vertexNormals))
-      {
-        throw new SpeckleException("Failed to set Vertex Normals");
-      }
-    }
-
     if (target.textureCoordinates.Count != 0)
     {
       var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
@@ -52,9 +41,9 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
 
     AssignMeshFaces(target, m);
 
-    if (vertexNormals is not null && unusableNormals.Count != 0)
+    if (target.vertexNormals.Count != 0)
     {
-      ReplaceUnusableNormals(m, vertexNormals, unusableNormals);
+      AssignVertexNormals(target.vertexNormals, m);
     }
 
     // POC: CNX-9273 There was a piece of code here about Merging co-planar faces that I've removed for now as this setting does not exist yet.
@@ -135,36 +124,30 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
     return converted;
   }
 
-  // ON_Mesh::IsValid rejects a mesh with any non-unit vertex normal [ENG-11147].
-  private static RG.Vector3f[] ConvertVertexNormals(IReadOnlyList<double> vertexNormals, List<int> unusable)
+  // ON_Mesh::IsValid rejects a mesh with any non-unit vertex normal [ENG-11147]; authored normals must survive
+  // receive [ENG-9214].
+  private static void AssignVertexNormals(IReadOnlyList<double> vertexNormals, RG.Mesh m)
   {
-    RG.Vector3f[] converted = new RG.Vector3f[vertexNormals.Count / 3];
+    var normals = new RG.Vector3f[vertexNormals.Count / 3];
+    bool? computed = null;
     for (int i = 0, j = 0; i < vertexNormals.Count; i += 3, j++)
     {
       var x = vertexNormals[i + 0];
       var y = vertexNormals[i + 1];
       var z = vertexNormals[i + 2];
       var length = Math.Sqrt(x * x + y * y + z * z);
-      if (!(length > 0) || double.IsInfinity(length))
+      if (length > 0 && !double.IsInfinity(length))
       {
-        unusable.Add(j);
+        normals[j] = new RG.Vector3f((float)(x / length), (float)(y / length), (float)(z / length));
         continue;
       }
-      converted[j] = new RG.Vector3f((float)(x / length), (float)(y / length), (float)(z / length));
+
+      computed ??= m.Normals.ComputeNormals();
+      var fallback = computed.Value ? m.Normals[j] : RG.Vector3f.ZAxis;
+      normals[j] = fallback.Unitize() ? fallback : RG.Vector3f.ZAxis;
     }
 
-    return converted;
-  }
-
-  // Authored normals must survive receive [ENG-9214].
-  private static void ReplaceUnusableNormals(RG.Mesh m, RG.Vector3f[] authored, List<int> unusable)
-  {
-    m.Normals.ComputeNormals();
-    foreach (int i in unusable)
-    {
-      authored[i] = m.Normals[i];
-    }
-    if (!m.Normals.SetNormals(authored))
+    if (!m.Normals.SetNormals(normals))
     {
       throw new SpeckleException("Failed to set Vertex Normals");
     }

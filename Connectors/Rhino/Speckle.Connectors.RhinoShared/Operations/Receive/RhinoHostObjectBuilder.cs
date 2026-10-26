@@ -192,11 +192,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             // multiple "geometry bases" - but this is not a fallback conversion.
             // EXTRA NOTE: Oguzhan says i shouldn't be unhappy about this - it's a legitimate case
             // EXTRA EXTRA NOTE: TY Ogu, i am no longer than unhappy about it. It's legit "mess".
-            foreach (var gb in geometryBases)
-            {
-              var guid = BakeObject(gb, obj, null, atts);
-              conversionIds.Add(guid.ToString());
-            }
+            var guids = geometryBases.AddAcceptedOrThrow(gb => BakeObject(gb, obj, null, atts));
+            conversionIds.AddRange(guids.Select(id => id.ToString()));
           }
           else if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion
           {
@@ -377,32 +374,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     string baseLayerName
   )
   {
-    List<Guid> objectIds = new();
     string parentId = originatingObject.applicationId ?? originatingObject.id.NotNull();
-    int objCount = 0;
-    ConversionException? firstRejection = null;
-    foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
-    {
-      // Duplicate atts per object to prevent RenderMaterial reference bleed across iterations (CNX-3311)
-      try
-      {
-        var id = BakeObject(conversionResult, originalBaseObject, parentId, atts.Duplicate());
-        objectIds.Add(id);
-        objCount++;
-      }
-      catch (ConversionException ex)
-      {
-        firstRejection ??= ex;
-      }
-    }
-
-    if (objCount == 0 && firstRejection is not null)
-    {
-      throw firstRejection;
-    }
+    // Duplicate atts per object to prevent RenderMaterial reference bleed across iterations (CNX-3311)
+    List<Guid> objectIds = fallbackConversionResult.AddAcceptedOrThrow(r =>
+      BakeObject(r.Item1, r.Item2, parentId, atts.Duplicate())
+    );
 
     // only create groups if we really need to, ie if the fallback conversion result count is bigger than one.
-    if (objCount > 1)
+    if (objectIds.Count > 1)
     {
       var groupIndex = _converterSettings.Current.Document.Groups.Add(
         $"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",

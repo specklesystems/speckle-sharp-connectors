@@ -23,4 +23,30 @@ public static class ObjectTableExtensions
       : $"it is invalid ({log.Trim()})";
     throw new ConversionException($"Rhino rejected the {geometry.ObjectType} geometry: {reason}");
   }
+
+  /// <summary>
+  /// Adds every item and returns the ids Rhino accepted, rethrowing the first rejection only when Rhino accepted none.
+  /// </summary>
+  public static List<Guid> AddAcceptedOrThrow<T>(this IEnumerable<T> items, Func<T, Guid> add)
+  {
+    var ids = new List<Guid>();
+    ConversionException? firstRejection = null;
+    foreach (var item in items)
+    {
+      try
+      {
+        ids.Add(add(item));
+      }
+      catch (ConversionException ex)
+      {
+        firstRejection ??= ex;
+      }
+    }
+
+    if (ids.Count == 0 && firstRejection is not null)
+    {
+      throw firstRejection;
+    }
+    return ids;
+  }
 }
