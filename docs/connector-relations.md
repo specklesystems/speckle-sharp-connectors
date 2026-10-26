@@ -65,8 +65,8 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **9 DEFINES_INSTANCE** | ● | ● | ● | ● | ● | ● | · | · | · | · |
 | **10 IN_COLLECTION** | ● | ● | ● | ● | ● | ● | · | ● | ● | ● |
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
-| **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | · | · |
-| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | · | · |
+| **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | ● | · |
+| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | ● | · |
 | **3 SUBELEMENT** | · | ◐⁴ | · | · | ● | · | ● | ● | · | ◐¹ |
 | **18 IN_ASSEMBLY** | · | ◐⁴ | · | · | · | · | · | · | · | · |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
@@ -507,11 +507,11 @@ Every object (owner and child) lands in a flat by-type collection AND is wired i
 
 ---
 
-### CSi · ETABS · SAP — structural · analysis · emits 3 (+2 volumetric)
+### CSi · ETABS · SAP — structural · analysis · emits 5 (+2 volumetric)
 
-The analysis model as display-only geometry in a nested scene tree, plus a member↔joint connectivity graph and a flat table of analysis result rows — the primary `structural_results` producer.
+The analysis model as display-only geometry in a nested scene tree, plus a member↔joint connectivity graph, story and group membership, and a flat table of analysis result rows — the primary `structural_results` producer.
 
-**Connectivity graph** — `CONNECTS_TO` · `IN_COLLECTION`
+**Connectivity graph** — `CONNECTS_TO` · `IN_COLLECTION` · `ON_LEVEL` · `IN_GROUP`
 
 ```mermaid
 graph LR
@@ -520,15 +520,19 @@ graph LR
   J2([obj · J-joint]):::obj
   C2{{node · Collection · Beams}}:::nd
   C1{{node · Collection · Level 3}}:::nd
+  L3{{node · LEVEL · Level 3 · elev}}:::nd
+  G1{{node · Group · Transfer}}:::nd
   FR -->|CONNECTS_TO| J1
   FR -->|CONNECTS_TO| J2
   FR -->|IN_COLLECTION| C2
   C2 -.->|def_ref| C1
+  FR -->|ON_LEVEL| L3
+  FR -->|IN_GROUP| G1
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-A frame connects to its I/J-end joints (the slab↔beam↔column graph via shared joints). ETABS groups **level → category**; **stories are Collections, not LEVEL nodes**.
+A frame connects to its I/J-end joints (the slab↔beam↔column graph via shared joints). ETABS groups the scene tree **level → category**; the story is also a LEVEL node with its elevation (`ON_LEVEL`, objects without a story get no edge) and every ETABS group assignment a CONTAINER `"Group"` (`IN_GROUP`), the same edges `etabsextract` writes (ENG-11148).
 
 **Analysis results** — `structural_results`
 
@@ -545,7 +549,7 @@ graph LR
 
 Object-level rows (frameForce, jointReaction) join back via `object_index`; model-level rows (baseReaction, modalPeriod) have null object and key by location/step. Pier/spandrel/story results are extracted but not yet flattened.
 
-- **Nodes:** CONTAINER `"Collection"` — ETABS level→category; base CSi/SAP flat by-type
+- **Nodes:** CONTAINER `"Collection"` — ETABS level→category; base CSi/SAP flat by-type · LEVEL per story (ETABS) · CONTAINER `"Group"` per group assignment
 - **Sidecar:** `structural_results` — frame/joint (object) · base/modal (model)
 - **Receive:** send-only
 **Volumetric geometry** — `DISPLAY` · `CENTERLINE` · `HAS_MATERIAL` (setting-gated, ENG-9048)
@@ -605,12 +609,12 @@ Members group by member-type (Beam, Column, Slab…) into flat collections. Resu
 
 **Three families.**
 - _Free-form CAD_ (Rhino, GH, AutoCAD, Plant3D, SketchUp) shares one profile: DISPLAY + instancing + IN_COLLECTION + materials/colours, ± groups & solids.
-- _BIM_ (Revit) is the only user of ON_LEVEL, IN_MODEL and IN_ROOM — the storey/federation/spatial tier. It shares the CAD family's `IN_GROUP` axis, sourced from model groups rather than authored scene groups (ENG-9079).
+- _BIM_ (Revit) is the only user of IN_MODEL and IN_ROOM — the federation/spatial tier; ON_LEVEL it shares with ETABS stories. It shares the CAD family's `IN_GROUP` axis, sourced from model groups rather than authored scene groups (ENG-9079).
 - _Structural_ (Tekla, CSi, TSD) is lean geometry + one topology or results channel; CSi & TSD own `structural_results`.
 
 **Deliberate folds & substitutions.**
 - Revit **folds BOUNDS into IN_ROOM** — reuses the richer rel rather than emit the rvextract-only one. `HOSTED_ON` is **no longer folded** into `SUBELEMENT` (ENG-9081): hosting and ownership are distinct, and collapsing them made topology depend on the publish route.
-- SketchUp maps **groups to component instances**, so it never emits IN_GROUP. CSi maps **stories to Collections**, not LEVEL nodes.
+- SketchUp maps **groups to component instances**, so it never emits IN_GROUP.
 - The spec's `emitted_by` hint (`rvextract`/`nwextract`/`managed`) is coarse — this map is the precise managed-connector truth.
 
 **Known gaps.**

@@ -24,6 +24,7 @@ using Speckle.Sdk.Pipelines.Send.Artifacts;
 using DataObject = Speckle.Objects.Data.DataObject; // disambiguate from System.Windows.Forms.DataObject (ETABS uses WinForms)
 using Path = System.IO.Path;
 using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecLevel = Speckle.Bundle.Spec.Level;
 using SpecStructuralResult = Speckle.Bundle.Spec.StructuralResult;
 
 namespace Speckle.Connectors.CSiShared.Builders;
@@ -41,7 +42,8 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// <para>CSi elements have no lossless raw encoding — the display geometry (Point/Line/Mesh from
 /// <c>DisplayValueExtractor</c>) IS the geometry, and it's SGEO-encodable, so this only emits <c>DISPLAY</c> geometry.
 /// Grouping reuses <see cref="CsiSendCollectionManager.GetCollectionSegments"/> (base: by type; ETABS: level→category)
-/// as nested CONTAINER nodes + IN_COLLECTION. Analysis results flatten into <c>structural_results</c> rows (all 8
+/// as nested CONTAINER nodes + IN_COLLECTION; stories also become LEVEL nodes + ON_LEVEL and group assignments
+/// CONTAINER(Group) nodes + IN_GROUP. Analysis results flatten into <c>structural_results</c> rows (all 8
 /// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
 /// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. Material display colours become
 /// MATERIAL nodes + HAS_MATERIAL edges, and each frame's analytical line a CENTERLINE, only when volumetric geometry is
@@ -159,7 +161,9 @@ public class CsiArtifactRootObjectBuilder(
             converted,
             segments,
             GetMaterialName(converted),
-            wrapper.ObjectType == ModelObjectType.FRAME ? centerline : null
+            wrapper.ObjectType == ModelObjectType.FRAME ? centerline : null,
+            GetLevelName(converted),
+            GetGroupNames(converted)
           )
         );
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
@@ -202,6 +206,8 @@ public class CsiArtifactRootObjectBuilder(
       ? ResolveMaterialColors(collected)
       : new Dictionary<string, int>(StringComparer.Ordinal);
 
+    var storyElevations = ResolveStoryElevations(collected);
+
     var resultRows = ExtractResultRows(objects, nameToAppId, session);
     return new CollectedModel(
       units,
@@ -211,8 +217,54 @@ public class CsiArtifactRootObjectBuilder(
       resultRows,
       results,
       nameToAppId,
-      materialColors
+      materialColors,
+      storyElevations
     );
+  }
+
+  private static string? GetLevelName(Base converted) =>
+    converted is DataObject dataObject
+    && dataObject.properties.TryGetValue(ObjectPropertyCategory.OBJECT_ID, out var objectIdObj)
+    && objectIdObj is IDictionary<string, object?> objectId
+    && objectId.TryGetValue(CommonObjectProperty.LEVEL, out var level)
+    && level is string levelName
+    && levelName.Length > 0
+      ? levelName
+      : null;
+
+  private static IReadOnlyList<string> GetGroupNames(Base converted)
+  {
+    if (
+      converted is not DataObject dataObject
+      || !dataObject.properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out var assignmentsObj)
+      || assignmentsObj is not IDictionary<string, object?> assignments
+      || !assignments.TryGetValue(CommonObjectProperty.GROUPS, out var groupsObj)
+      || groupsObj is not IEnumerable<string> groups
+    )
+    {
+      return Array.Empty<string>();
+    }
+    return groups.Where(g => !string.IsNullOrEmpty(g)).Distinct(StringComparer.Ordinal).ToList();
+  }
+
+  // A LEVEL node needs the story's elevation, which only the Story API knows; a story the API cannot resolve gets no
+  // node and its objects no ON_LEVEL edge rather than an invented elevation (spec: ETABS relation table).
+  private Dictionary<string, double> ResolveStoryElevations(IEnumerable<CollectedObject> collected)
+  {
+    var elevations = new Dictionary<string, double>(StringComparer.Ordinal);
+    foreach (string story in collected.Select(o => o.Level).OfType<string>().Distinct(StringComparer.Ordinal))
+    {
+      double elevation = 0;
+      if (converterSettings.Current.SapModel.Story.GetElevation(story, ref elevation) == 0)
+      {
+        elevations[story] = elevation;
+      }
+      else
+      {
+        logger.LogWarning("Story {Story} has no elevation in the model; its objects get no ON_LEVEL edge", story);
+      }
+    }
+    return elevations;
   }
 
   private static string? GetMaterialName(Base converted)
@@ -642,6 +694,8 @@ public class CsiArtifactRootObjectBuilder(
 
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
     var materialKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    var levelKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    var groupKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
     foreach (CollectedObject co in model.Objects)
@@ -650,6 +704,28 @@ public class CsiArtifactRootObjectBuilder(
       int collK = GetOrAddCollection(pipeline, co.Segments, collectionKByPath);
       int objK = pipeline.InternObject(co.ApplicationId);
       pipeline.InCollection(objK, collK, 0);
+
+      // ON_LEVEL and IN_GROUP are separate axes from the story→category scene tree, which stays the default view;
+      // the same edges etabsextract writes, so an upload and a publish of one model carry one graph (ENG-11148).
+      if (co.Level is { } story && model.StoryElevations.TryGetValue(story, out double elevation))
+      {
+        if (!levelKByName.TryGetValue(story, out int lvlK))
+        {
+          lvlK = pipeline.AddLevel($"level:{story}", new SpecLevel(story, elevation));
+          levelKByName[story] = lvlK;
+        }
+        pipeline.OnLevel(objK, lvlK);
+      }
+
+      foreach (string group in co.Groups)
+      {
+        if (!groupKByName.TryGetValue(group, out int groupK))
+        {
+          groupK = pipeline.AddContainer($"group:{group}", new SpecContainer(group, null, "Group", null));
+          groupKByName[group] = groupK;
+        }
+        pipeline.InGroup(objK, groupK, 0);
+      }
 
       List<Base> display;
       Dictionary<string, object?>? properties;
@@ -855,7 +931,9 @@ public class CsiArtifactRootObjectBuilder(
     Base Converted,
     IReadOnlyList<string> Segments,
     string? MaterialName,
-    Speckle.Objects.Geometry.Line? Centerline
+    Speckle.Objects.Geometry.Line? Centerline,
+    string? Level,
+    IReadOnlyList<string> Groups
   );
 
   private sealed record CollectedModel(
@@ -866,7 +944,8 @@ public class CsiArtifactRootObjectBuilder(
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results,
     IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId,
-    IReadOnlyDictionary<string, int> MaterialColors
+    IReadOnlyDictionary<string, int> MaterialColors,
+    IReadOnlyDictionary<string, double> StoryElevations
   );
 
   private sealed record BundleResult(

@@ -92,9 +92,11 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 - ✅ IN_COLLECTION (by-type / Level→Category tree), DISPLAY, structural_results (separate purpose file).
 - ✅ **CONNECTS_TO** — frame → I-/J-end joint objects (`Geometry["I-End Joint"|"J-End Joint"]` via
   `nameToAppId`). The slab↔beam↔column graph through shared joints.
-- 🔶 **ON_LEVEL** — story from `GetLabelAndLevel` (currently only a collection segment) → LEVEL node + edge.
-- 🔶 **IN_SYSTEM / grouping** — `GetGroupAssign` groups + pier/spandrel/diaphragm
-  (`EtabsShellPropertiesExtractor`) → semantic CONTAINERs. (Aligns with "pier = named group of walls".)
+- ✅ **ON_LEVEL** — story from `GetLabelAndLevel` → LEVEL node (elevation from `Story.GetElevation`) + edge;
+  no story, no edge (ENG-11148).
+- ✅ **IN_GROUP** — `GetGroupAssign` groups → CONTAINER `"Group"` + edge per membership (ENG-11148).
+- 🔶 **IN_SYSTEM** — pier/spandrel/diaphragm (`EtabsShellPropertiesExtractor`) → semantic CONTAINERs. Needs a
+  container subtype the spec does not have yet; stays eav (atlas spec 2026-10 enriching structural relationships).
 - 🔶 **HAS_MATERIAL / section** — `CsiToSpeckleCacheSingleton` section/material caches (two-tier proxy).
 
 ### Tekla — `TeklaArtifactRootObjectBuilder`
@@ -145,8 +147,8 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
-- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
-- **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). 🔶 CSi groups; rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
+- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO, story ON_LEVEL, group IN_GROUP (ENG-11148). 🔶 pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
+- **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). ✅ CSi groups (ENG-11148). 🔶 rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
 The 🔶 items all require **new host-API walks in the collect phase** (main-thread Revit/Plant3D/Tekla API);
 they were left as a **tested** follow-up rather than shipped blind, and each is wrapped/guarded so it can
