@@ -114,6 +114,8 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
   only when all of the element's construction points sit on that one plane (`IConstructionPoint.PlaneInfo`), so
   columns and braces get none (ENG-11156).
 - ✅ **IN_GROUP** — CONTAINER(Group) per `IEntity.ElementGroupName` (ENG-11156).
+- ✅ **SUBELEMENT** — slab → slab item in `ISlab.SlabItemIndices` order, wall → panel in `GetSpanAsync` order; the
+  slab and the wall are geometry-less parents, the panel carries the wall's display (ENG-11157).
 
 ## ODA blueprint (how the native producers derive each relation)
 
@@ -152,7 +154,7 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 ## Implementation status
 
 - **Phase 0** (SDK) — ✅ `Bounds` façade + scoped `ConnectsTo(…,scope)` overload + `InRoom` doc fix.
-- **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
+- **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D, TSD slabs and walls (ENG-11157).
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
 - **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO; TSD member/area → construction point CONNECTS_TO (ENG-11155). 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
