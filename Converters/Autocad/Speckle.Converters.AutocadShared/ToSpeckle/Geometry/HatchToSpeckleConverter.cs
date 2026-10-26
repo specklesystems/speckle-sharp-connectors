@@ -68,11 +68,11 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
           if (Math.Abs(areaBefore - regionToConvert.Area) < 0.00001)
           {
             using ADB.DBObjectCollection separateRegionCollection = ADB.Region.CreateFromCurves(objCollection);
-            regionToConvert.BooleanOperation(
-              ADB.BooleanOperationType.BoolUnite,
-              (ADB.Region)separateRegionCollection[0]
-            );
+            using ADB.Region separateRegion = (ADB.Region)separateRegionCollection[0];
+            regionToConvert.BooleanOperation(ADB.BooleanOperationType.BoolUnite, separateRegion);
           }
+
+          loopRegion.Dispose();
         }
       }
 
