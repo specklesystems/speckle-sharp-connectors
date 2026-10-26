@@ -302,7 +302,10 @@ public class TeklaArtifactRootObjectBuilder(
           RecordJoint(weld.MainObject, new[] { weld.SecondaryObject });
           break;
         case TSM.BoltGroup bolts:
-          RecordJoint(bolts.PartToBoltTo, bolts.OtherPartsToBolt.Cast<TSM.ModelObject?>().Prepend(bolts.PartToBeBolted));
+          RecordJoint(
+            bolts.PartToBoltTo,
+            bolts.OtherPartsToBolt.Cast<TSM.ModelObject?>().Prepend(bolts.PartToBeBolted)
+          );
           break;
       }
       foreach (TSM.ModelObject child in modelObject.GetSupportedChildren())
