@@ -36,6 +36,8 @@ internal sealed class TsdEntitySnapshotBuilder
   private readonly ILogger<TsdEntitySnapshotBuilder> _logger;
   private readonly Dictionary<string, IReadOnlyList<SOG.Line>> _centerlinesByAppId = new(StringComparer.Ordinal);
   private readonly Dictionary<string, IReadOnlyList<int>> _nodeIndicesByAppId = new(StringComparer.Ordinal);
+  private readonly Dictionary<int, int> _horizontalPlaneByNodeIndex = new();
+  private readonly Dictionary<string, string> _groupByAppId = new(StringComparer.Ordinal);
 
   /// <summary>Analytical span lines per member application id, filled only for volumetric sends (ENG-9048).</summary>
   public IReadOnlyDictionary<string, IReadOnlyList<SOG.Line>> CenterlinesByAppId => _centerlinesByAppId;
@@ -45,6 +47,12 @@ internal sealed class TsdEntitySnapshotBuilder
   /// corner points. Only these points are sent, as the targets of <c>CONNECTS_TO</c> (ENG-11155).
   /// </summary>
   public IReadOnlyDictionary<string, IReadOnlyList<int>> NodeIndicesByAppId => _nodeIndicesByAppId;
+
+  /// <summary>Horizontal construction plane index per converted construction point that sits on one (ENG-11156).</summary>
+  public IReadOnlyDictionary<int, int> HorizontalPlaneByNodeIndex => _horizontalPlaneByNodeIndex;
+
+  /// <summary>Element group name per converted entity that belongs to one (ENG-11156).</summary>
+  public IReadOnlyDictionary<string, string> GroupByAppId => _groupByAppId;
 
   public TsdEntitySnapshotBuilder(
     ITSDApplicationService applicationService,
@@ -101,6 +109,7 @@ internal sealed class TsdEntitySnapshotBuilder
   {
     string applicationId = entity.Id.ToString();
     string type = GetEntityType(entity);
+    RememberGroup(applicationId, entity);
 
     try
     {
@@ -163,6 +172,7 @@ internal sealed class TsdEntitySnapshotBuilder
     for (int i = 0; i < points.Count && i < displayValues.Count; i++)
     {
       var point = points[i];
+      RememberPlane(point);
       nodes.Add(
         (
           point.Index,
@@ -181,6 +191,74 @@ internal sealed class TsdEntitySnapshotBuilder
     }
 
     return nodes;
+  }
+
+  /// <summary>The horizontal construction planes at <paramref name="planeIndices"/> as levels, elevation in model units.</summary>
+  public async Task<IReadOnlyList<TsdLevel>> ConvertLevelsAsync(
+    IReadOnlyCollection<int> planeIndices,
+    IUnitBase? unit,
+    CancellationToken cancellationToken
+  )
+  {
+    var levels = new List<TsdLevel>();
+    if (planeIndices.Count == 0)
+    {
+      return levels;
+    }
+
+    var model = await _applicationService.GetModelAsync().ConfigureAwait(false);
+    if (model is null)
+    {
+      return levels;
+    }
+
+    var planes =
+      (await model.GetLevelsAsync(planeIndices, cancellationToken).ConfigureAwait(false))?.ToList()
+      ?? new List<IHorizontalConstructionPlane>();
+    var baseElevations = planes.Select(plane => plane.Level.Value).ToList();
+    var elevations = unit is null
+      ? baseElevations
+      : await _applicationService.ConvertFromBaseAsync(baseElevations, unit).ConfigureAwait(false);
+
+    for (int i = 0; i < planes.Count && i < elevations.Count; i++)
+    {
+      var plane = planes[i];
+      string name = string.IsNullOrWhiteSpace(plane.Name) ? $"Level {plane.Index}" : plane.Name;
+      levels.Add(new TsdLevel(plane.Index, name, elevations[i]));
+    }
+
+    return levels;
+  }
+
+  private void RememberPlane(IConstructionPoint point)
+  {
+    try
+    {
+      if (point.PlaneInfo.Value is { } plane && plane.Type == EntityType.HorizontalConstructionPlane)
+      {
+        _horizontalPlaneByNodeIndex[point.Index] = plane.Index;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read the plane of TSD construction point {Index}", point.Index);
+    }
+  }
+
+  private void RememberGroup(string applicationId, IEntity entity)
+  {
+    try
+    {
+      string? group = entity.ElementGroupName;
+      if (!string.IsNullOrWhiteSpace(group))
+      {
+        _groupByAppId[applicationId] = group;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read the element group of {ApplicationId}", applicationId);
+    }
   }
 
   private Dictionary<string, object?> ExtractNodeProperties(IConstructionPoint point)
@@ -404,6 +482,8 @@ internal sealed class TsdEntitySnapshotBuilder
     }
   }
 }
+
+internal sealed record TsdLevel(int Index, string Name, double Elevation);
 
 internal sealed record TsdModelUnits(
   string SpeckleUnits,
