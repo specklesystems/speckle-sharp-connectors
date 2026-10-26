@@ -293,9 +293,9 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     var edges = new List<NodeEdge>();
     var indicesByAppId = _snapshotBuilder.NodeIndicesByAppId;
     var referenced = new HashSet<int>();
-    foreach (CollectedObject co in collected)
+    foreach (string appId in AllAppIds(collected))
     {
-      if (indicesByAppId.TryGetValue(co.ApplicationId, out var indices))
+      if (indicesByAppId.TryGetValue(appId, out var indices))
       {
         referenced.UnionWith(indices);
       }

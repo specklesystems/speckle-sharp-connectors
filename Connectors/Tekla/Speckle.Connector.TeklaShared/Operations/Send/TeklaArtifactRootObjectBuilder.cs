@@ -290,11 +290,11 @@ public class TeklaArtifactRootObjectBuilder(
       {
         _anyRebar = true;
       }
-      if (owner is not null && modelObject is TSM.Reinforcement or TSM.SurfaceObject)
+      if (modelObject is TSM.Reinforcement or TSM.SurfaceObject && (owner ?? HostOf(modelObject)) is { } host)
       {
         string appId = modelObject.GetSpeckleApplicationId();
         _hosted.Add(appId);
-        _edges.Add(new Edge(EdgeKind.HostedOn, appId, owner.GetSpeckleApplicationId(), 0));
+        _edges.Add(new Edge(EdgeKind.HostedOn, appId, host.GetSpeckleApplicationId(), 0));
       }
       switch (modelObject)
       {
@@ -313,6 +313,16 @@ public class TeklaArtifactRootObjectBuilder(
         Walk(child, modelObject);
       }
     }
+
+    // A rebar or surface object selected on its own is walked before its part, and the part's walk then skips it as
+    // visited, so the host comes from the object itself; EmitEdges drops the edge when the host is not sent (ENG-11152).
+    private static TSM.ModelObject? HostOf(TSM.ModelObject modelObject) =>
+      modelObject switch
+      {
+        TSM.Reinforcement rebar => rebar.Father,
+        TSM.SurfaceObject surface => surface.Father,
+        _ => null,
+      };
 
     private void RecordPart(TSM.Part part)
     {
