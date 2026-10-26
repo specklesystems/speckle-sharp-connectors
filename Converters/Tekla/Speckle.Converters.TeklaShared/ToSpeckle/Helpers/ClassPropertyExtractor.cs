@@ -36,9 +36,48 @@ public class ClassPropertyExtractor
       case TSM.PourObject pourObject:
         AddPourObjectProperties(pourObject, properties);
         break;
+      case TSM.BaseComponent component:
+        AddComponentProperties(component, properties);
+        break;
+      case TSM.RebarSplice splice:
+        AddRebarSpliceProperties(splice, properties);
+        break;
     }
 
     return properties;
+  }
+
+  private void AddComponentProperties(TSM.BaseComponent component, Dictionary<string, object?> properties)
+  {
+    properties["number"] = component.Number;
+    switch (component)
+    {
+      case TSM.Connection connection:
+        properties["code"] = connection.Code;
+        properties["class"] = connection.Class;
+        properties["status"] = connection.Status.ToString();
+        break;
+      case TSM.Detail detail:
+        properties["code"] = detail.Code;
+        properties["class"] = detail.Class;
+        properties["status"] = detail.Status.ToString();
+        properties["detailType"] = detail.DetailType.ToString();
+        break;
+      case TSM.Seam seam:
+        properties["code"] = seam.Code;
+        properties["class"] = seam.Class;
+        properties["status"] = seam.Status.ToString();
+        break;
+    }
+  }
+
+  private void AddRebarSpliceProperties(TSM.RebarSplice splice, Dictionary<string, object?> properties)
+  {
+    properties["type"] = splice.Type.ToString();
+    properties["lapLength"] = splice.LapLength;
+    properties["offset"] = splice.Offset;
+    properties["clearance"] = splice.Clearance;
+    properties["barPositions"] = splice.BarPositions.ToString();
   }
 
   private void AddAssemblyProperties(TSM.Assembly assembly, Dictionary<string, object?> properties)

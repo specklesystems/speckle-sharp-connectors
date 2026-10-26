@@ -41,11 +41,14 @@ namespace Speckle.Connectors.TeklaShared.Operations.Send;
 /// <c>SOLID</c>) and no instances (Tekla has none). Grouping is flat by object type. Nested <c>TeklaObject.elements</c>
 /// (bolts, sub-parts, rebar, …) are interned as their own objects (own geometry + properties, so
 /// <see cref="TeklaMaterialUnpacker"/>'s per-applicationId <c>HAS_MATERIAL</c> edges resolve) and linked to their
-/// owner with a <c>SUBELEMENT</c> edge, while still appearing in the flat by-type scene collection. Assemblies, pour
-/// units and pour objects are geometry-less objects reached from the parts: every part points at its assembly with
-/// <c>IN_ASSEMBLY</c> (main part ord 0, the rest in Tekla's member order from 1, nested assemblies the same way) and
-/// every pour object at its pour unit (ord 0 for all, ADR-0003 of the atlas spec, ENG-11151). Tekla sends no
-/// analysis results.</para>
+/// owner with a <c>SUBELEMENT</c> edge, while still appearing in the flat by-type scene collection — except rebar and
+/// surface objects, which sit on their part rather than belong to it and get <c>HOSTED_ON</c> instead (ENG-11152).
+/// Assemblies, pour units, pour objects, components and rebar splices are geometry-less objects reached from the
+/// parts: every part points at its assembly with <c>IN_ASSEMBLY</c> (main part ord 0, the rest in Tekla's member
+/// order from 1, nested assemblies the same way), every pour object at its pour unit (ord 0 for all, ADR-0003 of the
+/// atlas spec, ENG-11151); a component keeps its created children in the send as <c>SUBELEMENT</c>, a connection or
+/// seam connects its primary part to each secondary and a splice connects to both bars (<c>CONNECTS_TO</c>, ord 0,
+/// ADR-0002). Tekla sends no analysis results.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the Tekla API (<c>GetSolid</c>/report properties/visualisation) is
 /// main-thread-affine, so phase 1 converts on the host thread → a pure-Speckle snapshot; phase 2 builds the parquet
 /// bundle on a worker (the pipeline's sync-over-async IO deadlocks on a UI SynchronizationContext).</para>
@@ -57,6 +60,7 @@ public class TeklaArtifactRootObjectBuilder(
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
+  TSM.Model teklaModel,
   ILogger<TeklaArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<TSM.ModelObject>
 {
@@ -157,12 +161,12 @@ public class TeklaArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    var memberships = CollectMemberships(expanded, collected, results, session);
+    var relations = new RelationCollector(converter, teklaModel, logger, collected, results, session).Collect(expanded);
 
     // Render materials (Tekla visualisation colours), keyed by object applicationId — needs the Tekla API, so phase 1.
     var materials = materialUnpacker.UnpackRenderMaterial(expanded);
 
-    return new CollectedModel(units, collected, materials, results, memberships);
+    return new CollectedModel(units, collected, materials, results, relations.Edges, relations.Hosted);
   }
 
   // A Tekla selection can hold assemblies and pour units themselves. They are membership targets here, not owners
@@ -228,69 +232,181 @@ public class TeklaArtifactRootObjectBuilder(
     }
   }
 
-  // Walks the sent objects (and their children, the same walk the converter does) for parts, and derives the
-  // assemblies, pour objects and pour units they belong to. Each derived object converts once and is collected like a
-  // sent object; the edges are resolved against application ids in phase 2.
-  private List<Membership> CollectMemberships(
-    IReadOnlyList<TSM.ModelObject> roots,
+  // Walks the sent objects (and their children, the same walk the converter does) and derives what they point at:
+  // assemblies, pour objects and pour units (IN_ASSEMBLY); host parts of rebar and surface objects (HOSTED_ON, which
+  // replaces the owner's SUBELEMENT: placement on a part is not ownership); components (geometry-less objects whose
+  // created children in the send stay SUBELEMENT; a connection or seam connects its primary to each secondary); rebar
+  // splices (CONNECTS_TO to both bars). Each derived object converts once and is collected like a sent object; edges
+  // are resolved by application id in phase 2. Host thread only.
+  private sealed class RelationCollector(
+    IRootToSpeckleConverter converter,
+    TSM.Model teklaModel,
+    ILogger logger,
     List<CollectedObject> collected,
     List<SendConversionResult> results,
     ArtefactSessionLog session
   )
   {
-    var edges = new List<Membership>();
-    var visited = new HashSet<Guid>();
-    var derived = new Dictionary<Guid, string>();
-    var memberOrds = new Dictionary<Guid, Dictionary<Guid, int>>();
-    foreach (TSM.ModelObject root in roots)
-    {
-      Walk(root);
-    }
-    return edges;
+    private readonly List<Edge> _edges = new();
+    private readonly HashSet<string> _hosted = new(StringComparer.Ordinal);
+    private readonly HashSet<Guid> _visited = new();
+    private readonly Dictionary<Guid, string> _derived = new();
+    private readonly Dictionary<Guid, Dictionary<Guid, int>> _memberOrds = new();
+    private readonly HashSet<Guid> _wiredComponents = new();
+    private readonly HashSet<(string, string)> _pairs = new();
+    private readonly List<TSM.Part> _parts = new();
+    private bool _anyRebar;
 
-    void Walk(TSM.ModelObject modelObject)
+    public RelationSet Collect(IReadOnlyList<TSM.ModelObject> roots)
     {
-      if (!visited.Add(modelObject.Identifier.GUID))
+      foreach (TSM.ModelObject root in roots)
+      {
+        Walk(root, null);
+      }
+      foreach (TSM.Part part in _parts)
+      {
+        RecordPart(part);
+      }
+      if (_anyRebar)
+      {
+        RecordSplices();
+      }
+      return new RelationSet(_edges, _hosted);
+    }
+
+    private void Walk(TSM.ModelObject modelObject, TSM.ModelObject? owner)
+    {
+      if (!_visited.Add(modelObject.Identifier.GUID))
       {
         return;
       }
       if (modelObject is TSM.Part part)
       {
-        RecordPart(part);
+        _parts.Add(part);
+      }
+      if (modelObject is TSM.Reinforcement)
+      {
+        _anyRebar = true;
+      }
+      if (owner is not null && modelObject is TSM.Reinforcement or TSM.SurfaceObject)
+      {
+        string appId = modelObject.GetSpeckleApplicationId();
+        _hosted.Add(appId);
+        _edges.Add(new Edge(EdgeKind.HostedOn, appId, owner.GetSpeckleApplicationId(), 0));
       }
       foreach (TSM.ModelObject child in modelObject.GetSupportedChildren())
       {
-        Walk(child);
+        Walk(child, modelObject);
       }
     }
 
-    void RecordPart(TSM.Part part)
+    private void RecordPart(TSM.Part part)
     {
+      string partId = part.GetSpeckleApplicationId();
       try
       {
         if (part.GetAssembly() is TSM.Assembly assembly)
         {
-          edges.Add(new Membership(part.GetSpeckleApplicationId(), Derive(assembly), OrdIn(assembly, part)));
+          _edges.Add(new Edge(EdgeKind.InAssembly, partId, Derive(assembly), OrdIn(assembly, part)));
         }
         foreach (TSM.ModelObject pour in part.GetPours())
         {
           if (pour is TSM.PourObject pourObject && pourObject.GetFatherPourUnit() is TSM.PourUnit pourUnit)
           {
-            edges.Add(new Membership(Derive(pourObject), Derive(pourUnit), 0));
+            _edges.Add(new Edge(EdgeKind.InAssembly, Derive(pourObject), Derive(pourUnit), 0));
+          }
+        }
+        foreach (TSM.ModelObject modelObject in part.GetComponents())
+        {
+          if (modelObject is TSM.BaseComponent component)
+          {
+            RecordComponent(component);
           }
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogWarning(ex, "Skipped assembly and pour membership of {AppId}", part.GetSpeckleApplicationId());
+        logger.LogWarning(ex, "Skipped assembly, pour and component relations of {AppId}", partId);
       }
     }
 
-    // Converts a membership target once; an assembly also points at its parent assembly.
-    string Derive(TSM.ModelObject target)
+    private void RecordComponent(TSM.BaseComponent component)
+    {
+      string componentId = Derive(component);
+      if (!_wiredComponents.Add(component.Identifier.GUID))
+      {
+        return;
+      }
+      int ord = 0;
+      foreach (TSM.ModelObject child in component.GetChildren())
+      {
+        if (_visited.Contains(child.Identifier.GUID))
+        {
+          _edges.Add(new Edge(EdgeKind.Subelement, componentId, child.GetSpeckleApplicationId(), ord++));
+        }
+      }
+      // Details have a primary only; custom components expose no primary/secondary split, like the SDK's macro rows.
+      var (primary, secondaries) = component switch
+      {
+        TSM.Connection connection => (connection.GetPrimaryObject(), connection.GetSecondaryObjects()),
+        TSM.Seam seam => (seam.GetPrimaryObject(), seam.GetSecondaryObjects()),
+        _ => (null, null),
+      };
+      if (primary is null || secondaries is null)
+      {
+        return;
+      }
+      foreach (TSM.ModelObject secondary in secondaries)
+      {
+        Connect(primary.GetSpeckleApplicationId(), secondary.GetSpeckleApplicationId());
+      }
+    }
+
+    // Splices are not children of anything, so they come from a model-wide query, kept to sends that carry rebar.
+    private void RecordSplices()
+    {
+      try
+      {
+        var splices = teklaModel
+          .GetModelObjectSelector()
+          .GetAllObjectsWithType(TSM.ModelObject.ModelObjectEnum.REBAR_SPLICE);
+        foreach (TSM.ModelObject modelObject in splices)
+        {
+          if (
+            modelObject is not TSM.RebarSplice splice
+            || splice.RebarGroup1 is not TSM.Reinforcement first
+            || splice.RebarGroup2 is not TSM.Reinforcement second
+            || !_visited.Contains(first.Identifier.GUID)
+            || !_visited.Contains(second.Identifier.GUID)
+          )
+          {
+            continue;
+          }
+          string spliceId = Derive(splice);
+          Connect(spliceId, first.GetSpeckleApplicationId());
+          Connect(spliceId, second.GetSpeckleApplicationId());
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Skipped rebar splices");
+      }
+    }
+
+    // One CONNECTS_TO per pair, unscoped (ADR-0002), however many components or splices join it.
+    private void Connect(string sourceAppId, string targetAppId)
+    {
+      if (_pairs.Add((sourceAppId, targetAppId)))
+      {
+        _edges.Add(new Edge(EdgeKind.ConnectsTo, sourceAppId, targetAppId, 0));
+      }
+    }
+
+    // Converts a relation target once; an assembly also points at its parent assembly.
+    private string Derive(TSM.ModelObject target)
     {
       Guid guid = target.Identifier.GUID;
-      if (derived.TryGetValue(guid, out string? known))
+      if (_derived.TryGetValue(guid, out string? known))
       {
         return known;
       }
@@ -298,21 +414,21 @@ public class TeklaArtifactRootObjectBuilder(
       var sw = Stopwatch.StartNew();
       Base converted = converter.Convert(target);
       string appId = converted.applicationId ?? guid.ToString();
-      derived[guid] = appId;
+      _derived[guid] = appId;
       collected.Add(new CollectedObject(sourceType, converted));
       results.Add(new(Status.SUCCESS, appId, sourceType, converted));
       session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       if (target is TSM.Assembly assembly && assembly.GetAssembly() is TSM.Assembly parent)
       {
-        edges.Add(new Membership(appId, Derive(parent), OrdIn(parent, assembly)));
+        _edges.Add(new Edge(EdgeKind.InAssembly, appId, Derive(parent), OrdIn(parent, assembly)));
       }
       return appId;
     }
 
-    int OrdIn(TSM.Assembly assembly, TSM.ModelObject member)
+    private int OrdIn(TSM.Assembly assembly, TSM.ModelObject member)
     {
       Guid guid = assembly.Identifier.GUID;
-      if (!memberOrds.TryGetValue(guid, out var ords))
+      if (!_memberOrds.TryGetValue(guid, out var ords))
       {
         ords = new Dictionary<Guid, int>();
         int ord = 0;
@@ -320,7 +436,7 @@ public class TeklaArtifactRootObjectBuilder(
         {
           ords[listed.Identifier.GUID] = ord++;
         }
-        memberOrds[guid] = ords;
+        _memberOrds[guid] = ords;
       }
       // A member the API does not list goes after every listed one, never in the main slot.
       return ords.TryGetValue(member.Identifier.GUID, out int found) ? found : ords.Count;
@@ -348,20 +464,12 @@ public class TeklaArtifactRootObjectBuilder(
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddCollection(pipeline, co.CollectionName, collectionKByName);
-      EmitObject(pipeline, co.Converted, collK, model.Units, geometryKsByAppId);
+      EmitObject(pipeline, co.Converted, collK, model.Units, geometryKsByAppId, model.Hosted);
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
     EmitMaterials(pipeline, model.Materials, geometryKsByAppId);
-
-    foreach (Membership membership in model.Memberships)
-    {
-      pipeline.InAssembly(
-        pipeline.InternObject(membership.MemberAppId),
-        pipeline.InternObject(membership.AssemblyAppId),
-        membership.Ord
-      );
-    }
+    EmitEdges(pipeline, model.Edges, geometryKsByAppId);
 
     // Default scene view: the flat by-type collections (IN_COLLECTION).
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -392,6 +500,7 @@ public class TeklaArtifactRootObjectBuilder(
     int collK,
     string units,
     Dictionary<string, List<int>> geometryKsByAppId,
+    HashSet<string> hosted,
     int? parentObjK = null,
     int subelementOrd = 0
   )
@@ -399,7 +508,7 @@ public class TeklaArtifactRootObjectBuilder(
     string appId = obj.applicationId ?? Guid.NewGuid().ToString();
     int objK = pipeline.InternObject(appId);
     pipeline.InCollection(objK, collK, 0);
-    if (parentObjK is int pK)
+    if (parentObjK is int pK && !hosted.Contains(appId))
     {
       pipeline.Subelement(pK, objK, subelementOrd);
     }
@@ -435,7 +544,41 @@ public class TeklaArtifactRootObjectBuilder(
       int childOrd = 0;
       foreach (TeklaObject child in teklaObject.elements)
       {
-        EmitObject(pipeline, child, collK, units, geometryKsByAppId, objK, childOrd++);
+        EmitObject(pipeline, child, collK, units, geometryKsByAppId, hosted, objK, childOrd++);
+      }
+    }
+  }
+
+  // Both ends must be objects of this send (every emitted object has a geometry list, empty or not), so a relation
+  // never interns a phantom object for a part that was not sent.
+  private static void EmitEdges(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<Edge> edges,
+    Dictionary<string, List<int>> geometryKsByAppId
+  )
+  {
+    foreach (Edge edge in edges)
+    {
+      if (!geometryKsByAppId.ContainsKey(edge.SourceAppId) || !geometryKsByAppId.ContainsKey(edge.TargetAppId))
+      {
+        continue;
+      }
+      int sourceK = pipeline.InternObject(edge.SourceAppId);
+      int targetK = pipeline.InternObject(edge.TargetAppId);
+      switch (edge.Kind)
+      {
+        case EdgeKind.InAssembly:
+          pipeline.InAssembly(sourceK, targetK, edge.Ord);
+          break;
+        case EdgeKind.HostedOn:
+          pipeline.HostedOn(sourceK, targetK);
+          break;
+        case EdgeKind.ConnectsTo:
+          pipeline.ConnectsTo(sourceK, targetK);
+          break;
+        case EdgeKind.Subelement:
+          pipeline.Subelement(sourceK, targetK, edge.Ord);
+          break;
       }
     }
   }
@@ -503,15 +646,28 @@ public class TeklaArtifactRootObjectBuilder(
 
   private sealed record CollectedObject(string CollectionName, Base Converted);
 
-  // IN_ASSEMBLY member → assembly (or pour object → pour unit), by application id.
-  private sealed record Membership(string MemberAppId, string AssemblyAppId, int Ord);
+  private enum EdgeKind
+  {
+    InAssembly,
+    HostedOn,
+    ConnectsTo,
+    Subelement,
+  }
+
+  // An object → object relation by application id, in the spec's direction (member → assembly, hosted → host,
+  // primary → secondary, parent → child).
+  private sealed record Edge(EdgeKind Kind, string SourceAppId, string TargetAppId, int Ord);
+
+  // Hosted: application ids whose owner's SUBELEMENT edge is replaced by HOSTED_ON.
+  private sealed record RelationSet(IReadOnlyList<Edge> Edges, HashSet<string> Hosted);
 
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<Speckle.Objects.Other.RenderMaterialProxy> Materials,
     IReadOnlyList<SendConversionResult> Results,
-    IReadOnlyList<Membership> Memberships
+    IReadOnlyList<Edge> Edges,
+    HashSet<string> Hosted
   );
 
   private sealed record BundleResult(
