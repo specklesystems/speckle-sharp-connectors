@@ -65,8 +65,8 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **9 DEFINES_INSTANCE** | ● | ● | ● | ● | ● | ● | · | · | · | · |
 | **10 IN_COLLECTION** | ● | ● | ● | ● | ● | ● | · | ● | ● | ● |
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
-| **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | ● | · |
-| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | ● | · |
+| **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | ● | ● |
+| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | ● | ● |
 | **3 SUBELEMENT** | · | ◐⁴ | · | · | ● | · | ● | ● | · | ◐¹ |
 | **18 IN_ASSEMBLY** | · | ◐⁴ | · | · | · | · | · | ● | · | · |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
@@ -583,11 +583,11 @@ With "Send Volumetric Geometry (Beta)" on, a frame's display is its section extr
 
 ---
 
-### TSD — structural · design · emits 3 (+1 volumetric)
+### TSD — structural · design · emits 5 (+1 volumetric)
 
-A flat structural model — members grouped by member-type, slabs, walls — with mesh display geometry, the construction points they sit on as node objects, and a separate stream of numeric-only analysis results.
+A flat structural model — members grouped by member-type, slabs, walls — with mesh display geometry, the construction points they sit on as node objects, levels from the horizontal construction planes, element groups, and a separate stream of numeric-only analysis results.
 
-**Flat model + nodes + results** — `DISPLAY` · `IN_COLLECTION` · `CONNECTS_TO` · `structural_results`
+**Flat model + nodes + levels + groups + results** — `DISPLAY` · `IN_COLLECTION` · `CONNECTS_TO` · `ON_LEVEL` · `IN_GROUP` · `structural_results`
 
 ```mermaid
 graph LR
@@ -597,10 +597,14 @@ graph LR
   P[geo · point]:::geo
   COL{{node · Collection · Beam}}:::nd
   NODES{{node · Collection · Nodes}}:::nd
+  LVL{{node · LEVEL · 2nd floor}}:::nd
+  GRP{{node · Group}}:::nd
   RES[[eav.structural_results · location-keyed]]:::file
   MB -->|DISPLAY| M
   MB -->|IN_COLLECTION| COL
   MB -->|CONNECTS_TO| N1
+  MB -->|ON_LEVEL| LVL
+  MB -->|IN_GROUP| GRP
   N1 -->|DISPLAY| P
   N1 -->|IN_COLLECTION| NODES
   RES -.->|no object join| RES
@@ -612,7 +616,8 @@ graph LR
 
 Members group by member-type (Beam, Column, Slab…) into flat collections. Results are **model-level (location-keyed)** — `ObjectAppId` always null — so they identify members by name, not by object K, and don't auto-join. Numeric only, no PASS/FAIL.
 
-- **Nodes:** CONTAINER `"Collection"` (flat, by MemberType) · `"Nodes"` for the construction points
+- **Nodes:** CONTAINER `"Collection"` (flat, by MemberType) · `"Nodes"` for the construction points · LEVEL per horizontal construction plane (name + elevation) · CONTAINER `"Group"` per element group
+- **Levels / groups** (ENG-11156): `ON_LEVEL` only when every construction point of the element sits on one horizontal construction plane — beams, slab items, single-storey walls; columns, braces and multi-storey walls get no invented level. `IN_GROUP` from `ElementGroupName`, one CONTAINER(Group) per name, ord 0.
 - **Topology** (ENG-11155): a member connects to the construction points at every span start and end, a slab item and a wall to their corner points — one unscoped `CONNECTS_TO` per pair (ADR-0002). Only referenced points are sent (the ETABS auto-joint idea), so no node is an orphan. Points carry a `Point` display the DAT decoder drops today; the edges are the point.
 - **Sidecar:** `structural_results` — forces / reactions / displacements, model-level
 - **Receive:** send-only

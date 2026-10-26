@@ -21,6 +21,7 @@ using Speckle.Sdk.Pipelines.Send.Artifacts;
 using TSD.API.Remoting.Common;
 using Path = System.IO.Path;
 using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecLevel = Speckle.Bundle.Spec.Level;
 using SpecStructuralResult = Speckle.Bundle.Spec.StructuralResult;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
@@ -178,10 +179,11 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
 
     await _snapshotBuilder.ApplyUnitsAsync(propertyTrees, modelUnits.Units).ConfigureAwait(false);
 
-    List<NodeEdge> edges;
+    NodeRelations relations;
     using (session.Phase("Nodes"))
     {
-      edges = await CollectNodesAsync(collected, results, modelUnits, session, cancellationToken).ConfigureAwait(false);
+      relations = await CollectNodesAsync(collected, results, modelUnits, session, cancellationToken)
+        .ConfigureAwait(false);
     }
 
     List<StructuralResultRow> resultRows;
@@ -190,12 +192,12 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       resultRows = await ExtractResultRowsAsync(modelUnits, session, cancellationToken).ConfigureAwait(false);
     }
 
-    return new CollectedModel(modelUnits.SpeckleUnits, collected, edges, resultRows, results);
+    return new CollectedModel(modelUnits.SpeckleUnits, collected, relations, resultRows, results);
   }
 
   // Only construction points a sent entity sits on become node objects (the ETABS auto-joint filter, ENG-10192), so
   // every node is the target of at least one CONNECTS_TO and no edge dangles (ENG-11155).
-  private async Task<List<NodeEdge>> CollectNodesAsync(
+  private async Task<NodeRelations> CollectNodesAsync(
     List<CollectedObject> collected,
     List<SendConversionResult> results,
     TsdModelUnits modelUnits,
@@ -225,7 +227,12 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     {
       _logger.LogWarning(ex, "Skipped TSD construction points");
       session.RecordObject("construction-points", NODES_COLLECTION, Status.WARNING, ex.Message, 0);
-      return edges;
+      return new NodeRelations(
+        edges,
+        Array.Empty<TsdLevel>(),
+        Array.Empty<LevelAssignment>(),
+        CollectGroups(collected)
+      );
     }
 
     var nodeAppIdByIndex = new Dictionary<int, string>(nodes.Count);
@@ -263,7 +270,87 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
         referenced.Count
       );
     }
-    return edges;
+
+    var (levels, onLevel) = await CollectLevelsAsync(collected, modelUnits, session, cancellationToken)
+      .ConfigureAwait(false);
+    return new NodeRelations(edges, levels, onLevel, CollectGroups(collected));
+  }
+
+  // ON_LEVEL only when every construction point of the element sits on one horizontal construction plane: beams,
+  // slab items and single-storey walls do, columns and braces span planes and get no invented level (ENG-11156).
+  private async Task<(IReadOnlyList<TsdLevel> Levels, List<LevelAssignment> OnLevel)> CollectLevelsAsync(
+    IReadOnlyList<CollectedObject> collected,
+    TsdModelUnits modelUnits,
+    ArtefactSessionLog session,
+    CancellationToken cancellationToken
+  )
+  {
+    var indicesByAppId = _snapshotBuilder.NodeIndicesByAppId;
+    var planeByNodeIndex = _snapshotBuilder.HorizontalPlaneByNodeIndex;
+    var onLevel = new List<LevelAssignment>();
+    foreach (CollectedObject co in collected)
+    {
+      if (
+        indicesByAppId.TryGetValue(co.ApplicationId, out var indices)
+        && CommonPlane(indices, planeByNodeIndex) is int plane
+      )
+      {
+        onLevel.Add(new LevelAssignment(co.ApplicationId, plane));
+      }
+    }
+
+    IReadOnlyList<TsdLevel> levels = Array.Empty<TsdLevel>();
+    if (onLevel.Count > 0)
+    {
+      try
+      {
+        levels = await _snapshotBuilder
+          .ConvertLevelsAsync(
+            onLevel.Select(a => a.PlaneIndex).Distinct().ToList(),
+            modelUnits.LengthUnit,
+            cancellationToken
+          )
+          .ConfigureAwait(false);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Skipped TSD levels");
+        session.RecordObject("levels", "Level", Status.WARNING, ex.Message, 0);
+        onLevel.Clear();
+      }
+    }
+
+    session.SetStat("levels", levels.Count);
+    session.SetStat("onLevel", onLevel.Count);
+    return (levels, onLevel);
+  }
+
+  private static int? CommonPlane(IReadOnlyList<int> indices, IReadOnlyDictionary<int, int> planeByNodeIndex)
+  {
+    int? common = null;
+    foreach (int index in indices)
+    {
+      if (!planeByNodeIndex.TryGetValue(index, out int plane) || (common is int known && known != plane))
+      {
+        return null;
+      }
+      common = plane;
+    }
+    return common;
+  }
+
+  private IReadOnlyDictionary<string, string> CollectGroups(IReadOnlyList<CollectedObject> collected)
+  {
+    var groupByAppId = _snapshotBuilder.GroupByAppId;
+    var groups = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (CollectedObject co in collected)
+    {
+      if (groupByAppId.TryGetValue(co.ApplicationId, out var group))
+      {
+        groups[co.ApplicationId] = group;
+      }
+    }
+    return groups;
   }
 
   private async Task<List<StructuralResultRow>> ExtractResultRowsAsync(
@@ -455,10 +542,39 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     }
 
     // Unscoped (ord 0): a member or area element sits on its nodes, there is no second edge set to tell apart (ADR-0002).
-    foreach (NodeEdge edge in model.Edges)
+    foreach (NodeEdge edge in model.Relations.Edges)
     {
       pipeline.ConnectsTo(pipeline.InternObject(edge.SourceAppId), pipeline.InternObject(edge.NodeAppId));
     }
+
+    // Levels and groups are separate axes from the by-type collections, which stay the default view (ENG-11156).
+    var levelKByIndex = new Dictionary<int, int>();
+    foreach (TsdLevel level in model.Relations.Levels)
+    {
+      levelKByIndex[level.Index] = pipeline.AddLevel(
+        $"level:{level.Index}",
+        new SpecLevel(level.Name, level.Elevation)
+      );
+    }
+    foreach (LevelAssignment assignment in model.Relations.OnLevel)
+    {
+      if (levelKByIndex.TryGetValue(assignment.PlaneIndex, out int levelK))
+      {
+        pipeline.OnLevel(pipeline.InternObject(assignment.AppId), levelK);
+      }
+    }
+
+    var groupKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var (appId, group) in model.Relations.Groups)
+    {
+      if (!groupKByName.TryGetValue(group, out int groupK))
+      {
+        groupK = pipeline.AddContainer($"group:{group}", new SpecContainer(group, null, "Group", null));
+        groupKByName[group] = groupK;
+      }
+      pipeline.InGroup(pipeline.InternObject(appId), groupK, 0);
+    }
+    session.SetStat("groups", groupKByName.Count);
 
     foreach (var r in model.ResultRows)
     {
@@ -608,10 +724,19 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
 
   private sealed record NodeEdge(string SourceAppId, string NodeAppId);
 
+  private sealed record LevelAssignment(string AppId, int PlaneIndex);
+
+  private sealed record NodeRelations(
+    IReadOnlyList<NodeEdge> Edges,
+    IReadOnlyList<TsdLevel> Levels,
+    IReadOnlyList<LevelAssignment> OnLevel,
+    IReadOnlyDictionary<string, string> Groups
+  );
+
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
-    IReadOnlyList<NodeEdge> Edges,
+    NodeRelations Relations,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results
   );
