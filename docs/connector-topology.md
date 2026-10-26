@@ -90,8 +90,9 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 
 ### CSi / ETABS / SAP2000 — `CsiArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (by-type / Level→Category tree), DISPLAY, structural_results (separate purpose file).
-- ✅ **CONNECTS_TO** — frame → I-/J-end joint objects (`Geometry["I-End Joint"|"J-End Joint"]` via
-  `nameToAppId`). The slab↔beam↔column graph through shared joints.
+- ✅ **CONNECTS_TO** — frame → I-/J-end joint objects (`Geometry["I-End Joint"|"J-End Joint"]`) and shell →
+  corner joint objects (`Geometry["Joints"]`, ENG-11149) via `nameToAppId`, all ord 0 (ADR-0002 of the atlas spec).
+  The slab↔beam↔column graph through shared joints.
 - ✅ **ON_LEVEL** — story from `GetLabelAndLevel` → LEVEL node (elevation from `Story.GetElevation`) + edge;
   no story, no edge (ENG-11148).
 - ✅ **IN_GROUP** — `GetGroupAssign` groups → CONTAINER `"Group"` + edge per membership (ENG-11148).

@@ -58,7 +58,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | **1 DISPLAY** | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | **2 SOLID** | ● | ● | ● | ● | ● | · | · | · | · | · |
-| **5 HAS_MATERIAL** | ● | ● | ● | ● | ● | ● | ● | ● | ◐³ | · |
+| **5 HAS_MATERIAL** | ● | ● | ● | ● | ● | ● | ● | ● | ● | · |
 | **6 HAS_COLOR** | ● | ● | ● | ● | ● | ● | · | · | · | · |
 | **4 DEFINES** | ● | ● | ● | ● | ● | ● | ● | · | · | · |
 | **8 DISPLAY_INSTANCE** | ● | ● | ● | ● | ● | ● | ● | · | · | · |
@@ -74,7 +74,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **21 CONNECTS_TO** | · | ◐⁴ | · | · | ● | · | ● | · | ● | · |
 | **22 HOSTED_ON** | · | ◐⁴ | · | · | · | · | ● | · | · | · |
 | **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
-| **30 CENTERLINE** | · | · | · | · | · | · | ● | · | ◐³ | ◐³ |
+| **30 CENTERLINE** | · | · | · | · | · | · | ● | · | ● | ◐³ |
 | _camera_views_ | ● | · | · | · | · | ● | ● | · | · | · |
 | _structural_results_ | · | · | · | · | · | · | · | · | ● | ● |
 | _reference_point (meta)_ | · | · | · | · | · | · | ● | · | · | · |
@@ -83,7 +83,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 
 ¹ TSD `SUBELEMENT` is wired but unreachable — `elements` is always empty.
 ² Revit folds `BOUNDS` into `IN_ROOM`.
-³ Only with the "Send Volumetric Geometry" card setting (ENG-9048): frames/members ship their analytical line as `CENTERLINE` while the extruded solid takes `DISPLAY`; CSi also emits material display colours.
+³ Only with the "Send Volumetric Geometry" card setting (ENG-9048): members ship their analytical line as `CENTERLINE` while the extruded solid takes `DISPLAY`. CSi lost this gate in ENG-11149: every frame carries its `CENTERLINE` and its section material's colour whatever the setting, as `etabsextract` does.
 ⁴ Grasshopper writes these only when the user authors them with the **Speckle Relation** component (ENG-9475); nothing is derived from the canvas.
 
 Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them**. Plant3D is send-only. SketchUp is a pure-Ruby producer.
@@ -552,7 +552,7 @@ Object-level rows (frameForce, jointReaction) join back via `object_index`; mode
 - **Nodes:** CONTAINER `"Collection"` — ETABS level→category; base CSi/SAP flat by-type · LEVEL per story (ETABS) · CONTAINER `"Group"` per group assignment
 - **Sidecar:** `structural_results` — frame/joint (object) · base/modal (model)
 - **Receive:** send-only
-**Volumetric geometry** — `DISPLAY` · `CENTERLINE` · `HAS_MATERIAL` (setting-gated, ENG-9048)
+**Volumetric geometry** — `DISPLAY` is the extruded solid when the setting is on (ENG-9048); `CENTERLINE` and `HAS_MATERIAL` ship either way (ENG-11149). Shells connect to their corner joints like frames to their ends (ENG-11149).
 
 ```mermaid
 graph LR

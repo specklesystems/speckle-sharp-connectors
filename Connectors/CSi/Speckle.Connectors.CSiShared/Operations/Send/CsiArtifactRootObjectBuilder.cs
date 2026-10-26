@@ -46,9 +46,8 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// CONTAINER(Group) nodes + IN_GROUP. Analysis results flatten into <c>structural_results</c> rows (all 8
 /// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
 /// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. Material display colours become
-/// MATERIAL nodes + HAS_MATERIAL edges, and each frame's analytical line a CENTERLINE, only when volumetric geometry is
-/// requested (ENG-9048); section/material
-/// <c>GroupProxy</c>s remain deferred.</para>
+/// MATERIAL nodes + HAS_MATERIAL edges and each frame's analytical line a CENTERLINE, with or without volumetric
+/// geometry (ENG-11149); section/material <c>GroupProxy</c>s remain deferred.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the CSi COM <c>SapModel</c> API is main-thread-affine, so phase 1
 /// (<see cref="CollectOnMain"/>) converts on the host thread → a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) builds the parquet bundle on a worker (the pipeline's sync-over-async IO deadlocks on a
@@ -200,11 +199,8 @@ public class CsiArtifactRootObjectBuilder(
       session.SetStat("extrusionFallbacks", extrusionFallbacks.Total);
     }
 
-    // Material colours only ride along with volumetric geometry (ENG-9048), so a send with the setting off is
-    // unchanged; the COM lookups stay in this phase because PropMaterial is main-thread-affine.
-    var materialColors = converterSettings.Current.SendVolumetricGeometry
-      ? ResolveMaterialColors(collected)
-      : new Dictionary<string, int>(StringComparer.Ordinal);
+    // The COM lookups stay in this phase because PropMaterial is main-thread-affine.
+    var materialColors = ResolveMaterialColors(collected);
 
     var storyElevations = ResolveStoryElevations(collected);
 
@@ -818,7 +814,7 @@ public class CsiArtifactRootObjectBuilder(
       );
     }
 
-    EmitFrameJointConnectivity(pipeline, model);
+    EmitJointConnectivity(pipeline, model);
 
     // Default scene view: the CSi collection tree (IN_COLLECTION); the CONTAINER parent chain carries the nesting.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -890,12 +886,14 @@ public class CsiArtifactRootObjectBuilder(
       new("type", sourceType),
     };
 
-  // Member↔joint connectivity (CONNECTS_TO): a frame → its I-/J-end joint objects. The joint NAMES live in the
-  // frame's "Geometry" properties (CsiFramePropertiesExtractor); NameToAppId maps a CSi (type, name) pair → its
-  // applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. The JOINT type is
-  // part of the lookup because an end-joint name can equally name a frame or an area. This is the slab↔beam↔column
-  // graph via shared joints — reverse-lookup a joint's object_index to find every member meeting there.
-  private static void EmitFrameJointConnectivity(ObjectsArtifactPipeline pipeline, CollectedModel model)
+  // Member↔joint connectivity (CONNECTS_TO): a frame → its I-/J-end joints, a shell → its corner joints. The joint
+  // NAMES live in the "Geometry" properties (CsiFrame/ShellPropertiesExtractor); NameToAppId maps a CSi (type, name)
+  // pair → its applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. The
+  // JOINT type is part of the lookup because a joint name can equally name a frame or an area. Every edge is
+  // unscoped (ord 0): which end or corner a joint is stays on the member's properties (ADR-0002, atlas spec
+  // 2026-10 enriching structural relationships). This is the slab↔beam↔column graph via shared joints —
+  // reverse-lookup a joint's object_index to find every member meeting there.
+  private static void EmitJointConnectivity(ObjectsArtifactPipeline pipeline, CollectedModel model)
   {
     foreach (var co in model.Objects)
     {
@@ -907,23 +905,40 @@ public class CsiArtifactRootObjectBuilder(
       {
         continue;
       }
-      int frameK = pipeline.InternObject(co.ApplicationId);
-      foreach (var endKey in s_endJointKeys)
+      int memberK = pipeline.InternObject(co.ApplicationId);
+      foreach (string jointName in JointNames(geometry).Distinct(StringComparer.Ordinal))
       {
-        if (
-          geometry.TryGetValue(endKey, out var jn)
-          && jn is string jointName
-          && jointName.Length > 0
-          && model.NameToAppId.TryGetValue((ModelObjectType.JOINT, jointName), out var jointAppId)
-        )
+        if (model.NameToAppId.TryGetValue((ModelObjectType.JOINT, jointName), out var jointAppId))
         {
-          pipeline.ConnectsTo(frameK, pipeline.InternObject(jointAppId));
+          pipeline.ConnectsTo(memberK, pipeline.InternObject(jointAppId));
+        }
+      }
+    }
+  }
+
+  private static IEnumerable<string> JointNames(IDictionary<string, object?> geometry)
+  {
+    foreach (var endKey in s_endJointKeys)
+    {
+      if (geometry.TryGetValue(endKey, out var jn) && jn is string jointName && jointName.Length > 0)
+      {
+        yield return jointName;
+      }
+    }
+    if (geometry.TryGetValue(SHELL_JOINTS_KEY, out var corners) && corners is IEnumerable<string> cornerNames)
+    {
+      foreach (string cornerName in cornerNames)
+      {
+        if (!string.IsNullOrEmpty(cornerName))
+        {
+          yield return cornerName;
         }
       }
     }
   }
 
   private static readonly string[] s_endJointKeys = { "I-End Joint", "J-End Joint" };
+  private const string SHELL_JOINTS_KEY = "Joints";
 
   private sealed record CollectedObject(
     string ApplicationId,
