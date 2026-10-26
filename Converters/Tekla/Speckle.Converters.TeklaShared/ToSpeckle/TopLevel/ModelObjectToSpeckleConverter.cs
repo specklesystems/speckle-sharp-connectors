@@ -33,12 +33,17 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 
     // get children
     // POC: This logic should be same in the material unpacker in connector
+    // Assemblies, pour units and pour objects are membership targets, not owners: their members reach the bundle as
+    // objects of their own and point back with IN_ASSEMBLY (ENG-11151), so they carry no children here.
     List<TeklaObject> children = new();
-    foreach (TSM.ModelObject childObject in target.GetSupportedChildren())
+    if (target is not (TSM.Assembly or TSM.PourUnit or TSM.PourObject))
     {
-      var child = Convert(childObject);
-      child.applicationId = childObject.GetSpeckleApplicationId();
-      children.Add(child);
+      foreach (TSM.ModelObject childObject in target.GetSupportedChildren())
+      {
+        var child = Convert(childObject);
+        child.applicationId = childObject.GetSpeckleApplicationId();
+        children.Add(child);
+      }
     }
 
     // get display value
@@ -53,6 +58,12 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
         break;
       case TSM.Reinforcement reinforcement:
         name = reinforcement.Name;
+        break;
+      case TSM.Assembly assembly:
+        name = assembly.Name;
+        break;
+      case TSM.PourUnit pourUnit:
+        name = pourUnit.Name;
         break;
     }
 

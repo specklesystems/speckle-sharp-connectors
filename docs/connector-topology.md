@@ -30,8 +30,9 @@
 | BOUNDS (23) | object → object | — | bounding wall → room | `Bounds` |
 
 Node kinds: DEFINITION, INSTANCE, MATERIAL, COLOR, LEVEL, CONTAINER (subtype `Collection｜Group｜Model｜MEP System｜Network`).
-**Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), IN_ASSEMBLY(18),
-IN_SUBASSEMBLY(19), XREF(20), COLLECTION-node(6). (`IN_GROUP(17)` was **un-retired** post-v5 — see decision 1.)
+**Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), IN_SUBASSEMBLY(19), XREF(20),
+COLLECTION-node(6). (`IN_GROUP(17)` was **un-retired** post-v5 — see decision 1; `IN_ASSEMBLY(18)` is live in the
+catalog and carries Tekla assemblies and pour units — see decision 4.)
 
 **SUBELEMENT is ownership, HOSTED_ON is placement** — and they are not interchangeable. A curtain panel is a
 *component of* its curtain wall (SUBELEMENT); a door is *placed on* its wall (HOSTED_ON). Ownership takes
@@ -100,8 +101,11 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 ### Tekla — `TeklaArtifactRootObjectBuilder`
 - ✅ IN_COLLECTION (flat by type), DISPLAY, HAS_MATERIAL.
 - ✅ **SUBELEMENT** — `TeklaObject.elements` (part → bolts / rebar / sub-parts; was flattened).
-- 🔶 **Assemblies** — `Part.GetAssembly()` / `Assembly.GetMainPart()` / `GetSecondaries()` → SUBELEMENT
-  main→secondary (new walk; not extracted today).
+- ✅ **IN_ASSEMBLY** — part → assembly from `Part.GetAssembly()` (main object ord 0, then `GetSecondaries()` and
+  `GetSubAssemblies()` from 1; a sub-assembly points at its parent the same way) and pour object → pour unit from
+  `Part.GetPours()` / `PourObject.GetFatherPourUnit()` (ord 0 for every member). Assemblies, pour objects and pour
+  units are geometry-less objects with their report properties, in their own by-type collections; a selected assembly
+  or pour unit stands for its members (ENG-11151, aligned with teklaextract).
 - 🔶 **CONNECTS_TO** — `Weld.MainObject / SecondaryObject` (welds are excluded from children today) → part
   ↔ part connection (new walk).
 
@@ -137,7 +141,9 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
    Folding them into one rel made a model's topology depend on whether it was published through the connector
    or extracted from an uploaded file [ENG-9081].
 3. **Civil pipe networks use CONTAINER subtype `Network`**; Revit MEP systems use `MEP System`.
-4. **Assemblies (Tekla) use SUBELEMENT** (main → secondary), avoiding a new CONTAINER subtype.
+4. **Assemblies (Tekla) use IN_ASSEMBLY** (member → assembly object, main member ord 0; pour object → pour unit,
+   ord 0 for all — ADR-0003 of the atlas spec `2026-10-enriching-structural-relationships`). The earlier
+   SUBELEMENT main→secondary idea contradicted the bundle spec and teklaextract, which already wrote IN_ASSEMBLY.
 
 ## Implementation status
 
@@ -145,7 +151,7 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
-- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
+- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla welds. ✅ Tekla assemblies + pour units (ENG-11151).
 - **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). 🔶 CSi groups; rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
 The 🔶 items all require **new host-API walks in the collect phase** (main-thread Revit/Plant3D/Tekla API);
