@@ -71,7 +71,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **18 IN_ASSEMBLY** | · | ◐⁴ | · | · | · | · | · | ● | · | · |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
-| **21 CONNECTS_TO** | · | ◐⁴ | · | · | ● | · | ● | ● | ● | · |
+| **21 CONNECTS_TO** | · | ◐⁴ | · | · | ● | · | ● | ● | ● | ● |
 | **22 HOSTED_ON** | · | ◐⁴ | · | · | · | · | ● | ● | · | · |
 | **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
 | **30 CENTERLINE** | · | · | · | · | · | · | ● | · | ● | ◐³ |
@@ -583,20 +583,26 @@ With "Send Volumetric Geometry (Beta)" on, a frame's display is its section extr
 
 ---
 
-### TSD — structural · design · emits 2 (+1 volumetric)
+### TSD — structural · design · emits 3 (+1 volumetric)
 
-A flat structural model — members grouped by member-type, slabs, walls — with mesh display geometry and a separate stream of numeric-only analysis results.
+A flat structural model — members grouped by member-type, slabs, walls — with mesh display geometry, the construction points they sit on as node objects, and a separate stream of numeric-only analysis results.
 
-**Flat model + results** — `DISPLAY` · `IN_COLLECTION` · `structural_results`
+**Flat model + nodes + results** — `DISPLAY` · `IN_COLLECTION` · `CONNECTS_TO` · `structural_results`
 
 ```mermaid
 graph LR
   MB([obj · Beam member]):::obj
+  N1([obj · ConstructionPoint]):::obj
   M[geo · mesh]:::geo
+  P[geo · point]:::geo
   COL{{node · Collection · Beam}}:::nd
+  NODES{{node · Collection · Nodes}}:::nd
   RES[[eav.structural_results · location-keyed]]:::file
   MB -->|DISPLAY| M
   MB -->|IN_COLLECTION| COL
+  MB -->|CONNECTS_TO| N1
+  N1 -->|DISPLAY| P
+  N1 -->|IN_COLLECTION| NODES
   RES -.->|no object join| RES
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
@@ -606,7 +612,8 @@ graph LR
 
 Members group by member-type (Beam, Column, Slab…) into flat collections. Results are **model-level (location-keyed)** — `ObjectAppId` always null — so they identify members by name, not by object K, and don't auto-join. Numeric only, no PASS/FAIL.
 
-- **Nodes:** CONTAINER `"Collection"` (flat, by MemberType)
+- **Nodes:** CONTAINER `"Collection"` (flat, by MemberType) · `"Nodes"` for the construction points
+- **Topology** (ENG-11155): a member connects to the construction points at every span start and end, a slab item and a wall to their corner points — one unscoped `CONNECTS_TO` per pair (ADR-0002). Only referenced points are sent (the ETABS auto-joint idea), so no node is an orphan. Points carry a `Point` display the DAT decoder drops today; the edges are the point.
 - **Sidecar:** `structural_results` — forces / reactions / displacements, model-level
 - **Receive:** send-only
 - **Volumetric geometry** (ENG-9048, setting-gated): members display one extruded prism per span and ship each span's analytical line as `CENTERLINE` (`ord` = span index); slabs/walls are extruded, no `CENTERLINE`. TSD exposes no material colour.
