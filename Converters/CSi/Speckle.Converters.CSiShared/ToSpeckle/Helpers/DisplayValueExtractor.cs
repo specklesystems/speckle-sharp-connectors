@@ -50,14 +50,15 @@ public class DisplayValueExtractor
   private IEnumerable<Base> ExtractFrame(CsiFrameWrapper target)
   {
     var line = _frameConverter.Convert(target);
+    // Recorded for every frame, volumetric or not and even when the extrusion falls back: the analytical axis is a
+    // CENTERLINE in its own right, the same edge etabsextract writes without any setting (ENG-11149).
+    _cache.FrameCenterlineCache[target.Name] = line;
     if (!_settingsStore.Current.SendVolumetricGeometry)
     {
       yield return line;
       yield break;
     }
 
-    // Recorded even when the frame falls back, so CENTERLINE covers every frame of a volumetric send (ENG-9048).
-    _cache.FrameCenterlineCache[target.Name] = line;
     yield return (Base?)_volumetricExtractor.TryExtrudeFrame(target, line) ?? line;
   }
 
