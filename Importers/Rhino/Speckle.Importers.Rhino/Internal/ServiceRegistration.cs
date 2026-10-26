@@ -69,13 +69,7 @@ internal static class ServiceRegistration
         [
           new(
             Endpoint: new Uri("https://collector.speckle.dev/v1/logs"),
-            Headers: new()
-            {
-              {
-                "authorization",
-                Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()
-              },
-            }
+            Headers: $"authorization={Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()}"
           ),
         ],
         MinimumLevel: SpeckleLogLevel.Information
@@ -86,13 +80,7 @@ internal static class ServiceRegistration
         [
           new(
             Endpoint: new Uri("https://collector.speckle.dev/v1/traces"),
-            Headers: new()
-            {
-              {
-                "authorization",
-                Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()
-              },
-            }
+            Headers: $"authorization={Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()}"
           ),
         ]
       ),

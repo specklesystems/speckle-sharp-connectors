@@ -61,8 +61,10 @@ internal sealed class RevitParametersBinding : IParametersBinding
     _logger = logger;
   }
 
-  public async Task Update(string payload)
+  public async Task<ParameterUpdateSummary> Update(string payload)
   {
+    int successCount = 0;
+    List<string> errors = [];
     try
     {
       var wrapper = _jsonSerializer.Deserialize<ParameterChangesWrapper>(payload);
@@ -70,16 +72,13 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
       if (requests == null || requests.Count == 0)
       {
-        return;
+        return new ParameterUpdateSummary(0, 0, []);
       }
 
       var activeUIDoc =
         _revitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
       var doc = activeUIDoc.Document;
-
-      int successCount = 0;
-      List<string> errors = [];
 
       await _revitTask
         .RunAsync(() =>
@@ -187,12 +186,16 @@ internal sealed class RevitParametersBinding : IParametersBinding
           $"Successfully applied {successCount} updates."
         );
       }
+
+      return new ParameterUpdateSummary(successCount, errors.Count, errors);
     }
     catch (Exception ex)
     {
       _topLevelExceptionHandler.CatchUnhandled(() =>
         throw new SpeckleException("Failed to apply parameter updates", ex)
       );
+      errors.Add(ex.Message);
+      return new ParameterUpdateSummary(successCount, errors.Count, errors);
     }
   }
 

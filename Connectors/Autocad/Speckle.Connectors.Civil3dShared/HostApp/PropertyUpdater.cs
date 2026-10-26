@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Sdk;
@@ -195,12 +196,13 @@ public class PropertyUpdater
       return null;
     }
 
+    // the value comes from the web as text in JS notation; the host culture (de-DE reads "2.5" as 25) must not apply
     return dataType switch
     {
-      AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value),
-      AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(value),
-      AAEC.PropertyData.DataType.Real => Convert.ToDouble(value),
-      AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value),
+      AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+      AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+      AAEC.PropertyData.DataType.Real => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+      AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
       _ => value.ToString(),
     };
   }
