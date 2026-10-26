@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.TeklaShared.Extensions;
 using Speckle.Connectors.TeklaShared.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.TeklaShared;
@@ -40,7 +41,10 @@ namespace Speckle.Connectors.TeklaShared.Operations.Send;
 /// <c>SOLID</c>) and no instances (Tekla has none). Grouping is flat by object type. Nested <c>TeklaObject.elements</c>
 /// (bolts, sub-parts, rebar, …) are interned as their own objects (own geometry + properties, so
 /// <see cref="TeklaMaterialUnpacker"/>'s per-applicationId <c>HAS_MATERIAL</c> edges resolve) and linked to their
-/// owner with a <c>SUBELEMENT</c> edge, while still appearing in the flat by-type scene collection. Tekla sends no
+/// owner with a <c>SUBELEMENT</c> edge, while still appearing in the flat by-type scene collection. Assemblies, pour
+/// units and pour objects are geometry-less objects reached from the parts: every part points at its assembly with
+/// <c>IN_ASSEMBLY</c> (main part ord 0, the rest in Tekla's member order from 1, nested assemblies the same way) and
+/// every pour object at its pour unit (ord 0 for all, ADR-0003 of the atlas spec, ENG-11151). Tekla sends no
 /// analysis results.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the Tekla API (<c>GetSolid</c>/report properties/visualisation) is
 /// main-thread-affine, so phase 1 converts on the host thread → a pure-Speckle snapshot; phase 2 builds the parquet
@@ -120,11 +124,12 @@ public class TeklaArtifactRootObjectBuilder(
   )
   {
     var units = converterSettings.Current.SpeckleUnits;
-    var collected = new List<CollectedObject>(objects.Count);
-    var results = new List<SendConversionResult>(objects.Count);
+    var expanded = ExpandSelection(objects);
+    var collected = new List<CollectedObject>(expanded.Count);
+    var results = new List<SendConversionResult>(expanded.Count);
 
     int count = 0;
-    foreach (TSM.ModelObject modelObject in objects)
+    foreach (TSM.ModelObject modelObject in expanded)
     {
       cancellationToken.ThrowIfCancellationRequested();
       string sourceType = modelObject.GetType().ToString().Split('.').Last();
@@ -144,7 +149,7 @@ public class TeklaArtifactRootObjectBuilder(
         session.RecordObject(sourceType, sourceType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
       }
 
-      onOperationProgressed.Report(new("Converting", (double)++count / objects.Count));
+      onOperationProgressed.Report(new("Converting", (double)++count / expanded.Count));
     }
 
     if (results.Count > 0 && results.All(x => x.Status == Status.ERROR))
@@ -152,10 +157,174 @@ public class TeklaArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    // Render materials (Tekla visualisation colours), keyed by object applicationId — needs the Tekla API, so phase 1.
-    var materials = materialUnpacker.UnpackRenderMaterial(objects.ToList());
+    var memberships = CollectMemberships(expanded, collected, results, session);
 
-    return new CollectedModel(units, collected, materials, results);
+    // Render materials (Tekla visualisation colours), keyed by object applicationId — needs the Tekla API, so phase 1.
+    var materials = materialUnpacker.UnpackRenderMaterial(expanded);
+
+    return new CollectedModel(units, collected, materials, results, memberships);
+  }
+
+  // A Tekla selection can hold assemblies and pour units themselves. They are membership targets here, not owners
+  // (ENG-11151), so a selected one stands for its members; it still reaches the bundle through the membership walk.
+  private static List<TSM.ModelObject> ExpandSelection(IReadOnlyList<TSM.ModelObject> objects)
+  {
+    var expanded = new List<TSM.ModelObject>(objects.Count);
+    var seen = new HashSet<Guid>();
+    foreach (TSM.ModelObject modelObject in objects)
+    {
+      Add(modelObject);
+    }
+    return expanded;
+
+    void Add(TSM.ModelObject modelObject)
+    {
+      switch (modelObject)
+      {
+        case TSM.Assembly assembly:
+          foreach (TSM.ModelObject member in AssemblyMembers(assembly))
+          {
+            Add(member);
+          }
+          break;
+        case TSM.PourUnit pourUnit:
+          foreach (TSM.ModelObject member in pourUnit.GetObjects())
+          {
+            Add(member);
+          }
+          break;
+        default:
+          if (seen.Add(modelObject.Identifier.GUID))
+          {
+            expanded.Add(modelObject);
+          }
+          break;
+      }
+    }
+  }
+
+  // Tekla's member order: the main object first, then the secondaries, then any sub-assembly the secondaries list
+  // left out. That position is the IN_ASSEMBLY ord.
+  private static IEnumerable<TSM.ModelObject> AssemblyMembers(TSM.Assembly assembly)
+  {
+    var seen = new HashSet<Guid>();
+    if (assembly.GetMainObject() is TSM.ModelObject main && seen.Add(main.Identifier.GUID))
+    {
+      yield return main;
+    }
+    foreach (TSM.ModelObject secondary in assembly.GetSecondaries())
+    {
+      if (seen.Add(secondary.Identifier.GUID))
+      {
+        yield return secondary;
+      }
+    }
+    foreach (TSM.ModelObject subAssembly in assembly.GetSubAssemblies())
+    {
+      if (seen.Add(subAssembly.Identifier.GUID))
+      {
+        yield return subAssembly;
+      }
+    }
+  }
+
+  // Walks the sent objects (and their children, the same walk the converter does) for parts, and derives the
+  // assemblies, pour objects and pour units they belong to. Each derived object converts once and is collected like a
+  // sent object; the edges are resolved against application ids in phase 2.
+  private List<Membership> CollectMemberships(
+    IReadOnlyList<TSM.ModelObject> roots,
+    List<CollectedObject> collected,
+    List<SendConversionResult> results,
+    ArtefactSessionLog session
+  )
+  {
+    var edges = new List<Membership>();
+    var visited = new HashSet<Guid>();
+    var derived = new Dictionary<Guid, string>();
+    var memberOrds = new Dictionary<Guid, Dictionary<Guid, int>>();
+    foreach (TSM.ModelObject root in roots)
+    {
+      Walk(root);
+    }
+    return edges;
+
+    void Walk(TSM.ModelObject modelObject)
+    {
+      if (!visited.Add(modelObject.Identifier.GUID))
+      {
+        return;
+      }
+      if (modelObject is TSM.Part part)
+      {
+        RecordPart(part);
+      }
+      foreach (TSM.ModelObject child in modelObject.GetSupportedChildren())
+      {
+        Walk(child);
+      }
+    }
+
+    void RecordPart(TSM.Part part)
+    {
+      try
+      {
+        if (part.GetAssembly() is TSM.Assembly assembly)
+        {
+          edges.Add(new Membership(part.GetSpeckleApplicationId(), Derive(assembly), OrdIn(assembly, part)));
+        }
+        foreach (TSM.ModelObject pour in part.GetPours())
+        {
+          if (pour is TSM.PourObject pourObject && pourObject.GetFatherPourUnit() is TSM.PourUnit pourUnit)
+          {
+            edges.Add(new Membership(Derive(pourObject), Derive(pourUnit), 0));
+          }
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Skipped assembly and pour membership of {AppId}", part.GetSpeckleApplicationId());
+      }
+    }
+
+    // Converts a membership target once; an assembly also points at its parent assembly.
+    string Derive(TSM.ModelObject target)
+    {
+      Guid guid = target.Identifier.GUID;
+      if (derived.TryGetValue(guid, out string? known))
+      {
+        return known;
+      }
+      string sourceType = target.GetType().Name;
+      var sw = Stopwatch.StartNew();
+      Base converted = converter.Convert(target);
+      string appId = converted.applicationId ?? guid.ToString();
+      derived[guid] = appId;
+      collected.Add(new CollectedObject(sourceType, converted));
+      results.Add(new(Status.SUCCESS, appId, sourceType, converted));
+      session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
+      if (target is TSM.Assembly assembly && assembly.GetAssembly() is TSM.Assembly parent)
+      {
+        edges.Add(new Membership(appId, Derive(parent), OrdIn(parent, assembly)));
+      }
+      return appId;
+    }
+
+    int OrdIn(TSM.Assembly assembly, TSM.ModelObject member)
+    {
+      Guid guid = assembly.Identifier.GUID;
+      if (!memberOrds.TryGetValue(guid, out var ords))
+      {
+        ords = new Dictionary<Guid, int>();
+        int ord = 0;
+        foreach (TSM.ModelObject listed in AssemblyMembers(assembly))
+        {
+          ords[listed.Identifier.GUID] = ord++;
+        }
+        memberOrds[guid] = ords;
+      }
+      // A member the API does not list goes after every listed one, never in the main slot.
+      return ords.TryGetValue(member.Identifier.GUID, out int found) ? found : ords.Count;
+    }
   }
 
   // ── Phase 2 (worker thread): snapshot → parquet bundle ────────────────────────────────────────────────
@@ -184,6 +353,15 @@ public class TeklaArtifactRootObjectBuilder(
     }
 
     EmitMaterials(pipeline, model.Materials, geometryKsByAppId);
+
+    foreach (Membership membership in model.Memberships)
+    {
+      pipeline.InAssembly(
+        pipeline.InternObject(membership.MemberAppId),
+        pipeline.InternObject(membership.AssemblyAppId),
+        membership.Ord
+      );
+    }
 
     // Default scene view: the flat by-type collections (IN_COLLECTION).
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -325,11 +503,15 @@ public class TeklaArtifactRootObjectBuilder(
 
   private sealed record CollectedObject(string CollectionName, Base Converted);
 
+  // IN_ASSEMBLY member → assembly (or pour object → pour unit), by application id.
+  private sealed record Membership(string MemberAppId, string AssemblyAppId, int Ord);
+
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<Speckle.Objects.Other.RenderMaterialProxy> Materials,
-    IReadOnlyList<SendConversionResult> Results
+    IReadOnlyList<SendConversionResult> Results,
+    IReadOnlyList<Membership> Memberships
   );
 
   private sealed record BundleResult(

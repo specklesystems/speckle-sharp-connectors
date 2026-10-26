@@ -30,9 +30,30 @@ public class ClassPropertyExtractor
       case TSM.RebarGroup rebarGroup:
         AddRebarGroupProperties(rebarGroup, properties);
         break;
+      case TSM.Assembly assembly:
+        AddAssemblyProperties(assembly, properties);
+        break;
+      case TSM.PourObject pourObject:
+        AddPourObjectProperties(pourObject, properties);
+        break;
     }
 
     return properties;
+  }
+
+  private void AddAssemblyProperties(TSM.Assembly assembly, Dictionary<string, object?> properties)
+  {
+    properties["assemblyType"] = assembly.GetAssemblyType().ToString();
+    properties["assemblyPrefix"] = assembly.AssemblyNumber.Prefix;
+    properties["assemblyStartNumber"] = assembly.AssemblyNumber.StartNumber;
+  }
+
+  private void AddPourObjectProperties(TSM.PourObject pourObject, Dictionary<string, object?> properties)
+  {
+    properties["class"] = pourObject.Class;
+    properties["pourNumber"] = pourObject.PourNumber;
+    properties["pourType"] = pourObject.PourType;
+    properties["concreteMixture"] = pourObject.ConcreteMixture;
   }
 
   private void AddPartProperties(TSM.Part part, Dictionary<string, object?> properties)
