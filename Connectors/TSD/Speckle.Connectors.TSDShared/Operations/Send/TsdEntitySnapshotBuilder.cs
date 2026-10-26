@@ -153,7 +153,8 @@ internal sealed class TsdEntitySnapshotBuilder
       return nodes;
     }
 
-    var points = (await model.GetConstructionPointsAsync(indices, cancellationToken).ConfigureAwait(false))?.ToList()
+    var points =
+      (await model.GetConstructionPointsAsync(indices, cancellationToken).ConfigureAwait(false))?.ToList()
       ?? new List<IConstructionPoint>();
     var displayValues = await _displayValueExtractor
       .GetConstructionPointDisplayValueAsync(points, unit, speckleUnits)
