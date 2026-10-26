@@ -19,6 +19,7 @@ public class RevitParameterCreator
 
   private readonly RevitContext _revitContext;
   private readonly ILogger<RevitParameterCreator> _logger;
+  private readonly Lazy<Dictionary<string, ForgeTypeId>> _groupsByLabel = new(BuildGroupsByLabel);
 
   public RevitParameterCreator(RevitContext revitContext, ILogger<RevitParameterCreator> logger)
   {
@@ -142,8 +143,8 @@ public class RevitParameterCreator
   }
 
   /// <summary>
-  /// Matched by label because that is what the send side publishes as the path's group segment
-  /// (<c>LabelUtils.GetLabelForGroup</c>), so a path read back from a localized Revit resolves in that Revit.
+  /// The path's group segment is a group label in the host's UI language, as published on send, so it is matched
+  /// by <see cref="LabelUtils.GetLabelForGroup"/> rather than by group id.
   /// </summary>
   private ForgeTypeId ResolveGroup(string? groupLabel)
   {
@@ -152,17 +153,29 @@ public class RevitParameterCreator
       return GroupTypeId.Data;
     }
 
-    var label = groupLabel!.Trim();
-    foreach (var group in ParameterUtils.GetAllBuiltInGroups())
+    if (_groupsByLabel.Value.TryGetValue(groupLabel!, out var group))
     {
-      if (LabelUtils.GetLabelForGroup(group) == label)
+      return group;
+    }
+
+    _logger.LogWarning("Unknown parameter group '{GroupLabel}', creating under Data", groupLabel);
+    return GroupTypeId.Data;
+  }
+
+  private static Dictionary<string, ForgeTypeId> BuildGroupsByLabel()
+  {
+    // ungrouped parameters publish as "Other", the label of the empty group id, which GetAllBuiltInGroups omits
+    var groups = new Dictionary<string, ForgeTypeId>();
+    foreach (var group in ParameterUtils.GetAllBuiltInGroups().Append(new ForgeTypeId()))
+    {
+      var label = LabelUtils.GetLabelForGroup(group);
+      if (!groups.ContainsKey(label))
       {
-        return group;
+        groups[label] = group;
       }
     }
 
-    _logger.LogWarning("Unknown parameter group '{GroupLabel}', creating under Data", label);
-    return GroupTypeId.Data;
+    return groups;
   }
 
   private UpdateResult EnsureCategoryBinding(
