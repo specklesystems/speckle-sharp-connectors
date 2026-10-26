@@ -32,13 +32,7 @@ public class RevitParameterCreator
   /// and sets its value. Must be called inside an open Revit transaction.
   /// </summary>
   /// <param name="groupLabel">The parameter group as the send side labels it (e.g. "Identity Data"); null for Data.</param>
-  public UpdateResult CreateAndSet(
-    Document doc,
-    Element element,
-    string paramName,
-    string? groupLabel,
-    object? value
-  )
+  public UpdateResult CreateAndSet(Document doc, Element element, string paramName, string? groupLabel, object? value)
   {
     var app = _revitContext.UIApplication?.Application;
     if (app is null)
