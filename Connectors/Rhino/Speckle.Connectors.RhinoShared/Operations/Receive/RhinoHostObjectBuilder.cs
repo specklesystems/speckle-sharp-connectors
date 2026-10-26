@@ -367,7 +367,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = colorSpeckleObj.Item2;
     }
 
-    return _converterSettings.Current.Document.Objects.Add(obj, atts);
+    return _converterSettings.Current.Document.Objects.AddOrThrow(obj, atts);
   }
 
   private List<Guid> BakeObjectsAsFallbackGroup(
@@ -380,12 +380,25 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<Guid> objectIds = new();
     string parentId = originatingObject.applicationId ?? originatingObject.id.NotNull();
     int objCount = 0;
+    ConversionException? firstRejection = null;
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
       // Duplicate atts per object to prevent RenderMaterial reference bleed across iterations (CNX-3311)
-      var id = BakeObject(conversionResult, originalBaseObject, parentId, atts.Duplicate());
-      objectIds.Add(id);
-      objCount++;
+      try
+      {
+        var id = BakeObject(conversionResult, originalBaseObject, parentId, atts.Duplicate());
+        objectIds.Add(id);
+        objCount++;
+      }
+      catch (ConversionException ex)
+      {
+        firstRejection ??= ex;
+      }
+    }
+
+    if (objCount == 0 && firstRejection is not null)
+    {
+      throw firstRejection;
     }
 
     // only create groups if we really need to, ie if the fallback conversion result count is bigger than one.

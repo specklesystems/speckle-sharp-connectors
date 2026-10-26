@@ -47,6 +47,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)RhinoEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registration\ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\BoundingBox.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\ObjectTableExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\RhinoUnitsExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\RhinoSelectionFilter.cs" />

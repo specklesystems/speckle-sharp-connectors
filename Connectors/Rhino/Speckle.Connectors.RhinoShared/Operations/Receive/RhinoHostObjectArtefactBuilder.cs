@@ -11,6 +11,7 @@ using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -197,6 +198,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           // alongside the instance-scoped properties above.
           var objTypeProps = bundle.TypeProperties(objK);
           var ids = new List<Guid>();
+          ConversionException? firstRejection = null;
           foreach (var (geomK, geom) in geometries)
           {
             if (geom is RG.Hatch hatch)
@@ -204,21 +206,32 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
               RhinoHatchStyler.Apply(doc, hatch, objProps, _converterSettings.Current.SpeckleUnits);
             }
-            ids.Add(
-              BakeObject(
-                doc,
-                geom,
-                geomK,
-                layerIndex,
-                materialByObject,
-                materialByGeometry,
-                colorByObject,
-                appId,
-                name,
-                objProps,
-                objTypeProps
-              )
-            );
+            try
+            {
+              ids.Add(
+                BakeObject(
+                  doc,
+                  geom,
+                  geomK,
+                  layerIndex,
+                  materialByObject,
+                  materialByGeometry,
+                  colorByObject,
+                  appId,
+                  name,
+                  objProps,
+                  objTypeProps
+                )
+              );
+            }
+            catch (ConversionException ex)
+            {
+              firstRejection ??= ex;
+            }
+          }
+          if (ids.Count == 0 && firstRejection is not null)
+          {
+            throw firstRejection;
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           if (rels.GroupsByObject.ContainsKey(objK))
@@ -438,7 +451,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       atts.ObjectColor = Color.FromArgb(argb);
       atts.ColorSource = ObjectColorSource.ColorFromObject; // by-object display colour (HAS_COLOR)
     }
-    return doc.Objects.Add(geom, atts);
+    return doc.Objects.AddOrThrow(geom, atts);
   }
 
   // Binds the several Rhino geometries decoded from ONE source object into a native group [ENG-9113]. The name carries
