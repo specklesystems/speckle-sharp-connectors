@@ -27,6 +27,7 @@ namespace Speckle.Connectors.TSDShared.Operations.Send;
 
 internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<IEntity>
 {
+  private const string NODES_COLLECTION = "Nodes";
   private static readonly string[] s_noParts = Array.Empty<string>();
   private static readonly Dictionary<string, object?> s_emptyProps = new();
 
@@ -177,13 +178,92 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
 
     await _snapshotBuilder.ApplyUnitsAsync(propertyTrees, modelUnits.Units).ConfigureAwait(false);
 
+    List<NodeEdge> edges;
+    using (session.Phase("Nodes"))
+    {
+      edges = await CollectNodesAsync(collected, results, modelUnits, session, cancellationToken).ConfigureAwait(false);
+    }
+
     List<StructuralResultRow> resultRows;
     using (session.Phase("Analysis results"))
     {
       resultRows = await ExtractResultRowsAsync(modelUnits, session, cancellationToken).ConfigureAwait(false);
     }
 
-    return new CollectedModel(modelUnits.SpeckleUnits, collected, resultRows, results);
+    return new CollectedModel(modelUnits.SpeckleUnits, collected, edges, resultRows, results);
+  }
+
+  // Only construction points a sent entity sits on become node objects (the ETABS auto-joint filter, ENG-10192), so
+  // every node is the target of at least one CONNECTS_TO and no edge dangles (ENG-11155).
+  private async Task<List<NodeEdge>> CollectNodesAsync(
+    List<CollectedObject> collected,
+    List<SendConversionResult> results,
+    TsdModelUnits modelUnits,
+    ArtefactSessionLog session,
+    CancellationToken cancellationToken
+  )
+  {
+    var edges = new List<NodeEdge>();
+    var indicesByAppId = _snapshotBuilder.NodeIndicesByAppId;
+    var referenced = new HashSet<int>();
+    foreach (CollectedObject co in collected)
+    {
+      if (indicesByAppId.TryGetValue(co.ApplicationId, out var indices))
+      {
+        referenced.UnionWith(indices);
+      }
+    }
+
+    IReadOnlyList<(int Index, TsdObject Node)> nodes;
+    try
+    {
+      nodes = await _snapshotBuilder
+        .ConvertConstructionPointsAsync(referenced, modelUnits.LengthUnit, modelUnits.SpeckleUnits, cancellationToken)
+        .ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Skipped TSD construction points");
+      session.RecordObject("construction-points", NODES_COLLECTION, Status.WARNING, ex.Message, 0);
+      return edges;
+    }
+
+    var nodeAppIdByIndex = new Dictionary<int, string>(nodes.Count);
+    foreach (var (index, node) in nodes)
+    {
+      string appId = node.applicationId ?? index.ToString(CultureInfo.InvariantCulture);
+      nodeAppIdByIndex[index] = appId;
+      collected.Add(new CollectedObject(appId, NODES_COLLECTION, node));
+      results.Add(new SendConversionResult(Status.SUCCESS, appId, node.type, node));
+      session.RecordObject(appId, node.type, Status.SUCCESS, null, 0);
+    }
+
+    foreach (CollectedObject co in collected)
+    {
+      if (!indicesByAppId.TryGetValue(co.ApplicationId, out var indices))
+      {
+        continue;
+      }
+      foreach (int index in indices)
+      {
+        if (nodeAppIdByIndex.TryGetValue(index, out var nodeAppId))
+        {
+          edges.Add(new NodeEdge(co.ApplicationId, nodeAppId));
+        }
+      }
+    }
+
+    session.SetStat("nodes", nodes.Count);
+    session.SetStat("connectsTo", edges.Count);
+    if (referenced.Count != nodes.Count)
+    {
+      _logger.LogWarning(
+        "TSD returned {Returned} of {Referenced} referenced construction points",
+        nodes.Count,
+        referenced.Count
+      );
+    }
+    return edges;
   }
 
   private async Task<List<StructuralResultRow>> ExtractResultRowsAsync(
@@ -374,6 +454,12 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
+    // Unscoped (ord 0): a member or area element sits on its nodes, there is no second edge set to tell apart (ADR-0002).
+    foreach (NodeEdge edge in model.Edges)
+    {
+      pipeline.ConnectsTo(pipeline.InternObject(edge.SourceAppId), pipeline.InternObject(edge.NodeAppId));
+    }
+
     foreach (var r in model.ResultRows)
     {
       pipeline.AddStructuralResult(
@@ -520,9 +606,12 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
 
   private sealed record CollectedObject(string ApplicationId, string Type, TsdObject Object);
 
+  private sealed record NodeEdge(string SourceAppId, string NodeAppId);
+
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
+    IReadOnlyList<NodeEdge> Edges,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results
   );

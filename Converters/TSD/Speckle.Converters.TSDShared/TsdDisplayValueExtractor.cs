@@ -100,6 +100,32 @@ public sealed class TsdDisplayValueExtractor
     return lines;
   }
 
+  /// <summary>One point per construction point in model units, in the input order (ENG-11155).</summary>
+  public async Task<List<SOG.Point>> GetConstructionPointDisplayValueAsync(
+    IReadOnlyList<IConstructionPoint> points,
+    IUnitBase? unit,
+    string speckleUnits
+  )
+  {
+    var baseCoordinates = new List<double>(points.Count * 3);
+    foreach (var point in points)
+    {
+      var coordinates = point.Coordinates.Value;
+      baseCoordinates.Add(coordinates.X);
+      baseCoordinates.Add(coordinates.Y);
+      baseCoordinates.Add(coordinates.Z);
+    }
+
+    var converted = await ConvertFromBaseAsync(baseCoordinates, unit).ConfigureAwait(false);
+    var result = new List<SOG.Point>(points.Count);
+    for (int i = 0; i + 2 < converted.Count; i += 3)
+    {
+      result.Add(new SOG.Point(converted[i], converted[i + 1], converted[i + 2], speckleUnits));
+    }
+
+    return result;
+  }
+
   public async Task<List<Base>> GetSlabDisplayValueAsync(ISlabItem slabItem, IUnitBase? unit, string speckleUnits)
   {
     if (_settings.SendVolumetricGeometry)

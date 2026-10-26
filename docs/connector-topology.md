@@ -105,6 +105,12 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 - 🔶 **CONNECTS_TO** — `Weld.MainObject / SecondaryObject` (welds are excluded from children today) → part
   ↔ part connection (new walk).
 
+### TSD — `TsdArtifactRootObjectBuilder`
+- ✅ IN_COLLECTION (flat by member type, `Nodes` for construction points), DISPLAY, structural_results.
+- ✅ **CONNECTS_TO** — member → construction point at every span start/end (`IMemberNode.ConstructionPointIndex`),
+  slab item / wall → corner points (`IAreaElement.ConstructionPointIndices`). Only referenced points are sent, as
+  objects with a point display (ENG-11155).
+
 ## ODA blueprint (how the native producers derive each relation)
 
 The managed connectors have the same host-API affordances; the ODA extractors are the working reference.
@@ -145,7 +151,7 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
-- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
+- **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO; TSD member/area → construction point CONNECTS_TO (ENG-11155). 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
 - **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). 🔶 CSi groups; rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
 The 🔶 items all require **new host-API walks in the collect phase** (main-thread Revit/Plant3D/Tekla API);

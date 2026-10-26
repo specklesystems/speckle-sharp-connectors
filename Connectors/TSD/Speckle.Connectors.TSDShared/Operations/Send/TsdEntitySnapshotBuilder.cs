@@ -35,9 +35,16 @@ internal sealed class TsdEntitySnapshotBuilder
   private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
   private readonly ILogger<TsdEntitySnapshotBuilder> _logger;
   private readonly Dictionary<string, IReadOnlyList<SOG.Line>> _centerlinesByAppId = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, IReadOnlyList<int>> _nodeIndicesByAppId = new(StringComparer.Ordinal);
 
   /// <summary>Analytical span lines per member application id, filled only for volumetric sends (ENG-9048).</summary>
   public IReadOnlyDictionary<string, IReadOnlyList<SOG.Line>> CenterlinesByAppId => _centerlinesByAppId;
+
+  /// <summary>
+  /// Construction point indices each converted entity sits on: a member's span end nodes, a slab item's or wall's
+  /// corner points. Only these points are sent, as the targets of <c>CONNECTS_TO</c> (ENG-11155).
+  /// </summary>
+  public IReadOnlyDictionary<string, IReadOnlyList<int>> NodeIndicesByAppId => _nodeIndicesByAppId;
 
   public TsdEntitySnapshotBuilder(
     ITSDApplicationService applicationService,
@@ -126,6 +133,82 @@ internal sealed class TsdEntitySnapshotBuilder
     }
   }
 
+  /// <summary>Converts the construction points at <paramref name="indices"/> to node objects with a point display.</summary>
+  public async Task<IReadOnlyList<(int Index, TsdObject Node)>> ConvertConstructionPointsAsync(
+    IReadOnlyCollection<int> indices,
+    IUnitBase? unit,
+    string speckleUnits,
+    CancellationToken cancellationToken
+  )
+  {
+    var nodes = new List<(int, TsdObject)>();
+    if (indices.Count == 0)
+    {
+      return nodes;
+    }
+
+    var model = await _applicationService.GetModelAsync().ConfigureAwait(false);
+    if (model is null)
+    {
+      return nodes;
+    }
+
+    var points = (await model.GetConstructionPointsAsync(indices, cancellationToken).ConfigureAwait(false))?.ToList()
+      ?? new List<IConstructionPoint>();
+    var displayValues = await _displayValueExtractor
+      .GetConstructionPointDisplayValueAsync(points, unit, speckleUnits)
+      .ConfigureAwait(false);
+
+    for (int i = 0; i < points.Count && i < displayValues.Count; i++)
+    {
+      var point = points[i];
+      nodes.Add(
+        (
+          point.Index,
+          new TsdObject
+          {
+            name = point.Name ?? $"Node {point.Index}",
+            type = nameof(EntityType.ConstructionPoint),
+            elements = new List<TsdObject>(),
+            displayValue = new List<Base> { displayValues[i] },
+            properties = ExtractNodeProperties(point),
+            units = speckleUnits,
+            applicationId = point.Id.ToString(),
+          }
+        )
+      );
+    }
+
+    return nodes;
+  }
+
+  private Dictionary<string, object?> ExtractNodeProperties(IConstructionPoint point)
+  {
+    var objectId = new Dictionary<string, object?>();
+    TryAdd(objectId, "GUID", () => point.Id.ToString());
+    TryAdd(objectId, "Index", () => point.Index);
+    TryAdd(objectId, "Point Type", () => point.PointType.Value.ToString());
+    TryAdd(objectId, "Solver Node Index", () => point.SolverNodeIndex.Value);
+    TryAdd(objectId, "Group Index", () => point.GroupIndex.Value);
+    return new Dictionary<string, object?> { ["Object ID"] = objectId };
+  }
+
+  private void TryAdd(Dictionary<string, object?> target, string key, Func<object?> getter)
+  {
+    try
+    {
+      var value = getter();
+      if (value is not null)
+      {
+        target[key] = value;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read TSD construction point property {Key}", key);
+    }
+  }
+
   public async Task ApplyUnitsAsync(
     IReadOnlyList<Dictionary<string, object?>> propertyTrees,
     IReadOnlyDictionary<Quantity, IUnitBase> units
@@ -200,8 +283,31 @@ internal sealed class TsdEntitySnapshotBuilder
     {
       _centerlinesByAppId[applicationId] = centerlines;
     }
+    RememberNodes(applicationId, () => spans.SelectMany(SpanNodes));
     var properties = _memberPropertyExtractor.Extract(member, spans);
     return (displayValue, properties);
+  }
+
+  private static IEnumerable<int> SpanNodes(IMemberSpan span)
+  {
+    yield return span.StartMemberNode.ConstructionPointIndex.Value;
+    yield return span.EndMemberNode.ConstructionPointIndex.Value;
+  }
+
+  private void RememberNodes(string applicationId, Func<IEnumerable<int>> indices)
+  {
+    try
+    {
+      var distinct = indices().Distinct().ToList();
+      if (distinct.Count > 0)
+      {
+        _nodeIndicesByAppId[applicationId] = distinct;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read TSD construction point indices of {ApplicationId}", applicationId);
+    }
   }
 
   private async Task<(List<Base>, Dictionary<string, object?>)> ConvertSlabAsync(
@@ -214,6 +320,7 @@ internal sealed class TsdEntitySnapshotBuilder
     var displayValue = await _displayValueExtractor
       .GetSlabDisplayValueAsync(slabItem, unit, speckleUnits)
       .ConfigureAwait(false);
+    RememberNodes(slabItem.Id.ToString(), () => slabItem.ConstructionPointIndices);
 
     ISlabData? slabData = null;
     if (TryGetSlabIndex(slabItem) is int slabIndex)
@@ -235,6 +342,7 @@ internal sealed class TsdEntitySnapshotBuilder
     var displayValue = await _displayValueExtractor
       .GetWallDisplayValueAsync(panels, unit, speckleUnits)
       .ConfigureAwait(false);
+    RememberNodes(wall.Id.ToString(), () => wall.ConstructionPointIndices);
     var properties = _wallPropertyExtractor.Extract(wall, panels);
     return (displayValue, properties);
   }
