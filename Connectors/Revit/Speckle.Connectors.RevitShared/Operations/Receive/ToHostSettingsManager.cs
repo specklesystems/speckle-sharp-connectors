@@ -69,6 +69,25 @@ public class ToHostSettingsManager : IToHostSettingsManager
     return ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE;
   }
 
+  public bool GetReceivePropertiesAsParametersSetting(ModelCard modelCard)
+  {
+    var settingValue =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReceivePropertiesAsParametersSetting.SETTING_ID)?.Value as bool?;
+
+    if (settingValue is not null)
+    {
+      return settingValue.Value;
+    }
+
+    _logger.LogWarning(
+      "Receive properties as parameters setting was null for model {ModelCardId}, using default: {DefaultValue}",
+      modelCard.ModelCardId,
+      ReceivePropertiesAsParametersSetting.DEFAULT_VALUE
+    );
+
+    return ReceivePropertiesAsParametersSetting.DEFAULT_VALUE;
+  }
+
   private Transform? GetTransform(ReceiveReferencePointType referencePointType)
   {
     Transform? referencePointTransform = null;
