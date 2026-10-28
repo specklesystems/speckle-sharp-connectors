@@ -19,14 +19,17 @@ using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using TSD.API.Remoting.Common;
+using TSD.API.Remoting.Structure;
 using Path = System.IO.Path;
 using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecLevel = Speckle.Bundle.Spec.Level;
 using SpecStructuralResult = Speckle.Bundle.Spec.StructuralResult;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
 
 internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<IEntity>
 {
+  private const string NODES_COLLECTION = "Nodes";
   private static readonly string[] s_noParts = Array.Empty<string>();
   private static readonly Dictionary<string, object?> s_emptyProps = new();
 
@@ -124,7 +127,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   )
   {
     var modelUnits = await _snapshotBuilder.GetUnitsAsync().ConfigureAwait(false);
-    var slabDataByIndex = await _snapshotBuilder.GetSlabDataAsync(entities).ConfigureAwait(false);
+    var slabsByIndex = await _snapshotBuilder.GetSlabsAsync(entities).ConfigureAwait(false);
 
     var collected = new List<CollectedObject>(entities.Count);
     var results = new List<SendConversionResult>(entities.Count);
@@ -137,7 +140,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       var sw = Stopwatch.StartNew();
 
       var (result, converted) = await _snapshotBuilder
-        .ConvertEntityAsync(entity, slabDataByIndex, modelUnits.LengthUnit, modelUnits.SpeckleUnits)
+        .ConvertEntityAsync(entity, slabsByIndex, modelUnits.LengthUnit, modelUnits.SpeckleUnits)
         .ConfigureAwait(false);
       results.Add(result);
       if (converted is not null)
@@ -175,7 +178,19 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       session.SetStat("extrusionFallbacks", _extrusionFallbacks.Total);
     }
 
+    using (session.Phase("Slabs"))
+    {
+      collected = GroupSlabItems(collected, slabsByIndex, results, propertyTrees, session, modelUnits.SpeckleUnits);
+    }
+
     await _snapshotBuilder.ApplyUnitsAsync(propertyTrees, modelUnits.Units).ConfigureAwait(false);
+
+    NodeRelations relations;
+    using (session.Phase("Nodes"))
+    {
+      relations = await CollectNodesAsync(collected, results, modelUnits, session, cancellationToken)
+        .ConfigureAwait(false);
+    }
 
     List<StructuralResultRow> resultRows;
     using (session.Phase("Analysis results"))
@@ -183,7 +198,241 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       resultRows = await ExtractResultRowsAsync(modelUnits, session, cancellationToken).ConfigureAwait(false);
     }
 
-    return new CollectedModel(modelUnits.SpeckleUnits, collected, resultRows, results);
+    return new CollectedModel(modelUnits.SpeckleUnits, collected, relations, resultRows, results);
+  }
+
+  // A slab item hangs off its slab as SUBELEMENT, ord = its place in the slab's own item list; the slab is a
+  // geometry-less parent carrying the slab-level data. An item whose slab did not come back stays top level
+  // (ENG-11157).
+  private List<CollectedObject> GroupSlabItems(
+    List<CollectedObject> collected,
+    IReadOnlyDictionary<int, ISlab> slabsByIndex,
+    List<SendConversionResult> results,
+    List<Dictionary<string, object?>> propertyTrees,
+    ArtefactSessionLog session,
+    string speckleUnits
+  )
+  {
+    var placements = _snapshotBuilder.SlabItemPlacementByAppId;
+    var output = new List<CollectedObject>(collected.Count);
+    var parents = new Dictionary<int, (TsdObject Slab, List<(int Ord, TsdObject Item)> Items)>();
+    foreach (CollectedObject co in collected)
+    {
+      if (
+        !placements.TryGetValue(co.ApplicationId, out var placement)
+        || !slabsByIndex.TryGetValue(placement.SlabIndex, out var slab)
+      )
+      {
+        output.Add(co);
+        continue;
+      }
+
+      if (!parents.TryGetValue(placement.SlabIndex, out var parent))
+      {
+        parent = (_snapshotBuilder.ConvertSlabParent(slab, speckleUnits), new List<(int, TsdObject)>());
+        parents[placement.SlabIndex] = parent;
+      }
+
+      int ord = OrdOf(slab.SlabItemIndices, placement.ItemIndex);
+      parent.Items.Add((ord < 0 ? int.MaxValue : ord, co.Object));
+    }
+
+    foreach (var (slab, items) in parents.Values)
+    {
+      slab.elements.AddRange(items.OrderBy(item => item.Ord).Select(item => item.Item));
+      string appId = slab.applicationId ?? slab.name ?? slab.type;
+      output.Add(new CollectedObject(appId, slab.type, slab));
+      results.Add(new SendConversionResult(Status.SUCCESS, appId, slab.type, slab));
+      propertyTrees.Add(slab.properties);
+      session.RecordObject(appId, slab.type, Status.SUCCESS, null, 0);
+    }
+
+    session.SetStat("slabs", parents.Count);
+    return output;
+  }
+
+  private static int OrdOf(IReadOnlyList<int> order, int index)
+  {
+    for (int i = 0; i < order.Count; i++)
+    {
+      if (order[i] == index)
+      {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  /// <summary>Every collected object and its descendants: slab items and wall panels sit below their parent.</summary>
+  private static IEnumerable<string> AllAppIds(IEnumerable<CollectedObject> collected) =>
+    collected.SelectMany(co => Descendants(co.Object)).Select(obj => obj.applicationId).OfType<string>();
+
+  private static IEnumerable<TsdObject> Descendants(TsdObject obj)
+  {
+    yield return obj;
+    foreach (TsdObject child in obj.elements)
+    {
+      foreach (TsdObject descendant in Descendants(child))
+      {
+        yield return descendant;
+      }
+    }
+  }
+
+  // Only construction points a sent entity sits on become node objects (the ETABS auto-joint filter, ENG-10192), so
+  // every node is the target of at least one CONNECTS_TO and no edge dangles (ENG-11155).
+  private async Task<NodeRelations> CollectNodesAsync(
+    List<CollectedObject> collected,
+    List<SendConversionResult> results,
+    TsdModelUnits modelUnits,
+    ArtefactSessionLog session,
+    CancellationToken cancellationToken
+  )
+  {
+    var edges = new List<NodeEdge>();
+    var indicesByAppId = _snapshotBuilder.NodeIndicesByAppId;
+    var referenced = new HashSet<int>();
+    foreach (string appId in AllAppIds(collected))
+    {
+      if (indicesByAppId.TryGetValue(appId, out var indices))
+      {
+        referenced.UnionWith(indices);
+      }
+    }
+
+    IReadOnlyList<(int Index, TsdObject Node)> nodes;
+    try
+    {
+      nodes = await _snapshotBuilder
+        .ConvertConstructionPointsAsync(referenced, modelUnits.LengthUnit, modelUnits.SpeckleUnits, cancellationToken)
+        .ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Skipped TSD construction points");
+      session.RecordObject("construction-points", NODES_COLLECTION, Status.WARNING, ex.Message, 0);
+      return new NodeRelations(
+        edges,
+        Array.Empty<TsdLevel>(),
+        Array.Empty<LevelAssignment>(),
+        CollectGroups(collected)
+      );
+    }
+
+    var nodeAppIdByIndex = new Dictionary<int, string>(nodes.Count);
+    foreach (var (index, node) in nodes)
+    {
+      string appId = node.applicationId ?? index.ToString(CultureInfo.InvariantCulture);
+      nodeAppIdByIndex[index] = appId;
+      collected.Add(new CollectedObject(appId, NODES_COLLECTION, node));
+      results.Add(new SendConversionResult(Status.SUCCESS, appId, node.type, node));
+      session.RecordObject(appId, node.type, Status.SUCCESS, null, 0);
+    }
+
+    foreach (string appId in AllAppIds(collected))
+    {
+      if (!indicesByAppId.TryGetValue(appId, out var indices))
+      {
+        continue;
+      }
+      foreach (int index in indices)
+      {
+        if (nodeAppIdByIndex.TryGetValue(index, out var nodeAppId))
+        {
+          edges.Add(new NodeEdge(appId, nodeAppId));
+        }
+      }
+    }
+
+    session.SetStat("nodes", nodes.Count);
+    session.SetStat("connectsTo", edges.Count);
+    if (referenced.Count != nodes.Count)
+    {
+      _logger.LogWarning(
+        "TSD returned {Returned} of {Referenced} referenced construction points",
+        nodes.Count,
+        referenced.Count
+      );
+    }
+
+    var (levels, onLevel) = await CollectLevelsAsync(collected, modelUnits, session, cancellationToken)
+      .ConfigureAwait(false);
+    return new NodeRelations(edges, levels, onLevel, CollectGroups(collected));
+  }
+
+  // ON_LEVEL only when every construction point of the element sits on one horizontal construction plane: beams,
+  // slab items and single-storey walls do, columns and braces span planes and get no invented level (ENG-11156).
+  private async Task<(IReadOnlyList<TsdLevel> Levels, List<LevelAssignment> OnLevel)> CollectLevelsAsync(
+    IReadOnlyList<CollectedObject> collected,
+    TsdModelUnits modelUnits,
+    ArtefactSessionLog session,
+    CancellationToken cancellationToken
+  )
+  {
+    var indicesByAppId = _snapshotBuilder.NodeIndicesByAppId;
+    var planeByNodeIndex = _snapshotBuilder.HorizontalPlaneByNodeIndex;
+    var onLevel = new List<LevelAssignment>();
+    foreach (string appId in AllAppIds(collected))
+    {
+      if (indicesByAppId.TryGetValue(appId, out var indices) && CommonPlane(indices, planeByNodeIndex) is int plane)
+      {
+        onLevel.Add(new LevelAssignment(appId, plane));
+      }
+    }
+
+    IReadOnlyList<TsdLevel> levels = Array.Empty<TsdLevel>();
+    if (onLevel.Count > 0)
+    {
+      try
+      {
+        levels = await _snapshotBuilder
+          .ConvertLevelsAsync(
+            onLevel.Select(a => a.PlaneIndex).Distinct().ToList(),
+            modelUnits.LengthUnit,
+            cancellationToken
+          )
+          .ConfigureAwait(false);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Skipped TSD levels");
+        session.RecordObject("levels", "Level", Status.WARNING, ex.Message, 0);
+        onLevel.Clear();
+      }
+    }
+
+    session.SetStat("levels", levels.Count);
+    session.SetStat("onLevel", onLevel.Count);
+    return (levels, onLevel);
+  }
+
+  private static int? CommonPlane(IReadOnlyList<int> indices, IReadOnlyDictionary<int, int> planeByNodeIndex)
+  {
+    int? common = null;
+    foreach (int index in indices)
+    {
+      if (!planeByNodeIndex.TryGetValue(index, out int plane) || (common is int known && known != plane))
+      {
+        return null;
+      }
+      common = plane;
+    }
+    return common;
+  }
+
+  private IReadOnlyDictionary<string, string> CollectGroups(IReadOnlyList<CollectedObject> collected)
+  {
+    var groupByAppId = _snapshotBuilder.GroupByAppId;
+    var groups = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (string appId in AllAppIds(collected))
+    {
+      if (groupByAppId.TryGetValue(appId, out var group))
+      {
+        groups[appId] = group;
+      }
+    }
+    return groups;
   }
 
   private async Task<List<StructuralResultRow>> ExtractResultRowsAsync(
@@ -374,6 +623,41 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
+    // Unscoped (ord 0): a member or area element sits on its nodes, there is no second edge set to tell apart (ADR-0002).
+    foreach (NodeEdge edge in model.Relations.Edges)
+    {
+      pipeline.ConnectsTo(pipeline.InternObject(edge.SourceAppId), pipeline.InternObject(edge.NodeAppId));
+    }
+
+    // Levels and groups are separate axes from the by-type collections, which stay the default view (ENG-11156).
+    var levelKByIndex = new Dictionary<int, int>();
+    foreach (TsdLevel level in model.Relations.Levels)
+    {
+      levelKByIndex[level.Index] = pipeline.AddLevel(
+        $"level:{level.Index}",
+        new SpecLevel(level.Name, level.Elevation)
+      );
+    }
+    foreach (LevelAssignment assignment in model.Relations.OnLevel)
+    {
+      if (levelKByIndex.TryGetValue(assignment.PlaneIndex, out int levelK))
+      {
+        pipeline.OnLevel(pipeline.InternObject(assignment.AppId), levelK);
+      }
+    }
+
+    var groupKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var (appId, group) in model.Relations.Groups)
+    {
+      if (!groupKByName.TryGetValue(group, out int groupK))
+      {
+        groupK = pipeline.AddContainer($"group:{group}", new SpecContainer(group, null, "Group", null));
+        groupKByName[group] = groupK;
+      }
+      pipeline.InGroup(pipeline.InternObject(appId), groupK, 0);
+    }
+    session.SetStat("groups", groupKByName.Count);
+
     foreach (var r in model.ResultRows)
     {
       pipeline.AddStructuralResult(
@@ -520,9 +804,21 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
 
   private sealed record CollectedObject(string ApplicationId, string Type, TsdObject Object);
 
+  private sealed record NodeEdge(string SourceAppId, string NodeAppId);
+
+  private sealed record LevelAssignment(string AppId, int PlaneIndex);
+
+  private sealed record NodeRelations(
+    IReadOnlyList<NodeEdge> Edges,
+    IReadOnlyList<TsdLevel> Levels,
+    IReadOnlyList<LevelAssignment> OnLevel,
+    IReadOnlyDictionary<string, string> Groups
+  );
+
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
+    NodeRelations Relations,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results
   );
