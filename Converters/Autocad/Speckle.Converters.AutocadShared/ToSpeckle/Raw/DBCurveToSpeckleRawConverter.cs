@@ -14,6 +14,7 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
   private readonly ITypedConverter<ADB.Ellipse, SOG.Ellipse> _ellipseConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
+  private readonly ITypedConverter<ADB.Spline, SOG.Polyline> _displayValueConverter;
 
   public DBCurveToSpeckleRawConverter(
     ITypedConverter<ADB.Line, SOG.Line> lineConverter,
@@ -23,7 +24,8 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
     ITypedConverter<ADB.Arc, SOG.Arc> arcConverter,
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
     ITypedConverter<ADB.Ellipse, SOG.Ellipse> ellipseConverter,
-    ITypedConverter<ADB.Spline, SOG.Curve> splineConverter
+    ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
+    ITypedConverter<ADB.Spline, SOG.Polyline> displayValueConverter
   )
   {
     _lineConverter = lineConverter;
@@ -34,6 +36,7 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
     _circleConverter = circleConverter;
     _ellipseConverter = ellipseConverter;
     _splineConverter = splineConverter;
+    _displayValueConverter = displayValueConverter;
   }
 
   /// <summary>
@@ -55,9 +58,16 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
       ADB.Arc arc => _arcConverter.Convert(arc),
       ADB.Circle circle => _circleConverter.Convert(circle),
       ADB.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
-      ADB.Spline spline => _splineConverter.Convert(spline),
-      _ => _splineConverter.Convert(target.Spline),
+      ADB.Spline spline => ConvertSplineWithDisplayValue(spline),
+      _ => ConvertSplineWithDisplayValue(target.Spline),
     };
+
+  private SOG.Curve ConvertSplineWithDisplayValue(ADB.Spline spline)
+  {
+    var curve = _splineConverter.Convert(spline);
+    curve.displayValue ??= _displayValueConverter.Convert(spline);
+    return curve;
+  }
 
   Base ITypedConverter<ADB.Curve, Base>.Convert(ADB.Curve target) => (Base)Convert(target);
 }
