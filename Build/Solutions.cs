@@ -75,6 +75,8 @@ internal static class Solutions
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Objects\\Speckle.Objects.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk\\Speckle.Sdk.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
+    // check-solutions (CompareConnectorsToLocal) expects Parquet too — keep generator and check in sync.
+    connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Parquet\\Speckle.Sdk.Parquet.csproj");
     var sln = Path.Combine(DIRECTORY, "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
 
