@@ -283,7 +283,7 @@ public abstract class ReceiveComponentBase(
     var customProperties = new Dictionary<string, object>
     {
       { "isAsync", false },
-      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+      { "sourceHostApp", receiveInfo.SourceApplication },
     };
 
     if (receiveInfo.SelectedVersionUserId != null)

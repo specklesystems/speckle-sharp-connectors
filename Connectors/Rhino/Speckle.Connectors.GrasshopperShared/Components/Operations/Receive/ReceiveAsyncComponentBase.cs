@@ -545,7 +545,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       var customProperties = new Dictionary<string, object>()
       {
         { "isAsync", true },
-        { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+        { "sourceHostApp", receiveInfo.SourceApplication },
         { "auto", Parent.AutoReceive },
       };
 
