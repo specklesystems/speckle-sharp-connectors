@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
