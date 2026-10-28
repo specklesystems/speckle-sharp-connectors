@@ -71,5 +71,6 @@
       Include="../Speckle.Converters.CSiShared/ToSpeckle/Helpers/ShellMeshBuilder.cs"
       Link="ShellMeshBuilder.cs"
     />
+    <Compile Include="../Speckle.Converters.CSiShared/ToSpeckle/Helpers/ShellBoundary.cs" Link="ShellBoundary.cs" />
   </ItemGroup>
 </Project>
