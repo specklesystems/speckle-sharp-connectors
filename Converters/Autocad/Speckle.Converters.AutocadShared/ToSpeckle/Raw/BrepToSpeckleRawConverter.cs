@@ -1,11 +1,12 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
+public interface INonVolumetricBrepConverter : ITypedConverter<ABR.Brep, SOG.Mesh>;
+
+public class BrepToSpeckleRawConverter : INonVolumetricBrepConverter
 {
   private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
@@ -73,12 +74,6 @@ public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
         units = _settingsStore.Current.SpeckleUnits,
         area = target.GetSurfaceArea(),
       };
-
-      try
-      {
-        mesh.volume = target.GetVolume();
-      }
-      catch (ABR.Exception e) when (!e.IsFatal()) { } // exceptions can be thrown for non-volumetric breps
 
       return mesh;
     }
