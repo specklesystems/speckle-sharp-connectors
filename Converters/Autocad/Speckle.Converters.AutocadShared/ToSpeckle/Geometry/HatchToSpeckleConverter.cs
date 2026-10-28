@@ -32,7 +32,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
       // Convert HatchLoop into DBObjectCollection for the subsequent construction of the Region (.CreateFromCurves())
       ADB.HatchLoop loop = target.GetLoopAt(i);
       List<ADB.Curve> polyline = ConvertHatchLoopToCurveEntityList(loop);
-      ADB.DBObjectCollection objCollection = new();
+      using ADB.DBObjectCollection objCollection = new();
       polyline.ForEach(x => objCollection.Add(x));
 
       // Convert a loop (represented by DBObjectCollection) into an individual Region
