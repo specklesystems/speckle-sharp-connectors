@@ -103,7 +103,7 @@ public class Polyline2dToSpeckleConverter
     // NOTE: exploded segments may not be in order or in the correct direction
     List<Objects.ICurve> segments = new();
     List<double> segmentValues = new();
-    ADB.DBObjectCollection exploded = new();
+    using ADB.DBObjectCollection exploded = new();
     target.Explode(exploded);
     AG.Point3d previousPoint = new();
 
@@ -166,7 +166,8 @@ public class Polyline2dToSpeckleConverter
     // for splines, convert the spline curve and display value and add to the segments list
     if (isSpline)
     {
-      SOG.Curve spline = _splineConverter.Convert(target.Spline);
+      using var targetSpline = target.Spline;
+      SOG.Curve spline = _splineConverter.Convert(targetSpline);
       spline.displayValue = _doublesConverter.Convert(segmentValues);
       segments.Add(spline);
     }
