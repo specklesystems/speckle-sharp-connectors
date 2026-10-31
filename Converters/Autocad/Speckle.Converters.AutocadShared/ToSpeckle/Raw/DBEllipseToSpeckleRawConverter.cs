@@ -29,8 +29,8 @@ public class DBEllipseToSpeckleRawConverter : ITypedConverter<ADB.Ellipse, SOG.E
     {
       origin = _pointConverter.Convert(target.Center),
       normal = _vectorConverter.Convert(target.Normal),
-      xdir = _vectorConverter.Convert(target.MajorAxis),
-      ydir = _vectorConverter.Convert(target.MinorAxis),
+      xdir = _vectorConverter.Convert(target.MajorAxis.GetNormal()),
+      ydir = _vectorConverter.Convert(target.MinorAxis.GetNormal()),
       units = _settingsStore.Current.SpeckleUnits,
     };
 
