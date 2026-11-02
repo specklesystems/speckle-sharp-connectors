@@ -274,9 +274,9 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     }
   }
 
-  public async Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IEnumerable<int> slabIndices)
+  public async Task<IReadOnlyDictionary<int, ISlab>> GetSlabsAsync(IEnumerable<int> slabIndices)
   {
-    var result = new Dictionary<int, ISlabData>();
+    var result = new Dictionary<int, ISlab>();
     if (Application is null)
     {
       return result;
@@ -305,16 +305,12 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
 
       foreach (var slab in slabs)
       {
-        var data = slab.SlabData.Value;
-        if (data is not null)
-        {
-          result[slab.Index] = data;
-        }
+        result[slab.Index] = slab;
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to read TSD slab data");
+      _logger.LogError(ex, "Failed to read TSD slabs");
     }
 
     return result;
