@@ -21,8 +21,8 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// <para>Two phases, because a shared parameter is project-wide state: the bake <see cref="Stage"/>s each element's
 /// values as it creates it, and <see cref="Apply"/> runs once at the end of the bake transaction — one swap of the
 /// application's shared-parameter file, one definition lookup per name, one binding insert or extension per name
-/// over the full category set, then the values. Doing it per element (as <see cref="RevitParameterCreator"/> does
-/// for the parameter updater) costs a file swap and a binding walk per value.</para>
+/// over the full category set, then the values. Doing it per element would cost a file swap and a binding walk per
+/// value.</para>
 /// <para><b>Existing parameters win [ENG-11190].</b> A name that is already on an element — built-in, project or
 /// shared — is written to, never shadowed by a second definition of the same name; a value is coerced to that
 /// parameter's storage type, so a user who prepared a Number parameter gets a number. Only a name that no element
@@ -102,6 +102,9 @@ public sealed class RevitReceivedParameterWriter
   private readonly List<StagedElement> _staged = new();
   private readonly Dictionary<string, ValueKinds> _kindsByName = new(StringComparer.Ordinal);
   private readonly HashSet<string> _warnings = new(StringComparer.Ordinal);
+
+  // names this receive gave up on, so no later phase spends a lookup or a warning on them
+  private readonly HashSet<string> _skippedNames = new(StringComparer.Ordinal);
   private int _valuesSet;
   private int _valuesSkipped;
 
@@ -173,6 +176,7 @@ public sealed class RevitReceivedParameterWriter
     _staged.Clear();
     _kindsByName.Clear();
     _warnings.Clear();
+    _skippedNames.Clear();
     _valuesSet = 0;
     _valuesSkipped = 0;
   }
@@ -193,7 +197,7 @@ public sealed class RevitReceivedParameterWriter
       {
         continue;
       }
-      if (name == APPLICATION_ID_PARAMETER)
+      if (string.Equals(name, APPLICATION_ID_PARAMETER, StringComparison.OrdinalIgnoreCase))
       {
         _warnings.Add(
           $"Property '{kvp.Key}' was not written: '{APPLICATION_ID_PARAMETER}' is reserved for the source id"
@@ -202,9 +206,7 @@ public sealed class RevitReceivedParameterWriter
       }
       if (sourceByName.TryGetValue(name, out var claimedBy))
       {
-        _warnings.Add(
-          $"Properties '{claimedBy}' and '{kvp.Key}' both map to parameter '{name}'; '{claimedBy}' was written"
-        );
+        _warnings.Add($"Properties '{claimedBy}' and '{kvp.Key}' both map to parameter '{name}'; '{claimedBy}' wins");
         continue;
       }
       sourceByName[name] = kvp.Key;
@@ -266,15 +268,13 @@ public sealed class RevitReceivedParameterWriter
     {
       return;
     }
-    var skippedNames = new HashSet<string>(StringComparer.Ordinal);
-    var plans = PlanBindings(doc, elementsByCategory, skippedNames);
-    var newDefinitionByName = CreateDefinitions(doc, plans, skippedNames, session);
-    ApplyBindings(doc, plans, newDefinitionByName, skippedNames, session);
-    WriteValues(elementsByCategory, skippedNames);
+    var plans = PlanBindings(doc, elementsByCategory);
+    var newDefinitionByName = CreateDefinitions(doc, plans, session);
+    ApplyBindings(doc, plans, newDefinitionByName, session);
+    WriteValues(elementsByCategory);
   }
 
-  // 1 — elements by category. A category that cannot carry bound parameters keeps its geometry and costs one
-  // warning, not one per element.
+  // A category that cannot carry bound parameters keeps its geometry and costs one warning, not one per element.
   private Dictionary<Category, List<(Element Element, StagedElement Staged)>> GroupByCategory(Document doc)
   {
     var byId = new Dictionary<ElementId, (Category Category, List<(Element, StagedElement)> Group)>();
@@ -304,53 +304,65 @@ public sealed class RevitReceivedParameterWriter
     return byId.Values.ToDictionary(e => e.Category, e => e.Group);
   }
 
-  // 2 — per name, the categories that do not have it yet. A parameter the category already has — built-in,
-  // project or shared — is written to as it is.
+  // A name is missing from a category as soon as one of its elements lacks it: a family parameter on one element
+  // must not stand in for the others. An element that already has the name — built-in, project or shared — is
+  // written to as it is, never shadowed.
   private List<BindingPlan> PlanBindings(
     Document doc,
-    Dictionary<Category, List<(Element Element, StagedElement Staged)>> elementsByCategory,
-    HashSet<string> skippedNames
+    Dictionary<Category, List<(Element Element, StagedElement Staged)>> elementsByCategory
   )
   {
-    var existingBindings = ReadBindings(doc);
-    var plans = new List<BindingPlan>();
-    foreach (var name in _kindsByName.Keys)
+    var missingByName = new Dictionary<string, List<Category>>(StringComparer.Ordinal);
+    foreach (var kv in elementsByCategory)
     {
-      var missing = new List<Category>();
-      foreach (var kv in elementsByCategory)
+      var lacking = new HashSet<string>(StringComparer.Ordinal);
+      foreach (var (element, staged) in kv.Value)
       {
-        var group = kv.Value;
-        if (group.Exists(e => e.Staged.Values.ContainsKey(name)) && group[0].Element.LookupParameter(name) is null)
+        foreach (var name in staged.Values.Keys)
         {
-          missing.Add(kv.Key);
+          if (!lacking.Contains(name) && element.LookupParameter(name) is null)
+          {
+            lacking.Add(name);
+          }
         }
       }
-      if (missing.Count == 0)
+      foreach (var name in lacking)
       {
-        continue;
+        if (!missingByName.TryGetValue(name, out var categories))
+        {
+          categories = new List<Category>();
+          missingByName[name] = categories;
+        }
+        categories.Add(kv.Key);
       }
-      if (!existingBindings.TryGetValue(name, out var existing))
+    }
+
+    var existingBindings = ReadBindings(doc);
+    var plans = new List<BindingPlan>();
+    foreach (var kv in missingByName)
+    {
+      if (!existingBindings.TryGetValue(kv.Key, out var existing))
       {
-        plans.Add(new BindingPlan(name, null, null, missing));
+        plans.Add(new BindingPlan(kv.Key, null, null, kv.Value));
       }
       else if (existing.Binding is InstanceBinding instanceBinding)
       {
-        plans.Add(new BindingPlan(name, existing.Definition, instanceBinding, missing));
+        plans.Add(new BindingPlan(kv.Key, existing.Definition, instanceBinding, kv.Value));
       }
       else
       {
-        _warnings.Add($"'{name}' is bound as a type parameter in this project; instance values were not written");
-        skippedNames.Add(name);
+        _warnings.Add($"'{kv.Key}' is bound as a type parameter in this project; instance values were not written");
+        _skippedNames.Add(kv.Key);
       }
     }
     return plans;
   }
 
-  // 3 — definitions for the names no binding covers: one file swap for the whole receive.
+  // One file swap for the whole receive. A name Revit refuses (beyond the sanitised characters: length, a
+  // case-variant of an existing definition) costs that name alone, never the pass.
   private Dictionary<string, ExternalDefinition> CreateDefinitions(
     Document doc,
     List<BindingPlan> plans,
-    HashSet<string> skippedNames,
     ArtefactSessionLog session
   )
   {
@@ -363,15 +375,23 @@ public sealed class RevitReceivedParameterWriter
     using var file = _parameterCreator.OpenSpeckleSharedParameterFile(doc.Application);
     foreach (var plan in needDefinition)
     {
-      var definition = RevitParameterCreator.GetOrCreateDefinition(
-        file.Definitions,
-        plan.Name,
-        DataTypeFor(_kindsByName[plan.Name])
-      );
+      ExternalDefinition? definition = null;
+      try
+      {
+        definition = RevitParameterCreator.GetOrCreateDefinition(
+          file.Definitions,
+          plan.Name,
+          DataTypeFor(_kindsByName[plan.Name])
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Could not define shared parameter '{Name}'", plan.Name);
+      }
       if (definition is null)
       {
         _warnings.Add($"'{plan.Name}' could not be defined as a shared parameter");
-        skippedNames.Add(plan.Name);
+        _skippedNames.Add(plan.Name);
         continue;
       }
       definitionByName[plan.Name] = definition;
@@ -380,12 +400,10 @@ public sealed class RevitReceivedParameterWriter
     return definitionByName;
   }
 
-  // 4 — bindings: extend an existing instance binding with the missing categories, insert a new one otherwise.
   private void ApplyBindings(
     Document doc,
     List<BindingPlan> plans,
     Dictionary<string, ExternalDefinition> newDefinitionByName,
-    HashSet<string> skippedNames,
     ArtefactSessionLog session
   )
   {
@@ -394,38 +412,48 @@ public sealed class RevitReceivedParameterWriter
     int extended = 0;
     foreach (var plan in plans)
     {
-      if (skippedNames.Contains(plan.Name))
+      if (_skippedNames.Contains(plan.Name))
       {
         continue;
       }
-      bool bound;
-      if (plan.ExistingBinding is { } binding && plan.ExistingDefinition is { } definition)
+      bool bound = false;
+      try
       {
-        foreach (var category in plan.MissingCategories)
+        if (plan.ExistingBinding is { } binding && plan.ExistingDefinition is { } definition)
         {
-          if (!binding.Categories.Contains(category))
+          // a fresh set rather than the live one off the binding iterator, and the user's own parameter keeps the
+          // group they filed it under
+          var categories = new CategorySet();
+          foreach (Category category in binding.Categories)
           {
-            binding.Categories.Insert(category);
+            categories.Insert(category);
           }
+          foreach (var category in plan.MissingCategories)
+          {
+            categories.Insert(category);
+          }
+          bound = bindingMap.ReInsert(definition, new InstanceBinding(categories), definition.GetGroupTypeId());
+          extended += bound ? 1 : 0;
         }
-        // the user's own parameter keeps the group they filed it under
-        bound = bindingMap.ReInsert(definition, binding, definition.GetGroupTypeId());
-        extended += bound ? 1 : 0;
-      }
-      else
-      {
-        var categories = new CategorySet();
-        foreach (var category in plan.MissingCategories)
+        else
         {
-          categories.Insert(category);
+          var categories = new CategorySet();
+          foreach (var category in plan.MissingCategories)
+          {
+            categories.Insert(category);
+          }
+          bound = bindingMap.Insert(newDefinitionByName[plan.Name], new InstanceBinding(categories), GroupTypeId.Data);
+          inserted += bound ? 1 : 0;
         }
-        bound = bindingMap.Insert(newDefinitionByName[plan.Name], new InstanceBinding(categories), GroupTypeId.Data);
-        inserted += bound ? 1 : 0;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Could not bind parameter '{Name}'", plan.Name);
       }
       if (!bound)
       {
         _warnings.Add($"Revit rejected binding '{plan.Name}' to the received categories");
-        skippedNames.Add(plan.Name);
+        _skippedNames.Add(plan.Name);
       }
     }
     session.SetStat("parameterBindingsInserted", inserted);
@@ -436,11 +464,7 @@ public sealed class RevitReceivedParameterWriter
     }
   }
 
-  // 5 — values
-  private void WriteValues(
-    Dictionary<Category, List<(Element Element, StagedElement Staged)>> elementsByCategory,
-    HashSet<string> skippedNames
-  )
+  private void WriteValues(Dictionary<Category, List<(Element Element, StagedElement Staged)>> elementsByCategory)
   {
     foreach (var kv in elementsByCategory)
     {
@@ -449,11 +473,11 @@ public sealed class RevitReceivedParameterWriter
       {
         foreach (var value in staged.Values)
         {
-          if (skippedNames.Contains(value.Key))
+          if (_skippedNames.Contains(value.Key))
           {
             _valuesSkipped++;
           }
-          else if (TryWrite(element, value.Key, value.Value, out var reason))
+          else if (TryWriteByName(element, value.Key, value.Value, out var reason))
           {
             _valuesSet++;
           }
@@ -467,20 +491,28 @@ public sealed class RevitReceivedParameterWriter
     }
   }
 
-  private bool TryWrite(Element element, string name, object? value, out string reason)
+  private bool TryWriteByName(Element element, string name, object? value, out string reason)
   {
-    var parameter = element.LookupParameter(name);
-    if (parameter is null)
+    try
     {
-      reason = "the parameter is not available; values were not written";
+      var parameter = element.LookupParameter(name);
+      if (parameter is null)
+      {
+        reason = "the parameter is not available; values were not written";
+        return false;
+      }
+      if (parameter.IsReadOnly)
+      {
+        reason = "the parameter is read-only; values were not written";
+        return false;
+      }
+      return TrySetTyped(parameter, value, out reason);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      reason = ex.Message;
       return false;
     }
-    if (parameter.IsReadOnly)
-    {
-      reason = "the parameter is read-only; values were not written";
-      return false;
-    }
-    return TrySet(parameter, value, out reason);
   }
 
   // Every binding in the project by parameter name; the Definition is the one Revit holds, which ReInsert requires.
@@ -508,7 +540,7 @@ public sealed class RevitReceivedParameterWriter
       _ => SpecTypeId.String.Text,
     };
 
-  private bool TrySet(Parameter parameter, object? value, out string reason)
+  private bool TrySetTyped(Parameter parameter, object? value, out string reason)
   {
     reason = "";
     switch (parameter.StorageType)
@@ -584,7 +616,7 @@ public sealed class RevitReceivedParameterWriter
       case bool b:
         integer = b ? 1 : 0;
         return true;
-      case double d:
+      case double d when d >= int.MinValue && d <= int.MaxValue:
         integer = (int)Math.Round(d);
         return true;
       case string s when int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out integer):
