@@ -21,7 +21,8 @@ public class RevitConversionSettingsFactory(
     bool sendAreasAsMesh,
     bool receiveInstancesAsFamilies,
     double tolerance = 0.0164042, // 5mm in ft
-    ReferencePointType referencePointKind = ReferencePointType.InternalOrigin
+    ReferencePointType referencePointKind = ReferencePointType.InternalOrigin,
+    bool receivePropertiesAsParameters = false
   )
   {
     var document = revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
@@ -38,7 +39,8 @@ public class RevitConversionSettingsFactory(
       receiveInstancesAsFamilies,
       tolerance,
       referencePointKind,
-      referencePointTransform
+      referencePointTransform,
+      receivePropertiesAsParameters
     );
   }
 }
