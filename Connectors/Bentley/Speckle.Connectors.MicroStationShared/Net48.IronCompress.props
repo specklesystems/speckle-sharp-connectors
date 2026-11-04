@@ -1,0 +1,17 @@
+<Project>
+  <!-- net48 only: deploy IronCompress's native nironcompress.dll next to the plugin so Parquet.Net's Zstd codec
+       resolves on .NET Framework. On net48 the bare DllImport does no runtimes/ probing, so the native must sit next
+       to the plugin AND be pre-loaded by full path (Speckle.Connectors.Common's ZstdNativeLoader). net8+ gets the native automatically via
+       its RID, so this props is only imported by the net48 connector projects. -->
+  <ItemGroup>
+    <PackageReference Include="IronCompress" GeneratePathProperty="true" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PkgIronCompress)' != ''">
+    <None Include="$(PkgIronCompress)\runtimes\win-x64\native\nironcompress.dll">
+      <Link>nironcompress.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </None>
+  </ItemGroup>
+</Project>

@@ -6,6 +6,7 @@
   </Configurations>
   <Folder Name="/Build/">
     <Project Path="Build\Build.csproj" />
+    <File Path=".github/workflows/extended-ci-test.yml" />
     <File Path=".github\workflows\pr.yml" />
     <File Path=".github\workflows\release.yml" />
   </Folder>
@@ -25,7 +26,6 @@
   <Folder Name="/Connectors/Revit/">
     <File Path="Connectors\Revit\Directory.Build.targets" />
   </Folder>
-  <Folder Name="/Connectors/Revit/2022/" />
   <Folder Name="/Connectors/Revit/2023/">
     <Project Path="Connectors\Revit\Speckle.Connectors.Revit2023\Speckle.Connectors.Revit2023.csproj" />
     <Project Path="Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
@@ -76,5 +76,6 @@
   </Folder>
   <Project Path="../speckle-sharp-sdk/src/Speckle.Objects/Speckle.Objects.csproj" />
   <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk.Dependencies/Speckle.Sdk.Dependencies.csproj" />
+  <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk.Parquet/Speckle.Sdk.Parquet.csproj" />
   <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk/Speckle.Sdk.csproj" />
 </Solution>
