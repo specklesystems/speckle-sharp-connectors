@@ -81,6 +81,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<ToHostSettingsManager>();
     serviceCollection.AddSingleton<LinkedModelHandler>();
     serviceCollection.AddSingleton<RoomsAndAreasHandler>();
+    serviceCollection.AddSingleton<DesignOptionsHandler>();
     serviceCollection.AddSingleton<ParameterUpdater>();
     serviceCollection.AddSingleton<RevitParameterCreator>();
     serviceCollection.AddSingleton<RevitSendChangeTracker>();
