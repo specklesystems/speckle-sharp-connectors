@@ -1,3 +1,4 @@
+#if NETFRAMEWORK
 using System.Windows.Threading;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp.Extras;
@@ -134,3 +135,46 @@ public class DebounceDispatcher
     TimerStarted = curTime;
   }
 }
+#else
+using Rhino;
+
+namespace Speckle.Connectors.GrasshopperShared.HostApp.Extras;
+
+/// <summary>
+/// Debounce(): fires an action only after the specified interval has passed in which no other
+/// pending call has been made. Only the last call in the sequence fires, on the Rhino UI thread.
+/// </summary>
+/// <remarks>
+/// .NET Core heads (Rhino 8 Mac) have no WindowsBase/DispatcherTimer; <see cref="RhinoApp.InvokeOnUiThread"/> is the
+/// marshal instead (rhino-mac-connector spec, ticket 02). A version counter rather than a timer field keeps the type
+/// free of disposable state (CA1001 here and on the owning component). The net48 implementation above is untouched.
+/// </remarks>
+public class DebounceDispatcher
+{
+  private int _version;
+
+  /// <summary>
+  /// Debounce an event by resetting the timeout every time it is called. The action fires only after calls
+  /// stop for the given timeout period.
+  /// </summary>
+  /// <param name="interval">Timeout in milliseconds</param>
+  /// <param name="action">Action to fire, on the Rhino UI thread</param>
+  /// <param name="param">Optional parameter passed to <paramref name="action"/></param>
+  public void Debounce(int interval, Action<object?> action, object? param = null)
+  {
+    var version = Interlocked.Increment(ref _version);
+    Task.Delay(interval)
+      .ContinueWith(
+        _ =>
+        {
+          if (Volatile.Read(ref _version) != version)
+          {
+            return; // superseded by a later call
+          }
+          RhinoApp.InvokeOnUiThread(() => action.Invoke(param));
+        },
+        TaskScheduler.Default
+      );
+  }
+}
+#endif
