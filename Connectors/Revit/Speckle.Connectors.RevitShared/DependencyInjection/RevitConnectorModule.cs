@@ -104,6 +104,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IArtifactHostObjectBuilder, RevitHostObjectArtefactBuilder>();
     serviceCollection.AddScoped<RevitArtefactSolidImporter>();
     serviceCollection.AddScoped<RevitFamilyBaker>();
+    serviceCollection.AddScoped<RevitReceivedParameterWriter>();
     serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitReceiveManifest>();

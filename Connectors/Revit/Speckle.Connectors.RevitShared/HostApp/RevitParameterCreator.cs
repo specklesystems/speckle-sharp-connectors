@@ -10,7 +10,7 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// <summary>
 /// Creates new shared parameters on Revit elements and sets their value in one step.
 /// Parameters are defined under a "Speckle" group in a Speckle-managed shared parameter
-/// file, bound as Instance Text parameters under the requested built-in group, or "Data" when none resolves.
+/// file, bound as Instance parameters under the requested built-in group, or "Data" when none resolves.
 /// </summary>
 public class RevitParameterCreator
 {
@@ -40,33 +40,56 @@ public class RevitParameterCreator
       return UpdateResult.Fail("Could not access Revit application");
     }
 
-    var specklePath = GetSpeckleSharedParamsPath();
-    if (!File.Exists(specklePath))
-    {
-      File.WriteAllText(specklePath, string.Empty);
-    }
-
-    // Keep SharedParametersFilename pointing at our file for the entire creation
-    // flow — including EnsureCategoryBinding — then restore it unconditionally.
-    var previousPath = app.SharedParametersFilename;
-    app.SharedParametersFilename = specklePath;
     try
     {
-      return CreateAndSetCore(app, doc, element, paramName, ResolveGroup(groupLabel), value);
+      using var file = OpenSpeckleSharedParameterFile(app);
+      return CreateAndSetCore(file.Definitions, doc, element, paramName, ResolveGroup(groupLabel), value);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogWarning(ex, "Failed to create parameter '{ParamName}' on element", paramName);
       return UpdateResult.Fail($"Exception creating parameter '{paramName}': {ex.Message}");
     }
-    finally
-    {
-      app.SharedParametersFilename = previousPath;
-    }
   }
 
-  private UpdateResult CreateAndSetCore(
-    Autodesk.Revit.ApplicationServices.Application app,
+  /// <summary>
+  /// Points the application at the Speckle shared parameter file and opens it; disposing restores whatever file
+  /// the user had selected. Every definition created while the scope is open lands in the Speckle file, never in
+  /// the user's own — the file swap is the one thing a caller must not get wrong.
+  /// </summary>
+  public SharedParameterFileScope OpenSpeckleSharedParameterFile(Autodesk.Revit.ApplicationServices.Application app)
+  {
+    var specklePath = GetSpeckleSharedParamsPath();
+    if (!File.Exists(specklePath))
+    {
+      File.WriteAllText(specklePath, string.Empty);
+    }
+    return new SharedParameterFileScope(app, specklePath);
+  }
+
+  /// <summary>The definition named <paramref name="paramName"/> in the Speckle group, created with
+  /// <paramref name="dataType"/> when absent. An existing definition keeps its type: the file is shared across
+  /// receives and a definition's type cannot change once created.</summary>
+  public static ExternalDefinition? GetOrCreateDefinition(
+    DefinitionFile defFile,
+    string paramName,
+    ForgeTypeId dataType
+  )
+  {
+    var group = defFile.Groups.get_Item(SPECKLE_GROUP_NAME) ?? defFile.Groups.Create(SPECKLE_GROUP_NAME);
+
+    if (group.Definitions.get_Item(paramName) is ExternalDefinition existing)
+    {
+      return existing;
+    }
+
+    var opts = new ExternalDefinitionCreationOptions(paramName, dataType) { UserModifiable = true, Visible = true };
+
+    return group.Definitions.Create(opts) as ExternalDefinition;
+  }
+
+  private static UpdateResult CreateAndSetCore(
+    DefinitionFile defFile,
     Document doc,
     Element element,
     string paramName,
@@ -74,13 +97,7 @@ public class RevitParameterCreator
     object? value
   )
   {
-    var defFile = app.OpenSharedParameterFile();
-    if (defFile is null)
-    {
-      return UpdateResult.Fail("Could not open or create the Speckle shared parameter file");
-    }
-
-    var definition = GetOrCreateDefinition(defFile, paramName);
+    var definition = GetOrCreateDefinition(defFile, paramName, SpecTypeId.String.Text);
     if (definition is null)
     {
       return UpdateResult.Fail($"Could not create parameter definition for '{paramName}'");
@@ -116,24 +133,6 @@ public class RevitParameterCreator
     var speckleDir = Path.Combine(appData, "Speckle");
     Directory.CreateDirectory(speckleDir);
     return Path.Combine(speckleDir, SHARED_PARAMS_FILENAME);
-  }
-
-  private ExternalDefinition? GetOrCreateDefinition(DefinitionFile defFile, string paramName)
-  {
-    var group = defFile.Groups.get_Item(SPECKLE_GROUP_NAME) ?? defFile.Groups.Create(SPECKLE_GROUP_NAME);
-
-    if (group.Definitions.get_Item(paramName) is ExternalDefinition existing)
-    {
-      return existing;
-    }
-
-    var opts = new ExternalDefinitionCreationOptions(paramName, SpecTypeId.String.Text)
-    {
-      UserModifiable = true,
-      Visible = true,
-    };
-
-    return group.Definitions.Create(opts) as ExternalDefinition;
   }
 
   /// <summary>
@@ -172,7 +171,7 @@ public class RevitParameterCreator
     return groups;
   }
 
-  private UpdateResult EnsureCategoryBinding(
+  private static UpdateResult EnsureCategoryBinding(
     Document doc,
     ExternalDefinition definition,
     Element element,
@@ -225,4 +224,34 @@ public class RevitParameterCreator
         $"Revit rejected the parameter binding for '{definition.Name}' on category '{category.Name}'"
       );
   }
+}
+
+/// <summary>The Speckle shared parameter file, open for the lifetime of the scope. See
+/// <see cref="RevitParameterCreator.OpenSpeckleSharedParameterFile"/>.</summary>
+public sealed class SharedParameterFileScope : IDisposable
+{
+  private readonly Autodesk.Revit.ApplicationServices.Application _app;
+  private readonly string? _previousPath;
+
+  internal SharedParameterFileScope(Autodesk.Revit.ApplicationServices.Application app, string specklePath)
+  {
+    _app = app;
+    _previousPath = app.SharedParametersFilename;
+    app.SharedParametersFilename = specklePath;
+    try
+    {
+      Definitions =
+        app.OpenSharedParameterFile()
+        ?? throw new InvalidOperationException("Could not open or create the Speckle shared parameter file");
+    }
+    catch
+    {
+      app.SharedParametersFilename = _previousPath;
+      throw;
+    }
+  }
+
+  public DefinitionFile Definitions { get; }
+
+  public void Dispose() => _app.SharedParametersFilename = _previousPath;
 }
