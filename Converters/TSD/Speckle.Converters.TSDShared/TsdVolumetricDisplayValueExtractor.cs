@@ -88,6 +88,9 @@ public sealed class TsdVolumetricDisplayValueExtractor
         return Fallback(SLAB, "no-thickness");
       }
 
+      // The slab plane is the top of the slab; the depth hangs below it, moved by the vertical offset.
+      var translation = new Vector3(0, 0, -depth / 2 + ReadOrZero(slabItem.SlabItemData.Value.VerticalOffset));
+
       var contours = await slabItem.GetContoursAsync(SlabContourType.Complete).ConfigureAwait(false);
       if (contours is null)
       {
@@ -103,7 +106,7 @@ public sealed class TsdVolumetricDisplayValueExtractor
           continue;
         }
 
-        var prism = PrismBuilder.TryExtrudeOutline(outer, depth);
+        var prism = PrismBuilder.TryExtrudeOutline(outer, depth, translation);
         if (prism is null)
         {
           return Fallback(SLAB, "degenerate-outline");
