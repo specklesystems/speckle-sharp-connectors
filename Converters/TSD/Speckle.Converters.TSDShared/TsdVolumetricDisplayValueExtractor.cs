@@ -207,11 +207,34 @@ public sealed class TsdVolumetricDisplayValueExtractor
       return null;
     }
 
-    // TSD resolves alignment (snap level + offset) into per-end total offsets along the major (depth) and minor
-    // (width) axes, applied here in the +major / +minor directions of the frame.
-    var startOffset = new Vector2(ReadOrZero(span.StartMajorTotalOffset), ReadOrZero(span.StartMinorTotalOffset));
-    var endOffset = new Vector2(ReadOrZero(span.EndMajorTotalOffset), ReadOrZero(span.EndMinorTotalOffset));
+    var (startOffset, endOffset) = ReadAlignmentOffsets(span, frame.Value);
     return PrismBuilder.Place(prism.Template, start, frame.Value, length, startOffset, endOffset);
+  }
+
+  // The global alignment offsets (snap level + offset) are projected onto the section plane, so the major/minor
+  // sign convention of TSD does not matter. The major/minor totals are the fallback.
+  private static (Vector2 Start, Vector2 End) ReadAlignmentOffsets(IMemberSpan span, LocalFrame frame)
+  {
+    try
+    {
+      var alignment = span.Data.Value.Alignment.Value;
+      var start = alignment.StartGlobalOffset.Value;
+      var end = alignment.EndGlobalOffset.Value;
+      return (Project(start), Project(end));
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return (
+        new Vector2(ReadOrZero(span.StartMajorTotalOffset), ReadOrZero(span.StartMinorTotalOffset)),
+        new Vector2(ReadOrZero(span.EndMajorTotalOffset), ReadOrZero(span.EndMinorTotalOffset))
+      );
+    }
+
+    Vector2 Project(Vector3D v)
+    {
+      var offset = new Vector3(v.X, v.Y, v.Z);
+      return new Vector2(Vector3.Dot(offset, frame.XAxis), Vector3.Dot(offset, frame.YAxis));
+    }
   }
 
   private static double ReadOrZero(IReadOnlyProperty<double> property)
