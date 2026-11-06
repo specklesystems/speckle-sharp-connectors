@@ -200,7 +200,7 @@ public sealed class TsdVolumetricDisplayValueExtractor
     // global +X for vertical members; the span rotation angle (radians) then turns depth towards width about the axis.
     double sineToVertical = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y) / length;
     var reference = sineToVertical < VERTICAL_TOLERANCE ? Vector3.UnitX : Vector3.UnitZ;
-    var frame = LocalFrame.TryCreate(direction, reference, span.RotationAngle.Value);
+    var frame = LocalFrame.TryCreate(direction, reference, ReadRotation(span));
     if (frame is null)
     {
       reason = "degenerate-axes";
@@ -234,6 +234,26 @@ public sealed class TsdVolumetricDisplayValueExtractor
     {
       var offset = new Vector3(v.X, v.Y, v.Z);
       return new Vector2(Vector3.Dot(offset, frame.XAxis), Vector3.Dot(offset, frame.YAxis));
+    }
+  }
+
+  // Fixed rotation options (0/90/180/270) are not guaranteed to be mirrored in RotationAngle, so they win over it.
+  private static double ReadRotation(IMemberSpan span)
+  {
+    try
+    {
+      return span.RotationOption.Value switch
+      {
+        RotationOption.Degrees0 => 0,
+        RotationOption.Degrees90 => Math.PI / 2,
+        RotationOption.Degrees180 => Math.PI,
+        RotationOption.Degrees270 => 3 * Math.PI / 2,
+        _ => ReadOrZero(span.RotationAngle),
+      };
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return ReadOrZero(span.RotationAngle);
     }
   }
 
