@@ -121,6 +121,8 @@ public sealed class TsdMemberPropertyExtractor
     var assignments = new Dictionary<string, object?>();
 
     TryAdd(assignments, "Groups", () => member.ElementGroupName);
+    TryAdd(assignments, "Construction", () => memberData?.Construction.Value.ToString());
+    TryAdd(assignments, "Fabrication", () => memberData?.Fabrication.Value.ToString());
 
     if (memberData is not null && TryGetValue(() => (double?)memberData.RotationAngle.Value) is double angle)
     {
