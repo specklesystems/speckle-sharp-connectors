@@ -119,7 +119,12 @@ public sealed class DUI3EtoWebView : Panel, IBrowserScriptExecutor
         Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBindingsMethodNames()));
         break;
       case "RunMethod":
-        bridge.RunMethod(message.MethodName ?? string.Empty, message.RequestId ?? string.Empty, message.Args ?? "[]");
+        bridge.RunMethodTraced(
+          message.MethodName ?? string.Empty,
+          message.RequestId ?? string.Empty,
+          message.Args ?? "[]",
+          null
+        );
         break;
       case "GetCallResult":
         Resolve(message.CallId, bridge.GetCallResult(message.RequestId ?? string.Empty) ?? string.Empty);
