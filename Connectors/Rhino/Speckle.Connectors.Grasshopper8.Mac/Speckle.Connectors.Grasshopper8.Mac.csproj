@@ -55,7 +55,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Speckle.Connectors.Rhino8.Mac\MacNativeLibraryResolver.cs" Link="MacNativeLibraryResolver.cs" />
+    <Compile
+      Include="..\Speckle.Connectors.Rhino8.Mac\MacNativeLibraryResolver.cs"
+      Link="MacNativeLibraryResolver.cs"
+    />
   </ItemGroup>
 
   <Import

@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 // global Rhino namespace; System.IO is qualified because only the Rhino head removes its implicit using.
 #pragma warning disable IDE0130
 namespace Speckle.Connectors.MacNative;
+
 #pragma warning restore IDE0130
 
 /// <summary>
