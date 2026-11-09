@@ -29,7 +29,7 @@
   <PropertyGroup>
     <!-- Shown in Rhino/Grasshopper's own plug-in listing — the "(Alpha)" tag needs to survive there, not just in docs -->
     <Title>Speckle.Connectors.Grasshopper8.Mac (Alpha)</Title>
-    <Description>Speckle Grasshopper connector for Rhino 8 on macOS — Alpha, self-built, no official distribution</Description>
+    <Description>Speckle Grasshopper connector for Rhino 8 on macOS — Alpha</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,6 +52,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Speckle.Connectors.Rhino8.Mac\MacNativeLibraryResolver.cs" Link="MacNativeLibraryResolver.cs" />
   </ItemGroup>
 
   <Import
