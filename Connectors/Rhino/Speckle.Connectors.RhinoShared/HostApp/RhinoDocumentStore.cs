@@ -39,6 +39,7 @@ public class RhinoDocumentStore : DocumentModelStore
     {
       return; // Should throw
     }
+#if RHINO_MAC
     uint docSerialNumber = RhinoDoc.ActiveDoc.RuntimeSerialNumber;
 
     void Write()
@@ -63,6 +64,10 @@ public class RhinoDocumentStore : DocumentModelStore
     {
       Write();
     }
+#else
+    RhinoDoc.ActiveDoc.Strings.Delete(SPECKLE_KEY);
+    RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, modelCardState);
+#endif
   }
 
   protected override void LoadState()

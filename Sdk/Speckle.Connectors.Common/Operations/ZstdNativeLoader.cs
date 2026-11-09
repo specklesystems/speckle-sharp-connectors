@@ -54,15 +54,14 @@ public static class ZstdNativeLoader
     }
   }
 #else
-  // net8+ normally resolves the native via its RID-specific runtimes/ deployment, but inside Rhino 8 Mac
-  // RuntimeInformation.RuntimeIdentifier is "unknown", so IronCompress's own probe finds nothing. Pick the RID from
-  // OS + architecture and load the file ourselves (rhino-mac-connector spec, ticket 08). Missing file = warning only,
-  // which keeps Windows net8 heads (no runtimes/ folder) on their previous no-op behaviour.
+  // net8+ resolves the native via its RID-specific runtimes/ deployment, except inside Rhino 8 Mac, where
+  // RuntimeInformation.RuntimeIdentifier is "unknown" so IronCompress's own probe finds nothing (FEA-124). Other
+  // platforms keep the no-op.
   private static int s_preloaded;
 
   public static void Ensure(ILogger? logger = null)
   {
-    if (Interlocked.Exchange(ref s_preloaded, 1) == 1)
+    if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || Interlocked.Exchange(ref s_preloaded, 1) == 1)
     {
       return;
     }
@@ -70,11 +69,7 @@ public static class ZstdNativeLoader
     {
       var dir = Path.GetDirectoryName(typeof(ZstdNativeLoader).Assembly.Location) ?? string.Empty;
       var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-      var (os, file) =
-        RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? ("osx", "libnironcompress.dylib")
-        : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ("linux", "libnironcompress.so")
-        : ("win", "nironcompress.dll");
-      var native = Path.Combine(dir, "runtimes", $"{os}-{arch}", "native", file);
+      var native = Path.Combine(dir, "runtimes", $"osx-{arch}", "native", "libnironcompress.dylib");
       if (!File.Exists(native))
       {
         return;
