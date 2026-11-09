@@ -132,6 +132,10 @@
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
   </Folder>
+  <Folder Name="/Connectors/Rhino/8/MacOS/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8.Mac\Speckle.Connectors.Grasshopper8.Mac.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8.Mac\Speckle.Connectors.Rhino8.Mac.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Rhino/9/">
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoHeadless\Speckle.Connectors.RhinoHeadless.csproj" />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino9\Speckle.Converters.Rhino9.csproj" />
@@ -177,6 +181,7 @@
     <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
+    <Project Path="DUI3\Speckle.Connectors.DUI.EtoWebView\Speckle.Connectors.DUI.EtoWebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
