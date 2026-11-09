@@ -30,15 +30,6 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
       }
     }
 
-    if (target.vertexNormals.Count != 0)
-    {
-      var vertexNormals = ConvertVertexNormals(target.vertexNormals);
-      if (!m.Normals.SetNormals(vertexNormals))
-      {
-        throw new SpeckleException("Failed to set Vertex Normals");
-      }
-    }
-
     if (target.textureCoordinates.Count != 0)
     {
       var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
@@ -49,6 +40,11 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
     }
 
     AssignMeshFaces(target, m);
+
+    if (target.vertexNormals.Count != 0)
+    {
+      AssignVertexNormals(target.vertexNormals, m);
+    }
 
     // POC: CNX-9273 There was a piece of code here about Merging co-planar faces that I've removed for now as this setting does not exist yet.
 
@@ -128,18 +124,33 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
     return converted;
   }
 
-  private static RG.Vector3f[] ConvertVertexNormals(IReadOnlyList<double> vertexNormals)
+  // ON_Mesh::IsValid rejects a mesh with any non-unit vertex normal [ENG-11147]; authored normals must survive
+  // receive [ENG-9214].
+  private static void AssignVertexNormals(IReadOnlyList<double> vertexNormals, RG.Mesh m)
   {
-    RG.Vector3f[] converted = new RG.Vector3f[vertexNormals.Count / 3];
+    var normals = new RG.Vector3f[vertexNormals.Count / 3];
+    bool? computed = null;
     for (int i = 0, j = 0; i < vertexNormals.Count; i += 3, j++)
     {
-      var x = (float)vertexNormals[i + 0];
-      var y = (float)vertexNormals[i + 1];
-      var z = (float)vertexNormals[i + 2];
-      converted[j] = new RG.Vector3f(x, y, z);
+      var x = vertexNormals[i + 0];
+      var y = vertexNormals[i + 1];
+      var z = vertexNormals[i + 2];
+      var length = Math.Sqrt(x * x + y * y + z * z);
+      if (length > 0 && !double.IsInfinity(length))
+      {
+        normals[j] = new RG.Vector3f((float)(x / length), (float)(y / length), (float)(z / length));
+        continue;
+      }
+
+      computed ??= m.Normals.ComputeNormals();
+      var fallback = computed.Value ? m.Normals[j] : RG.Vector3f.ZAxis;
+      normals[j] = fallback.Unitize() ? fallback : RG.Vector3f.ZAxis;
     }
 
-    return converted;
+    if (!m.Normals.SetNormals(normals))
+    {
+      throw new SpeckleException("Failed to set Vertex Normals");
+    }
   }
 
   private static Color[] ConvertVertexColors(IReadOnlyList<int> vertexColors)

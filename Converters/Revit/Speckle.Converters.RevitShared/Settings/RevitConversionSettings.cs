@@ -18,5 +18,7 @@ public record RevitConversionSettings(
   ReferencePointType ReferencePointKind = ReferencePointType.InternalOrigin,
   // The resolved model datum is retained even when ReferencePointTransform is null because Apply Transform is off.
   // It is metadata for eav.model; converters must continue to use ReferencePointTransform only.
-  DB.Transform? ModelReferencePointTransform = null
+  DB.Transform? ModelReferencePointTransform = null,
+  // Receive-only: opt-in because it adds shared parameters to the project [ENG-10511].
+  bool ReceivePropertiesAsParameters = false
 );

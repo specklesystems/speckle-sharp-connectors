@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -11,6 +12,7 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -21,6 +23,9 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using DataObject = Speckle.Objects.Data.DataObject; // disambiguate from System.Windows.Forms.DataObject (ETABS uses WinForms)
 using Path = System.IO.Path;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecLevel = Speckle.Bundle.Spec.Level;
+using SpecStructuralResult = Speckle.Bundle.Spec.StructuralResult;
 
 namespace Speckle.Connectors.CSiShared.Builders;
 
@@ -37,10 +42,12 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// <para>CSi elements have no lossless raw encoding — the display geometry (Point/Line/Mesh from
 /// <c>DisplayValueExtractor</c>) IS the geometry, and it's SGEO-encodable, so this only emits <c>DISPLAY</c> geometry.
 /// Grouping reuses <see cref="CsiSendCollectionManager.GetCollectionSegments"/> (base: by type; ETABS: level→category)
-/// as nested CONTAINER nodes + IN_COLLECTION. Analysis results flatten into <c>structural_results</c> rows (all 8
+/// as nested CONTAINER nodes + IN_COLLECTION; stories also become LEVEL nodes + ON_LEVEL and group assignments
+/// CONTAINER(Group) nodes + IN_GROUP. Analysis results flatten into <c>structural_results</c> rows (all 8
 /// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
-/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. **Deferred this pass:**
-/// section/material <c>GroupProxy</c>s (CSi has no render materials/colors).</para>
+/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. Material display colours become
+/// MATERIAL nodes + HAS_MATERIAL edges and each frame's analytical line a CENTERLINE, with or without volumetric
+/// geometry (ENG-11149); section/material <c>GroupProxy</c>s remain deferred.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the CSi COM <c>SapModel</c> API is main-thread-affine, so phase 1
 /// (<see cref="CollectOnMain"/>) converts on the host thread → a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) builds the parquet bundle on a worker (the pipeline's sync-over-async IO deadlocks on a
@@ -51,6 +58,8 @@ public class CsiArtifactRootObjectBuilder(
   IConverterSettingsStore<CsiConversionSettings> converterSettings,
   CsiSendCollectionManager collectionManager,
   AnalysisResultsExtractor analysisResultsExtractor,
+  ExtrusionFallbackTracker extrusionFallbacks,
+  CsiToSpeckleCacheSingleton csiCache,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
@@ -143,7 +152,19 @@ public class CsiArtifactRootObjectBuilder(
         var segments = collectionManager.GetCollectionSegments(converted);
         string appId = converted.applicationId ?? Guid.NewGuid().ToString();
         nameToAppId[(wrapper.ObjectType, wrapper.Name)] = appId;
-        collected.Add(new CollectedObject(appId, sourceType, converted, segments));
+        csiCache.FrameCenterlineCache.TryGetValue(wrapper.Name, out var centerline);
+        collected.Add(
+          new CollectedObject(
+            appId,
+            sourceType,
+            converted,
+            segments,
+            GetMaterialName(converted),
+            wrapper.ObjectType == ModelObjectType.FRAME ? centerline : null,
+            GetLevelName(converted),
+            GetGroupNames(converted)
+          )
+        );
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
         session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
@@ -168,9 +189,137 @@ public class CsiArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
+    if (extrusionFallbacks.Total > 0)
+    {
+      logger.LogWarning(
+        "Volumetric geometry kept the wireframe display value for {FallbackCount} element(s): {@FallbackCounts}",
+        extrusionFallbacks.Total,
+        extrusionFallbacks.Counts
+      );
+      session.SetStat("extrusionFallbacks", extrusionFallbacks.Total);
+    }
+
+    // The COM lookups stay in this phase because PropMaterial is main-thread-affine.
+    var materialColors = ResolveMaterialColors(collected);
+
+    var storyElevations = ResolveStoryElevations(collected);
+
     var resultRows = ExtractResultRows(objects, nameToAppId, session);
-    return new CollectedModel(units, forceUnits, temperatureUnits, collected, resultRows, results, nameToAppId);
+    return new CollectedModel(
+      units,
+      forceUnits,
+      temperatureUnits,
+      collected,
+      resultRows,
+      results,
+      nameToAppId,
+      materialColors,
+      storyElevations
+    );
   }
+
+  private static string? GetLevelName(Base converted) =>
+    converted is DataObject dataObject
+    && dataObject.properties.TryGetValue(ObjectPropertyCategory.OBJECT_ID, out var objectIdObj)
+    && objectIdObj is IDictionary<string, object?> objectId
+    && objectId.TryGetValue(CommonObjectProperty.LEVEL, out var level)
+    && level is string levelName
+    && levelName.Length > 0
+      ? levelName
+      : null;
+
+  private static IReadOnlyList<string> GetGroupNames(Base converted)
+  {
+    if (
+      converted is not DataObject dataObject
+      || !dataObject.properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out var assignmentsObj)
+      || assignmentsObj is not IDictionary<string, object?> assignments
+      || !assignments.TryGetValue(CommonObjectProperty.GROUPS, out var groupsObj)
+      || groupsObj is not IEnumerable<string> groups
+    )
+    {
+      return Array.Empty<string>();
+    }
+    return groups.Where(g => !string.IsNullOrEmpty(g)).Distinct(StringComparer.Ordinal).ToList();
+  }
+
+  // A LEVEL node needs the story's elevation, which only the Story API knows; a story the API cannot resolve gets no
+  // node and its objects no ON_LEVEL edge rather than an invented elevation (spec: ETABS relation table).
+  private Dictionary<string, double> ResolveStoryElevations(IEnumerable<CollectedObject> collected)
+  {
+    var elevations = new Dictionary<string, double>(StringComparer.Ordinal);
+    foreach (string story in collected.Select(o => o.Level).OfType<string>().Distinct(StringComparer.Ordinal))
+    {
+      double elevation = 0;
+      if (converterSettings.Current.SapModel.Story.GetElevation(story, ref elevation) == 0)
+      {
+        elevations[story] = elevation;
+      }
+      else
+      {
+        logger.LogWarning("Story {Story} has no elevation in the model; its objects get no ON_LEVEL edge", story);
+      }
+    }
+    return elevations;
+  }
+
+  private static string? GetMaterialName(Base converted)
+  {
+    if (
+      converted is not DataObject dataObject
+      || !dataObject.properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out var assignmentsObj)
+      || assignmentsObj is not IDictionary<string, object?> assignments
+    )
+    {
+      return null;
+    }
+
+    if (
+      assignments.TryGetValue(CommonObjectProperty.MATERIAL_OVERWRITE, out var overwrite)
+      && overwrite is string overwriteName
+      && overwriteName.Length > 0
+      && overwriteName != CsiName.NONE
+    )
+    {
+      return overwriteName;
+    }
+
+    return
+      assignments.TryGetValue(ObjectPropertyKey.MATERIAL_ID, out var material)
+      && material is string materialName
+      && materialName.Length > 0
+      ? materialName
+      : null;
+  }
+
+  private Dictionary<string, int> ResolveMaterialColors(IEnumerable<CollectedObject> collected)
+  {
+    var colors = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (string name in collected.Select(o => o.MaterialName).OfType<string>().Distinct(StringComparer.Ordinal))
+    {
+      eMatType materialType = 0;
+      int color = 0;
+      string notes = string.Empty,
+        guid = string.Empty;
+      if (
+        converterSettings.Current.SapModel.PropMaterial.GetMaterial(
+          name,
+          ref materialType,
+          ref color,
+          ref notes,
+          ref guid
+        ) == 0
+      )
+      {
+        colors[name] = ColorRefToArgb(color);
+      }
+    }
+    return colors;
+  }
+
+  // CSi reports display colours as Win32 COLORREF (0x00BBGGRR).
+  private static int ColorRefToArgb(int colorRef) =>
+    unchecked((int)0xFF000000) | ((colorRef & 0xFF) << 16) | (colorRef & 0xFF00) | ((colorRef >> 16) & 0xFF);
 
   // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
   // structural_results rows — all 8 CSi result types, across the schema's three identity shapes: object-level
@@ -303,7 +452,7 @@ public class CsiArtifactRootObjectBuilder(
 
         axes.TryGetValue("LoadCase", out var loadCase);
         double? station =
-          axes.TryGetValue("ElmSta", out var sta)
+          axes.TryGetValue("ObjSta", out var sta)
           && double.TryParse(sta, NumberStyles.Float, CultureInfo.InvariantCulture, out var s)
             ? s
             : null;
@@ -429,11 +578,11 @@ public class CsiArtifactRootObjectBuilder(
     new(
       "frameForces",
       "frameForce",
-      "Elm",
+      "Obj",
       null,
       null,
       null,
-      new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" },
+      new[] { "Obj", "Elm", "LoadCase", "Wrap:ObjSta", "Wrap:StepNum" },
       ElementObjectType: ModelObjectType.FRAME
     ),
     new(
@@ -540,6 +689,9 @@ public class CsiArtifactRootObjectBuilder(
     AddUnitModelProperty(pipeline, "units.temperature", model.TemperatureUnits);
 
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
+    var materialKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    var levelKByName = new Dictionary<string, int>(StringComparer.Ordinal);
+    var groupKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
     foreach (CollectedObject co in model.Objects)
@@ -548,6 +700,28 @@ public class CsiArtifactRootObjectBuilder(
       int collK = GetOrAddCollection(pipeline, co.Segments, collectionKByPath);
       int objK = pipeline.InternObject(co.ApplicationId);
       pipeline.InCollection(objK, collK, 0);
+
+      // ON_LEVEL and IN_GROUP are separate axes from the story→category scene tree, which stays the default view;
+      // the same edges etabsextract writes, so an upload and a publish of one model carry one graph (ENG-11148).
+      if (co.Level is { } story && model.StoryElevations.TryGetValue(story, out double elevation))
+      {
+        if (!levelKByName.TryGetValue(story, out int lvlK))
+        {
+          lvlK = pipeline.AddLevel($"level:{story}", new SpecLevel(story, elevation));
+          levelKByName[story] = lvlK;
+        }
+        pipeline.OnLevel(objK, lvlK);
+      }
+
+      foreach (string group in co.Groups)
+      {
+        if (!groupKByName.TryGetValue(group, out int groupK))
+        {
+          groupK = pipeline.AddContainer($"group:{group}", new SpecContainer(group, null, "Group", null));
+          groupKByName[group] = groupK;
+        }
+        pipeline.InGroup(objK, groupK, 0);
+      }
 
       List<Base> display;
       Dictionary<string, object?>? properties;
@@ -569,6 +743,7 @@ public class CsiArtifactRootObjectBuilder(
       );
 
       int ord = 0;
+      var geometryKs = new List<int>(display.Count);
       foreach (Base fragment in display)
       {
         try
@@ -576,6 +751,7 @@ public class CsiArtifactRootObjectBuilder(
           string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
           int gK = pipeline.AddGeometry(gAppId, fragment);
           pipeline.Display(objK, gK, ord++);
+          geometryKs.Add(gK);
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -588,6 +764,32 @@ public class CsiArtifactRootObjectBuilder(
         }
       }
 
+      if (co.MaterialName is { } materialName && model.MaterialColors.TryGetValue(materialName, out int argb))
+      {
+        if (!materialKByName.TryGetValue(materialName, out int matK))
+        {
+          matK = pipeline.AddMaterial($"material:{materialName}", new(materialName, argb, 1.0, 0.0, 1.0, null, null));
+          materialKByName[materialName] = matK;
+        }
+        foreach (int gK in geometryKs)
+        {
+          pipeline.HasMaterial(gK, matK);
+        }
+      }
+
+      if (co.Centerline is { } centerline)
+      {
+        try
+        {
+          // Own key: sharing one with a display fragment would collapse the DISPLAY and CENTERLINE edges onto one blob.
+          pipeline.Centerline(objK, pipeline.AddGeometry($"{co.ApplicationId}:cl", centerline), 0);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogWarning(ex, "Skipped centerline geometry on {AppId}", co.ApplicationId);
+        }
+      }
+
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -597,19 +799,22 @@ public class CsiArtifactRootObjectBuilder(
     {
       pipeline.AddStructuralResult(
         r.ObjectAppId,
-        r.Location,
-        r.ResultType,
-        r.LoadCase,
-        r.Component,
-        r.Station,
-        r.Step,
-        r.Value,
-        elementName: r.ElementName,
-        positionLabel: r.PositionLabel
+        new SpecStructuralResult(
+          ObjectIndex: null,
+          ElementName: r.ElementName,
+          Location: r.Location,
+          ResultType: r.ResultType,
+          LoadCase: r.LoadCase,
+          Component: r.Component,
+          PositionLabel: r.PositionLabel,
+          Station: r.Station,
+          Step: r.Step,
+          Value: r.Value
+        )
       );
     }
 
-    EmitFrameJointConnectivity(pipeline, model);
+    EmitJointConnectivity(pipeline, model);
 
     // Default scene view: the CSi collection tree (IN_COLLECTION); the CONTAINER parent chain carries the nesting.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -648,12 +853,12 @@ public class CsiArtifactRootObjectBuilder(
         parentK = existing;
         continue;
       }
-      int collK = pipeline.AddCollection(soFar, name, parentK, "Collection");
+      int collK = pipeline.AddCollection(soFar, new SpecContainer(name, parentK, "Collection", null));
       cache[soFar] = collK;
       parentK = collK;
     }
     // segments is always non-empty (GetCollectionSegments returns at least one), so parentK is set.
-    return parentK ?? pipeline.AddCollection("Model", "Model", null, "Collection");
+    return parentK ?? pipeline.AddCollection("Model", new SpecContainer("Model", null, "Collection", null));
   }
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();
@@ -681,12 +886,14 @@ public class CsiArtifactRootObjectBuilder(
       new("type", sourceType),
     };
 
-  // Member↔joint connectivity (CONNECTS_TO): a frame → its I-/J-end joint objects. The joint NAMES live in the
-  // frame's "Geometry" properties (CsiFramePropertiesExtractor); NameToAppId maps a CSi (type, name) pair → its
-  // applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. The JOINT type is
-  // part of the lookup because an end-joint name can equally name a frame or an area. This is the slab↔beam↔column
-  // graph via shared joints — reverse-lookup a joint's object_index to find every member meeting there.
-  private static void EmitFrameJointConnectivity(ObjectsArtifactPipeline pipeline, CollectedModel model)
+  // Member↔joint connectivity (CONNECTS_TO): a frame → its I-/J-end joints, a shell → its corner joints. The joint
+  // NAMES live in the "Geometry" properties (CsiFrame/ShellPropertiesExtractor); NameToAppId maps a CSi (type, name)
+  // pair → its applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. The
+  // JOINT type is part of the lookup because a joint name can equally name a frame or an area. Every edge is
+  // unscoped (ord 0): which end or corner a joint is stays on the member's properties (ADR-0002, atlas spec
+  // 2026-10 enriching structural relationships). This is the slab↔beam↔column graph via shared joints —
+  // reverse-lookup a joint's object_index to find every member meeting there.
+  private static void EmitJointConnectivity(ObjectsArtifactPipeline pipeline, CollectedModel model)
   {
     foreach (var co in model.Objects)
     {
@@ -698,29 +905,50 @@ public class CsiArtifactRootObjectBuilder(
       {
         continue;
       }
-      int frameK = pipeline.InternObject(co.ApplicationId);
-      foreach (var endKey in s_endJointKeys)
+      int memberK = pipeline.InternObject(co.ApplicationId);
+      foreach (string jointName in JointNames(geometry).Distinct(StringComparer.Ordinal))
       {
-        if (
-          geometry.TryGetValue(endKey, out var jn)
-          && jn is string jointName
-          && jointName.Length > 0
-          && model.NameToAppId.TryGetValue((ModelObjectType.JOINT, jointName), out var jointAppId)
-        )
+        if (model.NameToAppId.TryGetValue((ModelObjectType.JOINT, jointName), out var jointAppId))
         {
-          pipeline.ConnectsTo(frameK, pipeline.InternObject(jointAppId));
+          pipeline.ConnectsTo(memberK, pipeline.InternObject(jointAppId));
+        }
+      }
+    }
+  }
+
+  private static IEnumerable<string> JointNames(IDictionary<string, object?> geometry)
+  {
+    foreach (var endKey in s_endJointKeys)
+    {
+      if (geometry.TryGetValue(endKey, out var jn) && jn is string jointName && jointName.Length > 0)
+      {
+        yield return jointName;
+      }
+    }
+    if (geometry.TryGetValue(SHELL_JOINTS_KEY, out var corners) && corners is IEnumerable<string> cornerNames)
+    {
+      foreach (string cornerName in cornerNames)
+      {
+        if (!string.IsNullOrEmpty(cornerName))
+        {
+          yield return cornerName;
         }
       }
     }
   }
 
   private static readonly string[] s_endJointKeys = { "I-End Joint", "J-End Joint" };
+  private const string SHELL_JOINTS_KEY = "Joints";
 
   private sealed record CollectedObject(
     string ApplicationId,
     string SourceType,
     Base Converted,
-    IReadOnlyList<string> Segments
+    IReadOnlyList<string> Segments,
+    string? MaterialName,
+    Speckle.Objects.Geometry.Line? Centerline,
+    string? Level,
+    IReadOnlyList<string> Groups
   );
 
   private sealed record CollectedModel(
@@ -730,7 +958,9 @@ public class CsiArtifactRootObjectBuilder(
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results,
-    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId
+    IReadOnlyDictionary<(ModelObjectType Type, string Name), string> NameToAppId,
+    IReadOnlyDictionary<string, int> MaterialColors,
+    IReadOnlyDictionary<string, double> StoryElevations
   );
 
   private sealed record BundleResult(

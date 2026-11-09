@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -64,7 +63,7 @@ internal static class LogBuilder
         }
       }
 
-      foreach (var otel in speckleLogging?.Otel ?? [])
+      foreach (var otel in (speckleLogging?.Otel ?? []).Where(o => o.Enabled))
       {
         InitializeOtelLogging(loggingBuilder, otel, resourceBuilder);
       }
@@ -87,21 +86,7 @@ internal static class LogBuilder
           y.Endpoint = speckleOtelLogging.Endpoint is null
             ? throw new InvalidOperationException("Need a logging endpoint")
             : speckleOtelLogging.Endpoint;
-          var sb = new StringBuilder();
-          bool appendSemicolon = false;
-          foreach (var kvp in speckleOtelLogging.Headers ?? [])
-          {
-            sb.Append(kvp.Key).Append('=').Append(kvp.Value);
-            if (appendSemicolon)
-            {
-              sb.Append(',');
-            }
-            else
-            {
-              appendSemicolon = true;
-            }
-          }
-          y.Headers = sb.ToString();
+          y.Headers = speckleOtelLogging.Headers;
         })
         .AddProcessor(new ActivityScopeLogProcessor())
         .SetResourceBuilder(resourceBuilder);

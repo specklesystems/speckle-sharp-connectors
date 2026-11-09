@@ -4,5 +4,6 @@ public record CsiConversionSettings(
   cSapModel SapModel,
   string SpeckleUnits,
   List<string>? SelectedLoadCasesAndCombinations = null,
-  List<string>? SelectedResultTypes = null
+  List<string>? SelectedResultTypes = null,
+  bool SendVolumetricGeometry = false
 );

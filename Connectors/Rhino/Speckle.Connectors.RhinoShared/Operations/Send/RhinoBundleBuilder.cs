@@ -18,15 +18,17 @@ using Speckle.Objects.Other;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Bundles;
+using Speckle.Sdk.Bundles.Handles;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
 using Speckle.Sdk.Pipelines.Progress;
-using Speckle.Sdk.Pipelines.Send.Artifacts;
 using RG = Rhino.Geometry;
 using RhinoLayer = Rhino.DocObjects.Layer;
 using SOG = Speckle.Objects.Geometry;
+using SpecCameraView = Speckle.Bundle.Spec.CameraView;
+using SpecMaterial = Speckle.Bundle.Spec.Material;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
 
@@ -259,9 +261,9 @@ public class RhinoBundleBuilder(
   // Rhino named views → envelope camera_views. RhinoCommon-bound (NamedViewTable) → phase 1 only. Positions/target
   // are in doc model units; forward/up are unitized. Perspective views carry lens_mm + a frustum-derived vertical
   // fov (degrees); parallel views carry ortho_height (the near-frustum height) instead.
-  private static List<CameraView> CollectNamedViews(global::Rhino.RhinoDoc doc, string units)
+  private static List<SpecCameraView> CollectNamedViews(global::Rhino.RhinoDoc doc, string units)
   {
-    var views = new List<CameraView>();
+    var views = new List<SpecCameraView>();
     int ord = 0;
     foreach (ViewInfo namedView in doc.NamedViews)
     {
@@ -292,7 +294,7 @@ public class RhinoBundleBuilder(
 
       bool hasTarget = vp.TargetPoint.IsValid;
       views.Add(
-        new CameraView(
+        new SpecCameraView(
           View: ord,
           Name: namedView.Name,
           IsDefault: false,
@@ -756,13 +758,15 @@ public class RhinoBundleBuilder(
       var value = materialProxy.value;
       var material = bundle.GetOrAddMaterial(
         materialProxy.applicationId.NotNull(),
-        value.name,
-        value.diffuse,
-        value.opacity,
-        value.metalness,
-        value.roughness,
-        value.emissive,
-        value["ior"] as double? // dynamic prop set by RhinoMaterialUnpacker (PBR IndexOfRefraction) [ENG-8791]
+        new SpecMaterial(
+          value.name,
+          value.diffuse,
+          value.opacity,
+          value.metalness,
+          value.roughness,
+          value.emissive,
+          value["ior"] as double? // dynamic prop set by RhinoMaterialUnpacker (PBR IndexOfRefraction) [ENG-8791]
+        )
       );
       foreach (var objectId in materialProxy.objects)
       {
@@ -888,7 +892,7 @@ public class RhinoBundleBuilder(
     IReadOnlyList<ColorProxy> Colors,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<CollectedGroup> Groups,
-    IReadOnlyList<CameraView> CameraViews,
+    IReadOnlyList<SpecCameraView> CameraViews,
     // object id → the id of the layer whose render material it inherits (MaterialFromLayer only) [ENG-9108]
     IReadOnlyDictionary<string, string> LayerMaterialInheritors,
     IReadOnlyList<SendConversionResult> Results

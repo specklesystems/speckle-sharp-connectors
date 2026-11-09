@@ -32,6 +32,28 @@ public class ReportPropertyExtractor
     { typeof(TSM.RebarGroup), new[] { "NUMBER_OF_REBARS", "TOTAL_LENGTH", "WEIGHT", "SIZE", "GRADE", "CLASS" } },
     { typeof(TSM.SingleRebar), new[] { "LENGTH", "WEIGHT", "SIZE", "GRADE", "CLASS" } },
     { typeof(TSM.BoltArray), new[] { "BOLT_SIZE", "NUMBER_OF_BOLTS", "BOLT_STANDARD", "BOLT_TYPE", "LENGTH" } },
+    {
+      typeof(TSM.Assembly),
+      new[]
+      {
+        "ASSEMBLY_POS",
+        "ASSEMBLY_PREFIX",
+        "ASSEMBLY_SERIAL_NUMBER",
+        "ASSEMBLY_TYPE",
+        "WEIGHT",
+        "LENGTH",
+        "WIDTH",
+        "HEIGHT",
+        "AREA",
+        "VOLUME",
+        "PHASE",
+      }
+    },
+    { typeof(TSM.PourUnit), new[] { "NAME", "VOLUME", "WEIGHT", "AREA", "PHASE" } },
+    {
+      typeof(TSM.PourObject),
+      new[] { "POUR_NUMBER", "POUR_TYPE", "CONCRETE_MIXTURE", "CLASS", "VOLUME", "WEIGHT", "AREA", "PHASE" }
+    },
   };
 
   public Dictionary<string, object?> GetReportProperties(TSM.ModelObject modelObject)

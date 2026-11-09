@@ -18,6 +18,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
+using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -29,6 +30,10 @@ using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using SOG = Speckle.Objects.Geometry;
+using SpecCameraView = Speckle.Bundle.Spec.CameraView;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecLevel = Speckle.Bundle.Spec.Level;
+using SpecMaterial = Speckle.Bundle.Spec.Material;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
@@ -47,6 +52,11 @@ namespace Speckle.Connectors.Revit.Operations.Send;
 /// every object emits an <c>IN_MODEL</c> relation to its owning model; a federated (&gt;1 document) send
 /// prepends the <c>IN_MODEL</c> tier to the default scene view.</para>
 /// </remarks>
+[SuppressMessage(
+  "Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "Top-level artefact send orchestrator; coupling to converters, unpackers, host API and the pipeline façade is inherent."
+)]
 public class RevitArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -58,6 +68,7 @@ public class RevitArtifactRootObjectBuilder(
   IArtifactPipelineFactory artifactPipelineFactory,
   IScalingServiceToSpeckle scalingService,
   IReferencePointConverter referencePointConverter,
+  MepCenterlineExtractor mepCenterlineExtractor,
   ISpeckleApplication speckleApplication,
   ILogger<RevitArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<DocumentToConvert>
@@ -204,7 +215,7 @@ public class RevitArtifactRootObjectBuilder(
     // placements, and they flatten this post-loop.
     var objectKsByPlacement = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
     var modelContainerKeys = new HashSet<string>(StringComparer.Ordinal);
-    var cameraViews = new List<CameraView>();
+    var cameraViews = new List<SpecCameraView>();
     var countProgress = 0;
     var skippedObjectCount = 0;
 
@@ -227,7 +238,7 @@ public class RevitArtifactRootObjectBuilder(
         modelName = mainDoc.Title;
       }
 
-      int modelK = pipeline.AddContainer(modelKey, modelName, null, "Model");
+      int modelK = pipeline.AddContainer(modelKey, new SpecContainer(modelName, null, "Model", null));
       modelContainerKeys.Add(modelKey);
 
       // This placement's own identity map. Keyed per modelKey, which now derives from the SAME source as the
@@ -387,7 +398,7 @@ public class RevitArtifactRootObjectBuilder(
   // too). MUST run inside the caller's converterSettings.Push for the owning document, so origin/forward/up go
   // through the same ReferencePointTransform + main-document scaling as the document's element geometry (this is
   // what places linked-model cameras correctly in host coordinates). View/Ord = the running dense index.
-  private void CollectDocumentViews(Document doc, string? linkedModelName, List<CameraView> cameraViews)
+  private void CollectDocumentViews(Document doc, string? linkedModelName, List<SpecCameraView> cameraViews)
   {
     string units = converterSettings.Current.SpeckleUnits;
     using FilteredElementCollector collector = new(doc);
@@ -424,7 +435,7 @@ public class RevitArtifactRootObjectBuilder(
 
         int ord = cameraViews.Count;
         cameraViews.Add(
-          new CameraView(
+          new SpecCameraView(
             View: ord,
             Name: linkedModelName is null ? view3D.Name : $"{linkedModelName} - {view3D.Name}",
             IsDefault: false,
@@ -438,6 +449,9 @@ public class RevitArtifactRootObjectBuilder(
             UpX: up.X,
             UpY: up.Y,
             UpZ: up.Z,
+            TargetX: null,
+            TargetY: null,
+            TargetZ: null,
             Units: units,
             IsOrtho: isOrtho
           )
@@ -452,7 +466,8 @@ public class RevitArtifactRootObjectBuilder(
   }
 
   // Emits one atomic object: its eav labels + IN_MODEL edge + per-fragment DISPLAY (→ geometry) /
-  // DISPLAY_INSTANCE (→ INSTANCE node). Instance definitions + materials + levels are wired post-loop.
+  // DISPLAY_INSTANCE (→ INSTANCE node) + its location curve as CENTERLINE (→ geometry). Instance definitions +
+  // materials + levels are wired post-loop.
   // Returns the interned object K so the caller can wire per-document topology (groups) to this exact placement.
   private int EmitObject(
     ObjectsArtifactPipeline pipeline,
@@ -487,6 +502,7 @@ public class RevitArtifactRootObjectBuilder(
     );
 
     EmitDisplayValue(pipeline, objK, applicationId, dataObject.displayValue);
+    EmitCenterline(pipeline, objK, applicationId, revitElement, revitObject);
 
     // Recurse into hosted/nested children (RevitObject.elements) — curtain wall → mullions/panels, railing → top
     // rail, stacked wall → members. RemoveKnownChildElementsWhenParentPresent strips these from the atomic list when
@@ -742,6 +758,77 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
+  // Emits an element's centerline as CENTERLINE geometry [ENG-9510] — the axis, kept apart from the shell
+  // DISPLAY carries. Two sources: the authored location curve of an in-scope element, else a point-placed MEP
+  // fitting's connector branches. An element with a location curve never needs the fitting path — its connectors
+  // would only restate the ends of a curve it already has.
+  //
+  // The curve itself is free (the converter already produced it as RevitObject.location, through the same scaling +
+  // reference-point path as the display meshes), but each one still costs a geometry blob and a relation row on
+  // EVERY Revit send — hence CenterlineScope rather than "anything with a location curve".
+  private void EmitCenterline(
+    ObjectsArtifactPipeline pipeline,
+    int objK,
+    string appId,
+    Element revitElement,
+    RevitObject? revitObject
+  )
+  {
+    if (revitObject?.location is { } location && location is ICurve)
+    {
+      if (!CenterlineScope.Includes(revitElement))
+      {
+        return;
+      }
+
+      try
+      {
+        // Deterministic key, not location.applicationId: the converter never stamps one, and a key shared with a
+        // display fragment would collapse the two edges onto one blob.
+        int geometryK = pipeline.AddGeometry($"{appId}:cl", location);
+        pipeline.Centerline(objK, geometryK, 0);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // A curve the SGEO encoder doesn't cover is skipped without failing the object — its display geometry,
+        // properties and topology still land (same tolerance as EmitDisplayValue's curve path).
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported centerline geometry {Type} on {AppId}",
+          location.speckle_type,
+          appId
+        );
+      }
+      return;
+    }
+
+    EmitFittingCenterline(pipeline, objK, appId, revitElement);
+  }
+
+  // A fitting's centerline pieces, ord = piece index so they stay ordered. See MepCenterlineExtractor for where they
+  // come from: the family's own path curves, else one segment per connector.
+  private void EmitFittingCenterline(ObjectsArtifactPipeline pipeline, int objK, string appId, Element revitElement)
+  {
+    IReadOnlyList<Base> branches;
+    try
+    {
+      branches = mepCenterlineExtractor.GetCenterlineBranches(revitElement);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      // An unreadable connector set costs this fitting its centerline and nothing else — geometry, properties
+      // and topology still land (same tolerance as the rest of this builder's host-API reads).
+      logger.LogWarning(ex, "Could not read MEP connectors on {AppId}", appId);
+      return;
+    }
+
+    for (int ord = 0; ord < branches.Count; ord++)
+    {
+      int geometryK = pipeline.AddGeometry($"{appId}:cl{ord}", branches[ord]);
+      pipeline.Centerline(objK, geometryK, ord);
+    }
+  }
+
   // A hosted/nested child RevitObject: its own interned object (geometry + properties), a SUBELEMENT edge to its
   // owner, and recursion into its own children. Children are NOT in the atomic loop (stripped when the parent is
   // present), so they get no separate ON_LEVEL/type-key resolution here — geometry + hierarchy + materials suffice.
@@ -833,13 +920,15 @@ public class RevitArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
-        value.name,
-        value.diffuse,
-        value.opacity,
-        value.metalness,
-        value.roughness,
-        value.emissive,
-        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        new SpecMaterial(
+          value.name,
+          value.diffuse,
+          value.opacity,
+          value.metalness,
+          value.roughness,
+          value.emissive,
+          value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        )
       );
       foreach (var meshAppId in materialProxy.objects)
       {
@@ -855,7 +944,7 @@ public class RevitArtifactRootObjectBuilder(
     foreach (var levelProxy in levelUnpacker.Unpack(flatElements))
     {
       double elevation = levelProxy.value["elevation"] is double d ? d : 0.0;
-      int lvlK = pipeline.AddLevel(levelProxy.applicationId.NotNull(), levelProxy.value.name, elevation);
+      int lvlK = pipeline.AddLevel(levelProxy.applicationId.NotNull(), new SpecLevel(levelProxy.value.name, elevation));
       // flatElements repeats a linked element once per link instance, so LevelUnpacker lists its UniqueId once per
       // placement too. Dedup here or every occurrence's edge is written N times (relations.parquet is an append-only
       // log — nothing downstream collapses duplicate rows) [ENG-9212].
@@ -1052,7 +1141,10 @@ public class RevitArtifactRootObjectBuilder(
       int? parentK = group.Document.GetElement(group.GroupId) is Group parent
         ? ResolveGroupContainer(pipeline, modelKey, parent, cache)
         : null;
-      containerK = pipeline.AddContainer($"{modelKey}:{group.UniqueId}", group.GroupType.Name, parentK, "Group");
+      containerK = pipeline.AddContainer(
+        $"{modelKey}:{group.UniqueId}",
+        new SpecContainer(group.GroupType.Name, parentK, "Group", null)
+      );
     }
 
     cache[group.UniqueId] = containerK;

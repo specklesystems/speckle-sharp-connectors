@@ -85,6 +85,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly RevitFamilyBaker _familyBaker;
   private readonly ITypedConverter<SMesh, GeometryObject> _freeformMeshConverter;
   private readonly RevitArtefactSolidImporter _solidImporter;
+  private readonly RevitReceivedParameterWriter _parameterWriter;
 
   // Set by DecodeGeometry when the non-mesh SGEO fallback fails; surfaced by callers as the ERROR reason for an
   // empty geometry result instead of the generic "did not convert to any native geometry" message.
@@ -104,7 +105,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ITypedConverter<Base, List<GeometryObject>> geometryConverter,
     RevitFamilyBaker familyBaker,
     ITypedConverter<SMesh, GeometryObject> freeformMeshConverter,
-    RevitArtefactSolidImporter solidImporter
+    RevitArtefactSolidImporter solidImporter,
+    RevitReceivedParameterWriter parameterWriter
   )
   {
     _converterSettings = converterSettings;
@@ -121,6 +123,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _familyBaker = familyBaker;
     _freeformMeshConverter = freeformMeshConverter;
     _solidImporter = solidImporter;
+    _parameterWriter = parameterWriter;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -288,6 +291,13 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         }
       }
 
+      // 3b — the source id and (opt-in) properties of every element baked above, as instance parameters: one
+      // shared-parameter pass for the whole receive, inside the bake transaction [ENG-10511, ENG-11189].
+      using (session.Phase("Parameters"))
+      {
+        _parameterWriter.Apply(doc, session, conversionResults);
+      }
+
       // 4 — named camera viewpoints (envelope.camera_views.parquet) → View3D per row.
       if (bundle.CameraViews.Count > 0)
       {
@@ -423,6 +433,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         SetNameSafe(ds, PropString(props, "name"));
         ds.SetShape(geometry);
         groupMembers.Add(ds.Id);
+        _parameterWriter.Stage(ds, appId, bundle.TypeProperties(objK), props);
 
         if (fromSolid)
         {
@@ -629,6 +640,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         SetNameSafe(ds, PropString(props, "name"));
         ds.SetShape(geometry);
         groupMembers.Add(ds.Id);
+        _parameterWriter.Stage(ds, appId, bundle.TypeProperties(objK), props);
 
         if (defPaintMaterialByNode.TryGetValue(defNodeK, out var paintMaterial))
         {
@@ -1052,6 +1064,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             _converterSettings.Current.ReferencePointTransform
           ) ?? throw new ConversionException("Failed to place family instance");
         groupMembers.Add(instance.Id);
+        _parameterWriter.Stage(instance, appId, bundle.TypeProperties(objK), props);
 
         bakedObjectIds.Add(instance.UniqueId);
         conversionResults.Add(new(Status.SUCCESS, source, instance.UniqueId, "FamilyInstance", null, srcType));

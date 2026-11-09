@@ -51,7 +51,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     };
     rootObjectCollection["units"] = modelUnits.SpeckleUnits;
 
-    var slabDataByIndex = await _snapshotBuilder.GetSlabDataAsync(entities).ConfigureAwait(false);
+    var slabsByIndex = await _snapshotBuilder.GetSlabsAsync(entities).ConfigureAwait(false);
 
     List<SendConversionResult> results = new(entities.Count);
     List<Dictionary<string, object?>> propertyTrees = new(entities.Count);
@@ -62,7 +62,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
       cancellationToken.ThrowIfCancellationRequested();
 
       var (result, converted) = await _snapshotBuilder
-        .ConvertEntityAsync(entity, slabDataByIndex, modelUnits.LengthUnit, modelUnits.SpeckleUnits)
+        .ConvertEntityAsync(entity, slabsByIndex, modelUnits.LengthUnit, modelUnits.SpeckleUnits)
         .ConfigureAwait(false);
       results.Add(result);
       if (converted is not null)

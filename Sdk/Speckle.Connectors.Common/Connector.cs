@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Common;
+using Speckle.Connectors.Common.Settings;
 using Speckle.Connectors.Logging;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
@@ -20,6 +21,7 @@ public static class Connector
     }
   }
 
+  private const string CONNECTOR_GATEWAY_TOKEN = "7a6754bf-a883-49a7-afc4-f74ddd25e9c1";
   public static readonly string TabName = "Speckle";
   public static readonly string TabTitle = "Speckle";
 
@@ -38,22 +40,18 @@ public static class Connector
     );
 
     return serviceCollection.AddOpenTelemetry(
-      "Connector",
+      OtelConfig.GetOtelServiceName("Connector"),
       application,
       version,
-#if DEBUG || LOCAL
-      new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Debug),
-      new SpeckleTracing(Console: false),
-      new SpeckleMetrics(Console: false)
-#else
       new SpeckleLogging(
         Console: true,
         File: new(),
         Otel:
         [
           new(
-            Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/logs"),
-            Headers: new() { { "X-Seq-ApiKey", "Y0Ya2CFVt1tCSgrbY07c" } }
+            Endpoint: OtelConfig.GetOtelLogsExporter(new Uri("https://connectors.collector.speckle.dev/v1/logs")),
+            Enabled: OtelConfig.GetOtelEnabled(true),
+            Headers: OtelConfig.GetOtelLogsHeaders($"authorization={CONNECTOR_GATEWAY_TOKEN}")
           ),
         ],
         MinimumLevel: SpeckleLogLevel.Information
@@ -63,13 +61,13 @@ public static class Connector
         Otel:
         [
           new(
-            Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/traces"),
-            Headers: new() { { "X-Seq-ApiKey", "Y0Ya2CFVt1tCSgrbY07c" } }
+            Endpoint: OtelConfig.GetOtelTracesExporter(new Uri("https://connectors.collector.speckle.dev/v1/traces")),
+            Enabled: OtelConfig.GetOtelEnabled(true),
+            Headers: OtelConfig.GetOtelTracesHeaders($"authorization={CONNECTOR_GATEWAY_TOKEN}")
           ),
         ]
       ),
       null
-#endif
     );
   }
 

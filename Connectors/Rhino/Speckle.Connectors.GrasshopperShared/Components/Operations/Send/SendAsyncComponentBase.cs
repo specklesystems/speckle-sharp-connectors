@@ -544,6 +544,11 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponentBase>
       )
       .ConfigureAwait(false);
 
+    if (SendComponentBase.DescribeDroppedRelations(result.ConversionResults) is { } droppedRelations)
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Warning, droppedRelations));
+    }
+
     if (ingestionId != null)
     {
       Parent.Message = "Remote processing";
@@ -557,6 +562,10 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponentBase>
           Id,
           CancellationToken
         )
+        .ConfigureAwait(false);
+
+      await ingestionTracker
+        .SetVersionMessage(Parent.ApiClient, sendInfo.ProjectId, versionId, Parent.VersionMessage, CancellationToken)
         .ConfigureAwait(false);
     }
 

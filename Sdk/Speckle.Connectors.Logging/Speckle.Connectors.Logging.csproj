@@ -18,6 +18,9 @@
     <CustomAfterMicrosoftCSharpTargets>$(MSBuildThisFileDirectory)ILRepackIncremental.targets</CustomAfterMicrosoftCSharpTargets>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Speckle.Connectors.Common.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="ILRepack.FullAuto">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

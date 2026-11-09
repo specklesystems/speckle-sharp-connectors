@@ -105,9 +105,9 @@
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
-        "requested": "[0.9.6, )",
-        "resolved": "0.9.6",
-        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "kLPQ05iRI0fO9vwLvwZI1ZkmVecvC0mubiOUTeb4m0DV3JjHEhOT7ffjETSJJ9NE0vLylOaVb7HySqLXMbNn+Q=="
       },
       "ILRepack": {
         "type": "Transitive",
@@ -436,9 +436,9 @@
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
-        "requested": "[0.9.6, )",
-        "resolved": "0.9.6",
-        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "kLPQ05iRI0fO9vwLvwZI1ZkmVecvC0mubiOUTeb4m0DV3JjHEhOT7ffjETSJJ9NE0vLylOaVb7HySqLXMbNn+Q=="
       },
       "ILRepack": {
         "type": "Transitive",
@@ -676,9 +676,9 @@
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
-        "requested": "[0.9.6, )",
-        "resolved": "0.9.6",
-        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "kLPQ05iRI0fO9vwLvwZI1ZkmVecvC0mubiOUTeb4m0DV3JjHEhOT7ffjETSJJ9NE0vLylOaVb7HySqLXMbNn+Q=="
       },
       "ILRepack": {
         "type": "Transitive",

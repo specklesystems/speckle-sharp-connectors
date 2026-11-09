@@ -8,12 +8,12 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
-  private readonly Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor _textPropertiesExtractor;
+  private readonly AutocadShared.ToSpeckle.TextPropertiesExtractor _textPropertiesExtractor;
   private readonly string _drawingName;
 
   public PropertiesExtractor(
     ExtensionDictionaryExtractor extensionDictionaryExtractor,
-    Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor textPropertiesExtractor,
+    AutocadShared.ToSpeckle.TextPropertiesExtractor textPropertiesExtractor,
     IConverterSettingsStore<Plant3dConversionSettings> settingsStore
   )
   {
@@ -24,7 +24,7 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
   {
-    Dictionary<string, object?> properties = new();
+    Dictionary<string, object?> properties = [];
 
     // TODO: Add Plant3D class-specific property extraction here
     // For example, extract pipe spec data, equipment data, etc.
@@ -40,10 +40,12 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
     // geometry [ENG-8827].
     AddDictionaryToPropertyDictionary(_textPropertiesExtractor.GetTextProperties(entity), "Text", properties);
 
+    AddAssetProperties(entity, properties);
+
     return properties;
   }
 
-  private void AddDictionaryToPropertyDictionary(
+  private static void AddDictionaryToPropertyDictionary(
     Dictionary<string, object?>? entryDictionary,
     string entryName,
     Dictionary<string, object?> propertyDictionary
@@ -54,4 +56,23 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
       propertyDictionary.Add(entryName, entryDictionary);
     }
   }
+
+  private static void AddAssetProperties(ADB.Entity entity, Dictionary<string, object?> properties)
+  {
+    if (entity is PP.PnIDObjects.Asset asset && entity.Database.TransactionManager.TopTransaction is ADB.Transaction tr)
+    {
+      if (SafeGetObject(asset.BlockTableRecord, tr) is ADB.BlockTableRecord block && !block.IsAnonymous)
+      {
+        properties["Symbol Name"] = block.Name;
+      }
+
+      if (SafeGetObject(asset.StyleId, tr) is PP.Styles.AssetStyle assetStyle)
+      {
+        properties["Graphical Style"] = assetStyle.Name;
+      }
+    }
+  }
+
+  private static ADB.DBObject? SafeGetObject(ADB.ObjectId objectId, ADB.Transaction tr) =>
+    !objectId.IsNull && !objectId.IsErased && objectId.IsValid ? tr.GetObject(objectId, ADB.OpenMode.ForRead) : null;
 }

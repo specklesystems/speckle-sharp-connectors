@@ -4,15 +4,30 @@ namespace Speckle.Connectors.Logging;
 
 public static class Consts
 {
-  public const string DEPLOYMENT_ENVIRONMENT = "deployment.environment.name";
+  public const string DEPLOYMENT_ENVIRONMENT = "deployment.environment.name"; // Semantic conventions 1.44.0
   public const string SERVICE_NAME = "connector.name";
   public const string SERVICE_SLUG = "connector.slug";
-  public const string OS_NAME = "os.name";
-  public const string OS_TYPE = "os.type";
-  public const string OS_SLUG = "os.slug";
-  public const string RUNTIME_NAME = "process.runtime.name";
-  public const string RUNTIME_VERSION = "process.runtime.version";
-  public const string USER_ID = "user.id";
+
+  public const string OS_NAME = "os.name"; // Semantic conventions 1.44.0
+  public const string OS_VERSION = "os.version"; // Semantic conventions 1.44.0
+  public const string OS_TYPE = "os.type"; // Semantic conventions 1.44.0
+  public const string OS_DESCRIPTION = "os.description"; // Semantic conventions 1.44.0
+
+  public const string HOST_ARCH = "host.arch"; // Semantic conventions 1.44.0
+  public const string HOST_ID = "host.id"; // Semantic conventions 1.44.0
+
+  public const string SESSION_ID = "session.id"; // Semantic conventions 1.44.0
+
+  public const string PROCESS_CREATION_TIME = "process.creation.time"; // Semantic conventions 1.44.0
+  public const string PROCESS_PID = "process.pid"; // Semantic conventions 1.44.0
+
+  public const string RUNTIME_NAME = "process.runtime.name"; // Semantic conventions 1.44.0
+  public const string RUNTIME_VERSION = "process.runtime.version"; // Semantic conventions 1.44.0
+
+  public const string CPU_COUNT = "dotnet.process.cpu.count"; // Semantic conventions 1.44.0
+  public const string MEMORY_WORKING_SET = "dotnet.process.memory.working_set"; // Semantic conventions 1.44.0
+
+  public const string USER_ID = "user.id"; // Semantic conventions 1.44.0
   public const string USER_DISTINCT_ID = "user.distinctId";
   public const string USER_SERVER_URL = "user.server_url";
   public const string TRACING_SOURCE = "connector";

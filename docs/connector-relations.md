@@ -2,7 +2,7 @@
 
 _Speckle 4.0 artifact bundle · schema_version 5 · verified against connector send builders on `big-truck` + the SketchUp Ruby producer._
 
-The [bundle spec](https://github.com/specklesystems/speckle-bundle-spec) defines **17 live relations**, but no connector emits all of them. Each host maps its own concepts (layers, levels, blocks, systems, results) onto the subset that fits. This doc pins down, with diagrams and code evidence, exactly what **every connector** produces and consumes.
+The [bundle spec](https://github.com/specklesystems/speckle-bundle-spec) defines the live relations, but no connector emits all of them. Each host maps its own concepts (layers, levels, blocks, systems, results) onto the subset that fits. This doc pins down, with diagrams and code evidence, exactly what **every connector** produces and consumes.
 
 > Companion: [the artifact object model field guide](./artifact-object-model.md) — worked examples of each relation in the abstract.
 
@@ -18,7 +18,10 @@ A bundle is a graph of flat parquet rows across **three ID spaces**. A bare numb
 | **geometry** | `geometries` · `geometryIndex` | one blob — display mesh (SGEO) or lossless raw body (3dm / SAT) |
 | **node** | `envelope.nodes` · `id` | a synthetic value — material, color, level, definition, instance, container |
 
-### The 17 live relations
+### The live relations
+
+> This table lags the spec: rels 18 and 24-29 landed after it was written and are not listed. `docs/reference.md`
+> in speckle-bundle-spec is generated from the spec itself and is always current.
 
 | id | relation | src → dst | meaning |
 |---:|---|---|---|
@@ -39,6 +42,7 @@ A bundle is a graph of flat parquet rows across **three ID spaces**. A bare numb
 | 21 | `CONNECTS_TO` | object → object | directed connectivity (frame→joint, pipe→structure, room adjacency) |
 | 22 | `HOSTED_ON` | object → object | hosted element **placed on** host (door→wall) · distinct from ownership |
 | 23 | `BOUNDS` | object → object | bounding wall → room |
+| 30 | `CENTERLINE` | object → geometry | element's authored location curve (duct/pipe axis) · **not** a render edge |
 
 Plus four **value / sidecar files** outside the relation graph: `camera_views` (named viewpoints), `structural_results` (analysis rows), `reference_point` (meta columns), and the Civil3D **property-set definitions carrier**.
 
@@ -54,29 +58,32 @@ What each connector actually emits, verified in the send builders. `●` emitted
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | **1 DISPLAY** | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | **2 SOLID** | ● | ● | ● | ● | ● | · | · | · | · | · |
-| **5 HAS_MATERIAL** | ● | ● | ● | ● | ● | ● | ● | ● | · | · |
+| **5 HAS_MATERIAL** | ● | ● | ● | ● | ● | ● | ● | ● | ● | · |
 | **6 HAS_COLOR** | ● | ● | ● | ● | ● | ● | · | · | · | · |
 | **4 DEFINES** | ● | ● | ● | ● | ● | ● | ● | · | · | · |
 | **8 DISPLAY_INSTANCE** | ● | ● | ● | ● | ● | ● | ● | · | · | · |
 | **9 DEFINES_INSTANCE** | ● | ● | ● | ● | ● | ● | · | · | · | · |
 | **10 IN_COLLECTION** | ● | ● | ● | ● | ● | ● | · | ● | ● | ● |
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
-| **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | · | · |
-| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | · | · |
-| **3 SUBELEMENT** | · | · | · | · | ● | · | ● | ● | · | ◐¹ |
+| **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | ● | ● |
+| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | ● | ● |
+| **3 SUBELEMENT** | · | ◐³ | · | · | ● | · | ● | ● | · | ● |
+| **18 IN_ASSEMBLY** | · | ◐³ | · | · | · | · | · | ● | · | · |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
-| **21 CONNECTS_TO** | · | · | · | · | ● | · | ● | · | ● | · |
-| **22 HOSTED_ON** | · | · | · | · | · | · | ● | · | · | · |
-| **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
+| **21 CONNECTS_TO** | · | ◐³ | · | · | ● | · | ● | ● | ● | ● |
+| **22 HOSTED_ON** | · | ◐³ | · | · | · | · | ● | ● | · | · |
+| **23 BOUNDS** | · | · | · | · | · | · | ◐¹ | · | · | · |
+| **30 CENTERLINE** | · | · | · | · | · | · | ● | · | ● | ◐² |
 | _camera_views_ | ● | · | · | · | · | ● | ● | · | · | · |
 | _structural_results_ | · | · | · | · | · | · | · | · | ● | ● |
 | _reference_point (meta)_ | · | · | · | · | · | · | ● | · | · | · |
 | _property-set carrier_ | · | · | · | · | ● | · | · | · | · | · |
 | **native receive** | ● | · | ● | · | ● | ● | ● | · | · | · |
 
-¹ TSD `SUBELEMENT` is wired but unreachable — `elements` is always empty.
-² Revit folds `BOUNDS` into `IN_ROOM`.
+¹ Revit folds `BOUNDS` into `IN_ROOM`.
+² Only with the "Send Volumetric Geometry" card setting (ENG-9048): members ship their analytical line as `CENTERLINE` while the extruded solid takes `DISPLAY`. CSi lost this gate in ENG-11149: every frame carries its `CENTERLINE` and its section material's colour whatever the setting, as `etabsextract` does.
+³ Grasshopper writes these only when the user authors them with the **Speckle Relation** component (ENG-9475); nothing is derived from the canvas.
 
 Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them**. Plant3D is send-only. SketchUp is a pure-Ruby producer.
 
@@ -157,9 +164,9 @@ An object keeps its layer AND its group(s) — separate axes. Instance colours a
 
 ---
 
-### Grasshopper — CAD · computational · emits 8
+### Grasshopper — CAD · computational · emits 8 (+4 authored)
 
-The Rhino geometry set minus groups: each collection — including one per data-tree branch — becomes a nested CONTAINER, with instancing, materials and colours resolved the same way.
+The Rhino geometry set minus groups: each collection — including one per data-tree branch — becomes a nested CONTAINER, with instancing, materials and colours resolved the same way. On top, four object→object relations the user wires up by hand.
 
 **Data trees → collections** — `DISPLAY` · `IN_COLLECTION` + eav sidecar
 
@@ -182,7 +189,14 @@ graph LR
 
 Every GH branch maps to one CONTAINER; the exact path array rides a sidecar eav object (`__collection_topology_{k}`) so receivers rebuild the tree with no schema change. GH reuses Rhino's geometry/material/color/block packers verbatim — no layer or level concept.
 
+**Authored relations** — `HOSTED_ON` · `CONNECTS_TO` · `IN_ASSEMBLY` · `SUBELEMENT` (ENG-9475)
+
+The **Speckle Relation** component is a passthrough like Speckle Object: a source Speckle goo (Object / Geometry / Block Instance) goes in, a list of target goos goes in, and the source comes out again with the relations attached (`SpeckleWrapper.Relations`, outgoing edges by target application id — the same shape the bundle stores). The relation type is picked from a button in the component and both inputs rename to the spec's direction (Hosted → Host, From → To, Member → Assembly, Parent → Child); chain components to give one object several types. Nothing changes in Publish: the artefact builder queues each placed object's relations with its K during the walk and resolves the targets afterwards (`EmitRelations`, same timing as the proxies). Rules: exact duplicates collapse, a dangling target drops the edge, a second parent (SUBELEMENT) or host (HOSTED_ON) keeps the first — every drop becomes one Publish warning. Ordinals follow arrival order; CONNECTS_TO is unscoped (ord 0). Nothing else is derived: no IN_ROOM / BOUNDS (no room objects on a canvas) and no IN_GROUP / IN_SYSTEM (container ends). The vocabulary is the spec's closed enum, so a new relation is a spec change first.
+
 - **Nodes:** CONTAINER `"Collection"` (nested, one per branch) · DEFINITION/INSTANCE · MATERIAL · COLOR
+- **Consumes:** the Explore component reads the envelope graph catalog, so every relation surfaces without a code
+  change — as application ids for object/node ends, and as native geometry for `CENTERLINE` (the one geometry rel it
+  keeps, because receive never bakes it; see the Revit section)
 - **Receive:** send-only (data connector)
 
 ---
@@ -317,7 +331,7 @@ A SketchUp group emits DISPLAY_INSTANCE like a component — so **IN_GROUP is ne
 
 ---
 
-### Revit — BIM · emits 11
+### Revit — BIM · emits 12
 
 The richest BIM producer: display geometry + instances/materials/levels, per-document model containers for federation, and a best-effort host-API topology layer (sub-elements, rooms, room-adjacency, model groups).
 
@@ -398,6 +412,61 @@ graph LR
 
 `ElementUnpacker` explodes every placed group into its members before conversion, so the group instance is never an object — membership is recovered from each member's `Element.GroupId`, and because that unpacking recurses, `GroupId` always names the **innermost** group (one `IN_GROUP` edge per element). Nesting is the CONTAINER parent chain (`def_ref`), walked from each group's own `GroupId`. Containers are keyed per model container, so a linked file placed twice gets one group tier per placement. Attached detail groups are excluded (annotation, not model topology). The container name is the group TYPE name — the same string that ships as the `groupName` property.
 
+**Centerlines** — `CENTERLINE` (ENG-9510)
+
+```mermaid
+graph LR
+  DU([obj · Duct]):::obj
+  SH[geo · tube mesh]:::geo
+  AX[geo · axis curve]:::geo
+  DU -->|DISPLAY| SH
+  DU -->|CENTERLINE| AX
+  EL([obj · Elbow fitting]):::obj
+  B0[geo · path arc]:::geo
+  TE([obj · Tee fitting]):::obj
+  B1[geo · branch 0..2]:::geo
+  EL -->|CENTERLINE| B0
+  TE -->|CENTERLINE ord 0..2| B1
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
+```
+
+Two shapes, one rel, because a consumer asking "where is the axis" does not care which.
+
+**(a) The authored location curve**, for elements in a **curated scope** (`CenterlineScope`) — MEP curves
+(ducts, pipes, conduits, cable trays, incl. flex and placeholders) and the structural frame (framing, columns,
+trusses, foundations). Free: the converter already produced the curve as `RevitObject.location`, through the
+same scaling +
+reference-point path as the meshes and inside the same settings push, so the axis lands aligned with its own
+shell in a linked model too. **Deliberately not "anything with a location curve"**: every qualifying element adds
+a geometry blob and a relation row to *every* Revit send, so the set is opened on request rather than by default.
+Walls are therefore excluded, which also sidesteps their location line being a core or finish face rather than
+the centre. Gated on type and `BuiltInCategory`, **never on category name** — those are localised, so a
+name-based list matches nothing on a German or French model.
+
+**(b) The fitting path**, for a point-placed MEP fitting — elbow, tee, cross, transition — which has no
+location curve at all and so left a gap in every run (`MepCenterlineExtractor`). Two sources, `ord` = piece index
+either way:
+
+- **The family's own path curves.** Fitting families draw their single-line representation as model curves — an
+  elbow's is the true arc — and `get_Geometry` returns them. Which `Options` do so varies by category and family
+  author, so a few sets are tried (coarse first, the active view last) and the curves are only accepted when,
+  after trimming dead ends, they **tie every end connector together**. That check is what keeps stray symbolic
+  lines out.
+- **Connector branches**, when the family carries no usable path. Each connector reports where the run enters or
+  leaves the fitting and the insertion point is the node they meet at, so the fitting ships **one straight segment
+  per connector** — a sharp corner on an elbow.
+
+Consumers weld duct and fitting pieces into continuous runs (Join Curves). Origins come from `Connector.CoordinateSystem.Origin`, **not** `Connector.Origin`,
+which is documented to throw for a connector belonging to a family instance — i.e. every fitting. Scoped by
+connector **domain** (HVAC, piping, cable tray); electrical and structural-analytical connectors are excluded.
+
+Everything else emits nothing — walls, floors, railings, nested mullions and panels, furniture, and any
+point-placed element with no flow connectors.
+
+**Not a render edge**: no receiver bakes it, so Grasshopper’s Explore component is the route to it (it is the one
+geometry rel `ArtefactGraphCache` deliberately does not drop).
+
 - **Nodes:** CONTAINER `"Model"` (per source doc) · CONTAINER `"Group"` (per placed model group) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)
 - **Receive:** ● native — DirectShape + DirectShapeLibrary instances, reference-point reversal
@@ -405,21 +474,30 @@ graph LR
 
 ---
 
-### Tekla Structures — structural · detailing · emits 4
+### Tekla Structures — structural · detailing · emits 7
 
-A flat by-type scene of tessellated detailing objects (parts, plates, bolts, rebar), with nested elements wired to their owner via SUBELEMENT and Tekla visualisation colours as materials.
+A flat by-type scene of tessellated detailing objects (parts, plates, bolts, welds, rebar), with nested elements wired to their owner via SUBELEMENT, rebar and surface objects to the part they sit on via HOSTED_ON, parts pointing at their assembly (and pour objects at their pour unit) via IN_ASSEMBLY, connections, welds and bolt groups joining their main part to each part they join via CONNECTS_TO, and Tekla visualisation colours as materials.
 
-**Assembly / part tree** — `SUBELEMENT` · `DISPLAY` · `HAS_MATERIAL` · `IN_COLLECTION`
+**Assembly / part tree** — `IN_ASSEMBLY` · `SUBELEMENT` · `HOSTED_ON` · `CONNECTS_TO` · `DISPLAY` · `HAS_MATERIAL` · `IN_COLLECTION`
 
 ```mermaid
 graph LR
-  AS([obj · Assembly]):::obj
+  AS([obj · Assembly · no geometry]):::obj
+  PU([obj · PourUnit · no geometry]):::obj
+  PO([obj · PourObject]):::obj
+  CN([obj · Connection · no geometry]):::obj
   PT([obj · Beam part]):::obj
+  P2([obj · secondary part]):::obj
   BO([obj · Bolt]):::obj
+  RB([obj · RebarGroup]):::obj
   M[geo · part mesh]:::geo
   MAT{{node · MATERIAL · vis colour}}:::nd
   COL{{node · Collection · Beam}}:::nd
-  AS -->|SUBELEMENT| PT
+  PT -->|IN_ASSEMBLY ord 0 main| AS
+  PO -->|IN_ASSEMBLY ord 0| PU
+  PT -->|CONNECTS_TO · connection, weld or bolts| P2
+  CN -->|SUBELEMENT| BO
+  RB -->|HOSTED_ON| PT
   PT -->|SUBELEMENT| BO
   PT -->|DISPLAY| M
   M -->|HAS_MATERIAL| MAT
@@ -429,19 +507,19 @@ graph LR
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-Every object (owner and child) lands in a flat by-type collection AND is wired into a SUBELEMENT tree; each child is a first-class object with its own geometry + material. Material is the Tekla _visualisation colour_, per-mesh.
+Every object (owner and child) lands in a flat by-type collection AND is wired into a SUBELEMENT tree; each child is a first-class object with its own geometry + material. Rebar and surface objects are the exception: they sit on a part rather than belong to it, so they get `HOSTED_ON` → part and no SUBELEMENT (ENG-11152). Components, connections, details and seams come in as geometry-less objects from `Part.GetComponents()`: their created children in the send stay `SUBELEMENT` children of the component, and a connection or seam connects its primary part to each secondary with one unscoped `CONNECTS_TO` per pair (ADR-0002); rebar splices do the same to both bars, welds (`MainObject` → `SecondaryObject`) and bolt groups (`PartToBoltTo` → every bolted part) to the parts they join — ten welds between two plates are still one edge, the counts and sizes stay on the weld and bolt objects (ENG-11153). Welds are children of their main part like bolts, with their weld solid as `DISPLAY`. Material is the Tekla _visualisation colour_, per-mesh. Assemblies, pour objects and pour units are derived from the sent parts (`Part.GetAssembly()`, `Part.GetPours()`), sent once each as geometry-less objects with their report properties, and pointed at with `IN_ASSEMBLY`: the main object ord 0, secondaries and sub-assemblies from 1 in Tekla's order, a nested assembly → its parent the same way, pour object → pour unit ord 0 for all (ADR-0003 of the atlas spec, ENG-11151). A selected assembly or pour unit stands for its members.
 
-- **Nodes:** CONTAINER `"Collection"` (by object type — Beam, ContourPlate…) · MATERIAL
+- **Nodes:** CONTAINER `"Collection"` (by object type — Beam, ContourPlate, Assembly, PourUnit, Connection…) · MATERIAL
 - **Receive:** send-only
 - **Watch out:** grouping is by object type only — no class/phase/section sub-grouping yet (TODO). Rebar-as-solid is a toggle but always DISPLAY
 
 ---
 
-### CSi · ETABS · SAP — structural · analysis · emits 3
+### CSi · ETABS · SAP — structural · analysis · emits 7
 
-The analysis model as display-only geometry in a nested scene tree, plus a member↔joint connectivity graph and a flat table of analysis result rows — the primary `structural_results` producer.
+The analysis model as display-only geometry in a nested scene tree, plus a member↔joint connectivity graph, story and group membership, and a flat table of analysis result rows — the primary `structural_results` producer.
 
-**Connectivity graph** — `CONNECTS_TO` · `IN_COLLECTION`
+**Connectivity graph** — `CONNECTS_TO` · `IN_COLLECTION` · `ON_LEVEL` · `IN_GROUP`
 
 ```mermaid
 graph LR
@@ -450,15 +528,19 @@ graph LR
   J2([obj · J-joint]):::obj
   C2{{node · Collection · Beams}}:::nd
   C1{{node · Collection · Level 3}}:::nd
+  L3{{node · LEVEL · Level 3 · elev}}:::nd
+  G1{{node · Group · Transfer}}:::nd
   FR -->|CONNECTS_TO| J1
   FR -->|CONNECTS_TO| J2
   FR -->|IN_COLLECTION| C2
   C2 -.->|def_ref| C1
+  FR -->|ON_LEVEL| L3
+  FR -->|IN_GROUP| G1
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-A frame connects to its I/J-end joints (the slab↔beam↔column graph via shared joints). ETABS groups **level → category**; **stories are Collections, not LEVEL nodes**.
+A frame connects to its I/J-end joints (the slab↔beam↔column graph via shared joints). ETABS groups the scene tree **level → category**; the story is also a LEVEL node with its elevation (`ON_LEVEL`, objects without a story get no edge) and every ETABS group assignment a CONTAINER `"Group"` (`IN_GROUP`), the same edges `etabsextract` writes (ENG-11148).
 
 **Analysis results** — `structural_results`
 
@@ -475,27 +557,61 @@ graph LR
 
 Object-level rows (frameForce, jointReaction) join back via `object_index`; model-level rows (baseReaction, modalPeriod) have null object and key by location/step. Pier/spandrel/story results are extracted but not yet flattened.
 
-- **Nodes:** CONTAINER `"Collection"` — ETABS level→category; base CSi/SAP flat by-type
+- **Nodes:** CONTAINER `"Collection"` — ETABS level→category; base CSi/SAP flat by-type · LEVEL per story (ETABS) · CONTAINER `"Group"` per group assignment
 - **Sidecar:** `structural_results` — frame/joint (object) · base/modal (model)
 - **Receive:** send-only
-- **Watch out:** results gate on a **locked/analysed** model; a results failure never fails the geometry send. Sections/materials stay in eav (deferred)
+**Volumetric geometry** — `DISPLAY` is the extruded solid when the setting is on (ENG-9048); `CENTERLINE` and `HAS_MATERIAL` ship either way (ENG-11149). Shells connect to their corner joints like frames to their ends (ENG-11149).
+
+```mermaid
+graph LR
+  FR([obj · Frame]):::obj
+  SO[geo · extruded section]:::geo
+  AX[geo · analytical line]:::geo
+  MAT{{node · Material}}:::nd
+  FR -->|DISPLAY| SO
+  FR -->|CENTERLINE| AX
+  SO -->|HAS_MATERIAL| MAT
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
+  classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
+```
+
+With "Send Volumetric Geometry (Beta)" on, a frame's display is its section extruded along the member (insertion point applied) and its node-to-node analytical line moves to `CENTERLINE` — so the solid and the analysis axis both survive, and Grasshopper's Explore returns the axis. Every frame gets a `CENTERLINE`, including those whose section falls back to a wireframe display. Shells are extruded but carry no `CENTERLINE` (it is an axis-curve relation). Material display colours become MATERIAL nodes.
+
+- **Watch out:** results gate on a **locked/analysed** model; a results failure never fails the geometry send. Sections stay in eav (deferred); materials only as colours, and only for volumetric sends
 
 ---
 
-### TSD — structural · design · emits 2
+### TSD — structural · design · emits 6 (+1 volumetric)
 
-A flat structural model — members grouped by member-type, slabs, walls — with mesh display geometry and a separate stream of numeric-only analysis results.
+A structural model — members grouped by member-type, slabs owning their slab items, walls owning their panels — with mesh display geometry, the construction points they sit on as node objects, levels from the horizontal construction planes, element groups, and a separate stream of numeric-only analysis results.
 
-**Flat model + results** — `DISPLAY` · `IN_COLLECTION` · `structural_results`
+**Hierarchy + nodes + levels + groups + results** — `DISPLAY` · `IN_COLLECTION` · `SUBELEMENT` · `CONNECTS_TO` · `ON_LEVEL` · `IN_GROUP` · `structural_results`
 
 ```mermaid
 graph LR
   MB([obj · Beam member]):::obj
+  SL([obj · Slab]):::obj
+  SI([obj · SlabItem]):::obj
+  N1([obj · ConstructionPoint]):::obj
   M[geo · mesh]:::geo
+  SM[geo · mesh]:::geo
+  P[geo · point]:::geo
   COL{{node · Collection · Beam}}:::nd
+  NODES{{node · Collection · Nodes}}:::nd
+  LVL{{node · LEVEL · 2nd floor}}:::nd
+  GRP{{node · Group}}:::nd
   RES[[eav.structural_results · location-keyed]]:::file
   MB -->|DISPLAY| M
   MB -->|IN_COLLECTION| COL
+  MB -->|CONNECTS_TO| N1
+  MB -->|ON_LEVEL| LVL
+  MB -->|IN_GROUP| GRP
+  SL -->|SUBELEMENT ord=n| SI
+  SI -->|DISPLAY| SM
+  SI -->|CONNECTS_TO| N1
+  N1 -->|DISPLAY| P
+  N1 -->|IN_COLLECTION| NODES
   RES -.->|no object join| RES
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
@@ -503,12 +619,15 @@ graph LR
   classDef file fill:#d7dce6,stroke:#6b7488,color:#1b2130;
 ```
 
-Members group by member-type (Beam, Column, Slab…) into flat collections. Results are **model-level (location-keyed)** — `ObjectAppId` always null — so they identify members by name, not by object K, and don't auto-join. Numeric only, no PASS/FAIL.
+Members group by member-type (Beam, Column…) into flat collections; a slab and its items share the `Slab` collection, a wall and its panels the `StructuralWall` one. Results are **model-level (location-keyed)** — `ObjectAppId` always null — so they identify members by name, not by object K, and don't auto-join. Numeric only, no PASS/FAIL.
 
-- **Nodes:** CONTAINER `"Collection"` (flat, by MemberType)
+- **Nodes:** CONTAINER `"Collection"` (flat, by MemberType) · `"Nodes"` for the construction points · LEVEL per horizontal construction plane (name + elevation) · CONTAINER `"Group"` per element group
+- **Hierarchy** (ENG-11157): a slab is a geometry-less parent (`ISlab`, slab type / concrete / material) with `SUBELEMENT` to each slab item, ord = the slab's own item order; a wall is a geometry-less parent (design and mesh settings) with `SUBELEMENT` to each panel, ord = span order. Panels carry the display mesh and section data. The construction-point edges and the level stay on the wall, where TSD attaches the points; a slab item keeps its own. Spans stay `CENTERLINE` ordinals, not objects.
+- **Levels / groups** (ENG-11156): `ON_LEVEL` only when every construction point of the element sits on one horizontal construction plane — beams, slab items, single-storey walls; columns, braces and multi-storey walls get no invented level. `IN_GROUP` from `ElementGroupName`, one CONTAINER(Group) per name, ord 0.
+- **Topology** (ENG-11155): a member connects to the construction points at every span start and end, a slab item and a wall to their corner points — one unscoped `CONNECTS_TO` per pair (ADR-0002). Only referenced points are sent (the ETABS auto-joint idea), so no node is an orphan. Points carry a `Point` display the DAT decoder drops today; the edges are the point.
 - **Sidecar:** `structural_results` — forces / reactions / displacements, model-level
 - **Receive:** send-only
-- **Watch out:** `SUBELEMENT` is wired but **unreachable** (elements always empty) — scaffolding for future child modeling
+- **Volumetric geometry** (ENG-9048, setting-gated): members display one extruded prism per span and ship each span's analytical line as `CENTERLINE` (`ord` = span index); slab items and wall panels are extruded, no `CENTERLINE`. TSD exposes no material colour.
 
 ---
 
@@ -516,17 +635,17 @@ Members group by member-type (Beam, Column, Slab…) into flat collections. Resu
 
 **Three families.**
 - _Free-form CAD_ (Rhino, GH, AutoCAD, Plant3D, SketchUp) shares one profile: DISPLAY + instancing + IN_COLLECTION + materials/colours, ± groups & solids.
-- _BIM_ (Revit) is the only user of ON_LEVEL, IN_MODEL and IN_ROOM — the storey/federation/spatial tier. It shares the CAD family's `IN_GROUP` axis, sourced from model groups rather than authored scene groups (ENG-9079).
+- _BIM_ (Revit) is the only user of IN_MODEL and IN_ROOM — the federation/spatial tier; ON_LEVEL it shares with ETABS stories. It shares the CAD family's `IN_GROUP` axis, sourced from model groups rather than authored scene groups (ENG-9079).
 - _Structural_ (Tekla, CSi, TSD) is lean geometry + one topology or results channel; CSi & TSD own `structural_results`.
 
 **Deliberate folds & substitutions.**
 - Revit **folds BOUNDS into IN_ROOM** — reuses the richer rel rather than emit the rvextract-only one. `HOSTED_ON` is **no longer folded** into `SUBELEMENT` (ENG-9081): hosting and ownership are distinct, and collapsing them made topology depend on the publish route.
-- SketchUp maps **groups to component instances**, so it never emits IN_GROUP. CSi maps **stories to Collections**, not LEVEL nodes.
+- SketchUp maps **groups to component instances**, so it never emits IN_GROUP.
 - The spec's `emitted_by` hint (`rvextract`/`nwextract`/`managed`) is coarse — this map is the precise managed-connector truth.
 
 **Known gaps.**
 - **Civil3D topology is send-only** — SUBELEMENT/IN_SYSTEM/CONNECTS_TO survive in the graph but aren't rebuilt as native Civil relationships on receive.
-- **TSD SUBELEMENT is dead code** (elements always empty); **TSD results don't object-join** (location-keyed).
+- **TSD results don't object-join** (location-keyed).
 - **Member layers are Rhino + SketchUp only.** Both carry a definition member's layer/tag on a carrier object row joined back to its definition by `DEFINES_MEMBER`/`PLACES` (pre-vocab bundles: the `@speckle.geometry_k` / `@speckle.instance_k` eav stamp — SketchUp ENG-8851, Rhino ENG-9110). AutoCAD blocks have the identical gap and pin only the resolved member _colour_ (ENG-8825).
 - **Carriers depend on an unenforced invariant.** A carrier object row has no render edge, so any consumer walking objects must skip render-less ones or a member bakes twice and lands in the scene explorer. Every current reader does; nothing checks it.
 

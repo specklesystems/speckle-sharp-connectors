@@ -27,6 +27,8 @@ using Speckle.Sdk.Models.Proxies;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+using SpecContainer = Speckle.Bundle.Spec.Container;
+using SpecMaterial = Speckle.Bundle.Spec.Material;
 #if NETFRAMEWORK
 using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
 #endif
@@ -60,6 +62,11 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 /// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct
 /// without subclassing. Deferred this pass: Civil3D property-set definitions.</para>
 /// </remarks>
+[SuppressMessage(
+  "Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "One builder serves AutoCAD, Civil3D and Plant3D, so it touches all three verticals' types."
+)]
 public class AutocadArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<AutocadConversionSettings> converterSettings,
@@ -782,9 +789,12 @@ public class AutocadArtifactRootObjectBuilder(
         {
           netK = pipeline.AddContainer(
             networkId,
-            assign.TryGetValue("networkName", out var nn) ? nn as string : null,
-            null,
-            "Network"
+            new SpecContainer(
+              assign.TryGetValue("networkName", out var nn) ? nn as string : null,
+              null,
+              "Network",
+              null
+            )
           );
           networkKById[networkId] = netK;
         }
@@ -886,13 +896,15 @@ public class AutocadArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
-        value.name,
-        value.diffuse,
-        value.opacity,
-        value.metalness,
-        value.roughness,
-        value.emissive,
-        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        new SpecMaterial(
+          value.name,
+          value.diffuse,
+          value.opacity,
+          value.metalness,
+          value.roughness,
+          value.emissive,
+          value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+        )
       );
       foreach (var objectId in materialProxy.objects)
       {
@@ -1087,7 +1099,7 @@ public class AutocadArtifactRootObjectBuilder(
       {
         continue;
       }
-      int groupK = pipeline.AddContainer(group.Id, group.Name, null, "Group");
+      int groupK = pipeline.AddContainer(group.Id, new SpecContainer(group.Name, null, "Group", null));
       int ord = 0;
       foreach (string memberId in memberIds)
       {
@@ -1112,7 +1124,7 @@ public class AutocadArtifactRootObjectBuilder(
     int? argb = layerArgbByName.TryGetValue(layerName, out int a) ? a : null;
     // Layer colour as a first-class edge [bundle-spec rel 29 NODE_HAS_COLOR]; the argb-on-CONTAINER column
     // stamp it replaces stays a read fallback on consumers for pre-vocab bundles.
-    int collK = pipeline.AddCollection(layerName, layerName, null, "Layer");
+    int collK = pipeline.AddCollection(layerName, new SpecContainer(layerName, null, "Layer", null));
     if (argb is int layerArgb)
     {
       pipeline.NodeHasColor(collK, pipeline.AddColor(layerArgb));
