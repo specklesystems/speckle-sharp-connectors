@@ -1,6 +1,8 @@
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
+#if NETFRAMEWORK
+using System.Runtime.InteropServices;
 using Speckle.Sdk;
+#endif
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -54,35 +56,7 @@ public static class ZstdNativeLoader
     }
   }
 #else
-  // net8+ resolves the native via its RID-specific runtimes/ deployment, except inside Rhino 8 Mac, where
-  // RuntimeInformation.RuntimeIdentifier is "unknown" so IronCompress's own probe finds nothing (FEA-124). Other
-  // platforms keep the no-op.
-  private static int s_preloaded;
-
-  public static void Ensure(ILogger? logger = null)
-  {
-    if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || Interlocked.Exchange(ref s_preloaded, 1) == 1)
-    {
-      return;
-    }
-    try
-    {
-      var dir = Path.GetDirectoryName(typeof(ZstdNativeLoader).Assembly.Location) ?? string.Empty;
-      var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-      var native = Path.Combine(dir, "runtimes", $"osx-{arch}", "native", "libnironcompress.dylib");
-      if (!File.Exists(native))
-      {
-        return;
-      }
-      if (!NativeLibrary.TryLoad(native, out _))
-      {
-        logger?.LogWarning("Failed to pre-load native {Native} (parquet Zstd compression may fail)", native);
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger?.LogWarning(ex, "Could not pre-load the IronCompress native for parquet Zstd compression");
-    }
-  }
+  // net8+ resolves the native (nironcompress.dll) via its RID-specific deployment — nothing to pre-load.
+  public static void Ensure(ILogger? logger = null) => _ = logger;
 #endif
 }
