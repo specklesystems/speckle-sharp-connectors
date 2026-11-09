@@ -113,7 +113,11 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     var objects = GetObjectsFromIds(objectIds);
 
+#if RHINO_MAC
+    RhinoApp.InvokeOnUiThread(() => RhinoDoc.ActiveDoc.Objects.UnselectAll());
+#else
     RhinoDoc.ActiveDoc.Objects.UnselectAll();
+#endif
 
     if (objects.rhinoObjects.Count == 0 && objects.groups.Count == 0)
     {
@@ -142,6 +146,15 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   private void HighlightObjectsOnView(IReadOnlyList<RhinoObject> rhinoObjects, IReadOnlyList<Group> groups)
   {
+#if RHINO_MAC
+    // Bindings run on a worker thread; selecting, zooming and redrawing touch AppKit, which throws off the main
+    // thread on macOS and takes Rhino down. FEA-124.
+    if (RhinoApp.InvokeRequired)
+    {
+      RhinoApp.InvokeOnUiThread(() => HighlightObjectsOnView(rhinoObjects, groups));
+      return;
+    }
+#endif
     RhinoDoc.ActiveDoc.Objects.UnselectAll();
     List<RhinoObject> rhinoObjectsToSelect = new(rhinoObjects);
 
