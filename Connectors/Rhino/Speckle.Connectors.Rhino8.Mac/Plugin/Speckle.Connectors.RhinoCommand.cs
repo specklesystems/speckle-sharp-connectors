@@ -13,13 +13,12 @@ public class SpeckleConnectorsRhinoCommand : Command
     // Rhino only creates one instance of each command class defined in a
     // plug-in, so it is safe to store a reference in a static property.
     Instance = this;
-    // macOS head of the Windows command (Speckle.Connectors.RhinoShared/Plugin): Eto panel, no WPF reinit dance.
-    // TODO(rhino-mac): ship a proper panel icon; SystemIcons is served by McNeel's System.Drawing shim.
     Panels.RegisterPanel(
       SpeckleConnectorsRhinoPlugin.Instance,
       typeof(SpeckleRhinoPanelHost),
       "Speckle",
-      SystemIcons.Application,
+      typeof(SpeckleConnectorsRhinoCommand).Assembly,
+      "Speckle.Connectors.Rhino.Resources.speckle32.ico",
       PanelType.System
     );
   }
