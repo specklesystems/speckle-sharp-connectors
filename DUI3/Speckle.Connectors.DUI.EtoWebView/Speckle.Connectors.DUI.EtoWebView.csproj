@@ -4,8 +4,6 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
-    <!-- CA2255: module initializer is deliberate — see MacNativeLibraryResolver -->
-    <NoWarn>$(NoWarn);CA2255</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
