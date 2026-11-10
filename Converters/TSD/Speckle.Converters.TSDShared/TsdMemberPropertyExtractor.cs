@@ -131,7 +131,12 @@ public sealed class TsdMemberPropertyExtractor
     composite["Precamber Applied"] = precamber.ShouldBeApplied.Value;
     if (precamber.PrecamberMethod.Value == PrecamberMethod.Absolute)
     {
-      composite["Precamber"] = new TsdQuantityValue("Precamber", precamber.AbsoluteCamber.Value, Quantity.Dimension, "mm");
+      composite["Precamber"] = new TsdQuantityValue(
+        "Precamber",
+        precamber.AbsoluteCamber.Value,
+        Quantity.Dimension,
+        "mm"
+      );
     }
 
     int studs = 0;
@@ -155,10 +160,10 @@ public sealed class TsdMemberPropertyExtractor
         int count = group.ConnectorCount.Value;
         studs += count;
         groups[$"Group {groups.Count + 1}"] = new Dictionary<string, object?>
-          {
-            ["Count"] = count,
-            ["Distance"] = new TsdQuantityValue("Distance", group.Distance.Value, Quantity.Dimension, "mm"),
-          };
+        {
+          ["Count"] = count,
+          ["Distance"] = new TsdQuantityValue("Distance", group.Distance.Value, Quantity.Dimension, "mm"),
+        };
       }
     }
 
