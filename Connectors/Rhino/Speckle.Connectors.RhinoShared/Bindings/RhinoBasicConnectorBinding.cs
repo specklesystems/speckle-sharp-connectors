@@ -13,7 +13,6 @@ using Speckle.Sdk.Common;
 using Speckle.Connectors.Rhino.HostApp;
 #endif
 
-
 namespace Speckle.Connectors.Rhino.Bindings;
 
 public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding

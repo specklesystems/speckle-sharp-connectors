@@ -146,8 +146,8 @@ namespace Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 /// </summary>
 /// <remarks>
 /// .NET Core heads (Rhino 8 Mac) have no WindowsBase/DispatcherTimer; <see cref="RhinoApp.InvokeOnUiThread"/> is the
-/// marshal instead (rhino-mac-connector spec, ticket 02). A version counter rather than a timer field keeps the type
-/// free of disposable state (CA1001 here and on the owning component). The net48 implementation above is untouched.
+/// marshal instead (FEA-124). A version counter rather than a timer field keeps the type free of disposable state
+/// (CA1001 here and on the owning component).
 /// </remarks>
 public class DebounceDispatcher
 {

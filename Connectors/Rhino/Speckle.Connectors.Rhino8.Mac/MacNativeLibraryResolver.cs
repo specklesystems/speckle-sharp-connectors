@@ -16,7 +16,7 @@ namespace Speckle.Connectors.MacNative;
 /// <remarks>
 /// Inside Rhino 8 Mac <c>RuntimeInformation.RuntimeIdentifier</c> is <c>"unknown"</c>, so the runtime's RID-based
 /// probing of <c>runtimes/</c> never runs and every native the SDK depends on fails with DllNotFoundException
-/// (rhino-mac-connector spec, tickets 08/09). A module initializer registers the resolver before any component
+/// (FEA-124). A module initializer registers the resolver before any component
 /// (and therefore before PriorityLoad builds the DI container) touches SQLite or Parquet. Scoped to the assemblies
 /// that own the imports so no other plug-in's resolver is pre-empted.
 /// </remarks>
@@ -60,7 +60,7 @@ internal static class MacNativeLibraryResolver
     }
     catch (InvalidOperationException)
     {
-      // a resolver is already registered for this assembly — leave it
+      // Another plug-in already registered a resolver for this assembly; theirs wins rather than failing to load.
     }
   }
 
@@ -78,7 +78,7 @@ internal static class MacNativeLibraryResolver
         return handle;
       }
     }
-    return IntPtr.Zero; // fall back to default probing
+    return IntPtr.Zero;
   }
 
   private static IEnumerable<string> Candidates(string libraryName)

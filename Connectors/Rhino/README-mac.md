@@ -5,10 +5,10 @@
 
 Rhino 8 on macOS only loads .NET Core plug-ins, so `Speckle.Connectors.Rhino8.Mac` and
 `Speckle.Connectors.Grasshopper8.Mac` are separate `net8.0` projects that share almost all of
-their code with the Windows heads (`RhinoShared`, `GrasshopperShared`). Design notes and
-decisions: `atlas/specs/2026-09-rhino-mac-connector/` in the root Speckle checkout.
+their code with the Windows heads (`RhinoShared`, `GrasshopperShared`). Tracked in FEA-124.
 
-Requires Rhino 8 for Mac **8.20 or later**, Apple Silicon or Intel.
+Requires Rhino 8 for Mac **8.20 or later** on Apple Silicon. Intel Macs are untested, and publishing there
+likely fails: the bundled `libnironcompress.dylib` is built for `osx-arm64` only.
 
 ## Install
 
