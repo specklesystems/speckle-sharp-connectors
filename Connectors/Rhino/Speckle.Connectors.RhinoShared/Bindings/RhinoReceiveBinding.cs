@@ -5,6 +5,9 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+#if RHINO_MAC
+using Speckle.Connectors.Rhino.HostApp;
+#endif
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -39,12 +42,23 @@ public class RhinoReceiveBinding(
         uint undoRecord = 0;
         try
         {
+#if RHINO_MAC
+          // Like the other document writes, undo records are opened and closed on Rhino's main thread on macOS. FEA-124.
+          MacMainThread.Run(() =>
+            undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelName}")
+          );
+#else
           undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelName}");
+#endif
           return await processor();
         }
         finally
         {
+#if RHINO_MAC
+          MacMainThread.Run(() => RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord));
+#else
           RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord);
+#endif
         }
       }
     );

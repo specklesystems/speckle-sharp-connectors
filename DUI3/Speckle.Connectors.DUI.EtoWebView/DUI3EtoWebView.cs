@@ -113,43 +113,53 @@ public sealed class DUI3EtoWebView : Panel, IBrowserScriptExecutor
       Resolve(message?.CallId, string.Empty);
       return;
     }
-    switch (message.Op)
+    try
     {
-      case "GetBindingsMethodNames":
-        Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBindingsMethodNames()));
-        break;
-      case "GetBridgeCapabilities":
-        Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBridgeCapabilities()));
-        break;
-      case "RunMethod":
-        bridge.RunMethodTraced(
-          message.MethodName ?? string.Empty,
-          message.RequestId ?? string.Empty,
-          message.Args ?? "[]",
-          null
-        );
-        break;
-      case "RunMethodTraced":
-        bridge.RunMethodTraced(
-          message.MethodName ?? string.Empty,
-          message.RequestId ?? string.Empty,
-          message.Args ?? "[]",
-          message.OtelTraceContext
-        );
-        break;
-      case "GetCallResult":
-        Resolve(message.CallId, bridge.GetCallResult(message.RequestId ?? string.Empty) ?? string.Empty);
-        break;
-      case "OpenUrl":
-        bridge.OpenUrl(message.Url ?? string.Empty);
-        break;
-      case "ShowDevTools":
-        ShowDevTools();
-        break;
-      default:
-        // An op this host doesn't know still gets an answer, so a newer DUI's call fails at once, not on its timeout.
-        Resolve(message.CallId, string.Empty);
-        break;
+      switch (message.Op)
+      {
+        case "GetBindingsMethodNames":
+          Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBindingsMethodNames()));
+          break;
+        case "GetBridgeCapabilities":
+          Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBridgeCapabilities()));
+          break;
+        case "RunMethod":
+          bridge.RunMethodTraced(
+            message.MethodName ?? string.Empty,
+            message.RequestId ?? string.Empty,
+            message.Args ?? "[]",
+            null
+          );
+          break;
+        case "RunMethodTraced":
+          bridge.RunMethodTraced(
+            message.MethodName ?? string.Empty,
+            message.RequestId ?? string.Empty,
+            message.Args ?? "[]",
+            message.OtelTraceContext
+          );
+          break;
+        case "GetCallResult":
+          Resolve(message.CallId, bridge.GetCallResult(message.RequestId ?? string.Empty) ?? string.Empty);
+          break;
+        case "OpenUrl":
+          bridge.OpenUrl(message.Url ?? string.Empty);
+          break;
+        case "ShowDevTools":
+          ShowDevTools();
+          break;
+        default:
+          // An op this host doesn't know still gets an answer, so a newer DUI's call fails at once, not on its timeout.
+          Resolve(message.CallId, string.Empty);
+          break;
+      }
+    }
+    catch (Exception ex) when (!Speckle.Sdk.ExceptionHelpers.IsFatal(ex))
+    {
+      // A failed call still gets an answer, so the DUI fails it at once instead of on its call timeout; the top-level
+      // handler around OnMessage still reports the exception.
+      Resolve(message.CallId, string.Empty);
+      throw;
     }
   }
 
