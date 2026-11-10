@@ -6,7 +6,9 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// <summary>
 /// Runs document writes from binding methods on Rhino's main thread. Bindings run on the bridge's worker thread, and
 /// on macOS anything that marks the document edited or touches the UI throws off the main thread and takes Rhino
-/// down. Blocks the worker until the action has run so results and exceptions still reach the DUI. FEA-124.
+/// down. Blocks the worker until the action has run so results and exceptions still reach the DUI. Callers that run
+/// the action on the main thread call back into themselves, so they guard with <see cref="RhinoApp.InvokeRequired"/>
+/// first. FEA-124.
 /// </summary>
 internal static class MacMainThread
 {

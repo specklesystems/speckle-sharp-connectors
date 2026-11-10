@@ -9,6 +9,10 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+#if RHINO_MAC
+using Speckle.Connectors.Rhino.HostApp;
+#endif
+
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -114,7 +118,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     var objects = GetObjectsFromIds(objectIds);
 
 #if RHINO_MAC
-    RhinoApp.InvokeOnUiThread(() => RhinoDoc.ActiveDoc.Objects.UnselectAll());
+    MacMainThread.Run(() => RhinoDoc.ActiveDoc.Objects.UnselectAll());
 #else
     RhinoDoc.ActiveDoc.Objects.UnselectAll();
 #endif
@@ -147,11 +151,9 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
   private void HighlightObjectsOnView(IReadOnlyList<RhinoObject> rhinoObjects, IReadOnlyList<Group> groups)
   {
 #if RHINO_MAC
-    // Bindings run on a worker thread; selecting, zooming and redrawing touch AppKit, which throws off the main
-    // thread on macOS and takes Rhino down. FEA-124.
     if (RhinoApp.InvokeRequired)
     {
-      RhinoApp.InvokeOnUiThread(() => HighlightObjectsOnView(rhinoObjects, groups));
+      MacMainThread.Run(() => HighlightObjectsOnView(rhinoObjects, groups));
       return;
     }
 #endif

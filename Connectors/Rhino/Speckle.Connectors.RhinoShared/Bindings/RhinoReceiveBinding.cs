@@ -43,7 +43,6 @@ public class RhinoReceiveBinding(
         try
         {
 #if RHINO_MAC
-          // Like the other document writes, undo records are opened and closed on Rhino's main thread on macOS. FEA-124.
           MacMainThread.Run(() =>
             undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelName}")
           );
