@@ -21,10 +21,15 @@ public sealed class LoggingActivityFactory : IDisposable
   {
     if (!ActivityContext.TryParse(traceParent, traceState, true, out ActivityContext context))
     {
-      throw new ArgumentException(
-        "traceContext was not parsable to a valid W3C traceParent or traceState Header",
-        nameof(traceParent)
-      );
+      if (traceParent is not null)
+      {
+        throw new ArgumentException(
+          "traceContext was not parsable to a valid W3C traceParent or traceState Header",
+          nameof(traceParent)
+        );
+      }
+
+      return Start(name, kind, tags, startTime);
     }
 
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.

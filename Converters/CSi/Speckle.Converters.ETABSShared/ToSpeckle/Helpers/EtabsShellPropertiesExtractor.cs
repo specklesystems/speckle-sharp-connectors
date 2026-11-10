@@ -14,19 +14,19 @@ public sealed class EtabsShellPropertiesExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
   private readonly DatabaseTableExtractor _databaseTableExtractor;
-  private readonly EtabsShellSectionResolver _etabsShellSectionResolver;
+  private readonly IShellThicknessResolver _thicknessResolver;
 
   public EtabsShellPropertiesExtractor(
     CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
     DatabaseTableExtractor databaseTableExtractor,
-    EtabsShellSectionResolver etabsShellSectionResolver
+    IShellThicknessResolver thicknessResolver
   )
   {
     _settingsStore = settingsStore;
     _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
     _databaseTableExtractor = databaseTableExtractor;
-    _etabsShellSectionResolver = etabsShellSectionResolver;
+    _thicknessResolver = thicknessResolver;
   }
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
@@ -54,7 +54,7 @@ public sealed class EtabsShellPropertiesExtractor
     // CNX-2725 adds more numeric props for dashboard-ing
     var geometry = properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
     double area = GetArea(shell, designOrientation);
-    double thickness = GetSectionThickness(sectionId);
+    double thickness = _thicknessResolver.GetThickness(sectionId);
 
     double volume = double.NaN;
     if (!double.IsNaN(area) && !double.IsNaN(thickness) && area > 0 && thickness > 0)
@@ -189,67 +189,5 @@ public sealed class EtabsShellPropertiesExtractor
 
     // all database data is returned as strings
     return double.TryParse(area, out var result) ? result : double.NaN;
-  }
-
-  /// <summary>
-  /// Gets section thickness, resolving and caching section properties on first encounter.
-  /// </summary>
-  /// <param name="sectionId">The section name to get thickness for</param>
-  /// <returns>Thickness value, or NaN if section is invalid or thickness cannot be determined</returns>
-  private double GetSectionThickness(string sectionId)
-  {
-    // Guard against invalid sections
-    if (string.IsNullOrEmpty(sectionId) || sectionId == "None")
-    {
-      return double.NaN;
-    }
-
-    // Check if section already resolved and cached
-    if (!_csiToSpeckleCacheSingleton.ShellSectionPropertiesCache.TryGetValue(sectionId, out var sectionProperties))
-    {
-      // First encounter - resolve section and cache all properties
-      sectionProperties = _etabsShellSectionResolver.ResolveSection(sectionId);
-      _csiToSpeckleCacheSingleton.ShellSectionPropertiesCache[sectionId] = sectionProperties;
-    }
-
-    // Extract thickness from cached properties
-    return ExtractThicknessFromProperties(sectionProperties);
-  }
-
-  /// <summary>
-  /// Extracts thickness value from resolved section properties dictionary structure.
-  /// </summary>
-  /// <remarks>
-  /// Section properties have nested structure:
-  /// { "Property Data" -> { "Thickness" -> { "value" -> double, "units" -> string } } }
-  /// </remarks>
-  private static double ExtractThicknessFromProperties(Dictionary<string, object?> sectionProperties)
-  {
-    if (!sectionProperties.TryGetValue(SectionPropertyCategory.PROPERTY_DATA, out object? propertyDataObj))
-    {
-      return double.NaN;
-    }
-
-    if (propertyDataObj is not Dictionary<string, object?> propertyData)
-    {
-      return double.NaN;
-    }
-
-    if (!propertyData.TryGetValue(ObjectPropertyKey.THICKNESS, out object? thicknessObj))
-    {
-      return double.NaN;
-    }
-
-    if (thicknessObj is not Dictionary<string, object> thicknessDict)
-    {
-      return double.NaN;
-    }
-
-    if (!thicknessDict.TryGetValue("value", out object? valueObj))
-    {
-      return double.NaN;
-    }
-
-    return valueObj is double thickness ? thickness : double.NaN;
   }
 }

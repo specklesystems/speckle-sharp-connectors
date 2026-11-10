@@ -27,7 +27,7 @@ internal interface ITSDApplicationService : ITsdModelDataProvider
 
   Task<IReadOnlyList<IEntity>> GetObjectsForSendAsync(IReadOnlyList<string> objectIds);
 
-  Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IEnumerable<int> slabIndices);
+  Task<IReadOnlyDictionary<int, ISlab>> GetSlabsAsync(IEnumerable<int> slabIndices);
 
   Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities);
 }

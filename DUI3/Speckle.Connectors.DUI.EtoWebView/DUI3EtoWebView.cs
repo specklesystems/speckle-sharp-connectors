@@ -108,8 +108,8 @@ public sealed class DUI3EtoWebView : Panel, IBrowserScriptExecutor
     if (message?.Binding is null || !_bridges.TryGetValue(message.Binding, out var bridge))
     {
       // The DUI probes bindings that may not exist (00.bindings.ts hoists `nonExistantBindings` first, on purpose).
-      // WebView2 fails those synchronously; here the probe is a pending promise with no timeout, so an unanswered
-      // call stalls Nuxt's plugin chain and the app never mounts. Empty payload = "no such binding" on the JS side.
+      // WebView2 fails those synchronously; here each unanswered probe would hold Nuxt's sequential plugin chain for
+      // the DUI's call timeout. Empty payload = "no such binding" on the JS side.
       Resolve(message?.CallId, string.Empty);
       return;
     }
@@ -118,8 +118,24 @@ public sealed class DUI3EtoWebView : Panel, IBrowserScriptExecutor
       case "GetBindingsMethodNames":
         Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBindingsMethodNames()));
         break;
+      case "GetBridgeCapabilities":
+        Resolve(message.CallId, JsonConvert.SerializeObject(bridge.GetBridgeCapabilities()));
+        break;
       case "RunMethod":
-        bridge.RunMethod(message.MethodName ?? string.Empty, message.RequestId ?? string.Empty, message.Args ?? "[]");
+        bridge.RunMethodTraced(
+          message.MethodName ?? string.Empty,
+          message.RequestId ?? string.Empty,
+          message.Args ?? "[]",
+          null
+        );
+        break;
+      case "RunMethodTraced":
+        bridge.RunMethodTraced(
+          message.MethodName ?? string.Empty,
+          message.RequestId ?? string.Empty,
+          message.Args ?? "[]",
+          message.OtelTraceContext
+        );
         break;
       case "GetCallResult":
         Resolve(message.CallId, bridge.GetCallResult(message.RequestId ?? string.Empty) ?? string.Empty);
@@ -129,6 +145,10 @@ public sealed class DUI3EtoWebView : Panel, IBrowserScriptExecutor
         break;
       case "ShowDevTools":
         ShowDevTools();
+        break;
+      default:
+        // An op this host doesn't know still gets an answer, so a newer DUI's call fails at once, not on its timeout.
+        Resolve(message.CallId, string.Empty);
         break;
     }
   }
@@ -153,6 +173,7 @@ public sealed class DUI3EtoWebView : Panel, IBrowserScriptExecutor
     string? MethodName,
     string? RequestId,
     string? Args,
+    string? OtelTraceContext,
     string? Url
   );
 }

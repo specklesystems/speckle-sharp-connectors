@@ -15,6 +15,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsJointPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsShellPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsShellSectionResolver.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsShellThicknessResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\EtabsObjectToSpeckleConverter.cs" />
   </ItemGroup>
 </Project>

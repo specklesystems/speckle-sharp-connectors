@@ -1,9 +1,13 @@
-using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Speckle.Connectors.Rhino;
+// Also compiled into the Grasshopper Mac head, where a Speckle.Connectors.Rhino namespace would shadow RhinoCommon's
+// global Rhino namespace; System.IO is qualified because only the Rhino head removes its implicit using.
+#pragma warning disable IDE0130
+namespace Speckle.Connectors.MacNative;
+
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Resolves bare <c>[DllImport]</c> names (e_sqlite3, nironcompress) to the plug-in's
@@ -32,9 +36,9 @@ internal static class MacNativeLibraryResolver
     {
       return;
     }
-    var pluginDir = Path.GetDirectoryName(typeof(MacNativeLibraryResolver).Assembly.Location) ?? string.Empty;
+    var pluginDir = System.IO.Path.GetDirectoryName(typeof(MacNativeLibraryResolver).Assembly.Location) ?? string.Empty;
     var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-    s_nativeDir = Path.Combine(pluginDir, "runtimes", $"osx-{arch}", "native");
+    s_nativeDir = System.IO.Path.Combine(pluginDir, "runtimes", $"osx-{arch}", "native");
 
     foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
     {
@@ -68,8 +72,8 @@ internal static class MacNativeLibraryResolver
     }
     foreach (var candidate in Candidates(libraryName))
     {
-      var path = Path.Combine(s_nativeDir, candidate);
-      if (File.Exists(path) && NativeLibrary.TryLoad(path, out var handle))
+      var path = System.IO.Path.Combine(s_nativeDir, candidate);
+      if (System.IO.File.Exists(path) && NativeLibrary.TryLoad(path, out var handle))
       {
         return handle;
       }

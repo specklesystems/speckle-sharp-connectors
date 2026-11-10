@@ -38,7 +38,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.2xx # Align with global.json (including roll forward rules)
+          dotnet-version: 10.0.4xx # Align with global.json (including roll forward rules)
 
       # we are purposefully not caching releases when publishing artefacts, see https://docs.zizmor.sh/audits/#cache-poisoning
 
@@ -46,7 +46,7 @@ jobs:
         run: ./build.ps1 zip  
         
       - name: ⬆️ Upload artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: output-${{ env.SEMVER }}
           path: output/*.*
@@ -72,7 +72,7 @@ jobs:
       IS_PUBLIC_RELEASE: ${{ github.ref_type == 'tag' }}
     steps:
       - name: 🔫 Trigger Build Installers
-        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
+        uses: benc-uk/workflow-dispatch@d004979be141727c7a17c28f603e2facc40d0855 # v1.3.3
         with:
           workflow: Build Installers
           repo: specklesystems/connector-installers

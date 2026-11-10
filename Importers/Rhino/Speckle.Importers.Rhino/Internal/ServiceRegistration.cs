@@ -68,24 +68,8 @@ internal static class ServiceRegistration
         Otel:
         [
           new(
-            Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/logs"),
-            Headers: new()
-            {
-              // We're using a different token than connectors for seq because we want to beable to
-              // trust the client's timestamps (rather than use the server's timestamps) for better tracing
-              // This setting has more opportunity for abuse, so we're keeping it secret, unlike the connectors token.
-              { "X-Seq-ApiKey", Environment.GetEnvironmentVariable("SEQ_API_KEY").NotNullOrWhiteSpace() },
-            }
-          ),
-          new(
             Endpoint: new Uri("https://collector.speckle.dev/v1/logs"),
-            Headers: new()
-            {
-              {
-                "authorization",
-                Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()
-              },
-            }
+            Headers: $"authorization={Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()}"
           ),
         ],
         MinimumLevel: SpeckleLogLevel.Information
@@ -95,21 +79,8 @@ internal static class ServiceRegistration
         Otel:
         [
           new(
-            Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/traces"),
-            Headers: new()
-            {
-              { "X-Seq-ApiKey", Environment.GetEnvironmentVariable("SEQ_API_KEY").NotNullOrWhiteSpace() },
-            }
-          ),
-          new(
             Endpoint: new Uri("https://collector.speckle.dev/v1/traces"),
-            Headers: new()
-            {
-              {
-                "authorization",
-                Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()
-              },
-            }
+            Headers: $"authorization={Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN").NotNullOrWhiteSpace()}"
           ),
         ]
       ),

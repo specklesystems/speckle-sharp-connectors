@@ -2,5 +2,5 @@
 
 public interface IParametersBinding : IBinding
 {
-  public Task Update(string payload);
+  public Task<ParameterUpdateSummary> Update(string payload);
 }

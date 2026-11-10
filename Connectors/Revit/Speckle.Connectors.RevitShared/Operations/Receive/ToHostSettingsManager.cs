@@ -50,10 +50,25 @@ public class ToHostSettingsManager : IToHostSettingsManager
     return null;
   }
 
-  public bool GetReceiveInstancesAsFamiliesSetting(ModelCard modelCard)
+  public bool GetReceiveInstancesAsFamiliesSetting(ModelCard modelCard) =>
+    GetBoolSetting(
+      modelCard,
+      ReceiveInstancesAsFamiliesSetting.SETTING_ID,
+      ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE,
+      "Receive instances as families"
+    );
+
+  public bool GetReceivePropertiesAsParametersSetting(ModelCard modelCard) =>
+    GetBoolSetting(
+      modelCard,
+      ReceivePropertiesAsParametersSetting.SETTING_ID,
+      ReceivePropertiesAsParametersSetting.DEFAULT_VALUE,
+      "Receive properties as parameters"
+    );
+
+  private bool GetBoolSetting(ModelCard modelCard, string settingId, bool defaultValue, string label)
   {
-    var settingValue =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == ReceiveInstancesAsFamiliesSetting.SETTING_ID)?.Value as bool?;
+    var settingValue = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value as bool?;
 
     if (settingValue is not null)
     {
@@ -61,12 +76,13 @@ public class ToHostSettingsManager : IToHostSettingsManager
     }
 
     _logger.LogWarning(
-      "Receive instances as families setting was null for model {ModelCardId}, using default: {DefaultValue}",
+      "{Setting} setting was null for model {ModelCardId}, using default: {DefaultValue}",
+      label,
       modelCard.ModelCardId,
-      ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE
+      defaultValue
     );
 
-    return ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE;
+    return defaultValue;
   }
 
   private Transform? GetTransform(ReceiveReferencePointType referencePointType)

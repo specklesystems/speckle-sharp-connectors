@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Converters.RevitShared.Helpers;
@@ -62,6 +63,20 @@ public class ParameterUpdater
     }
 
     return SetParameterValue(parameter, newValue);
+  }
+
+  /// <summary>
+  /// Whether the path resolves to a parameter on the element. Same lookup as <see cref="Update"/>, no write.
+  /// </summary>
+  public bool Exists(DB.Element element, string[] path, string? internalDefinitionName = null)
+  {
+    if (path.Length != 3)
+    {
+      return false;
+    }
+
+    var targetElement = GetTargetElement(element, path[0]);
+    return targetElement != null && FindParameter(targetElement, path[1], path[2], internalDefinitionName) != null;
   }
 
   private DB.Element? GetTargetElement(DB.Element element, string scope) =>
@@ -247,7 +262,7 @@ public class ParameterUpdater
       return parameter.Set(b ? 1 : 0);
     }
 
-    if (int.TryParse(newValue.ToString(), out var parsed))
+    if (int.TryParse(newValue.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
     {
       return parameter.Set(parsed);
     }
@@ -277,7 +292,8 @@ public class ParameterUpdater
     {
       doubleValue = intVal;
     }
-    else if (double.TryParse(newValue.ToString(), out var parsed))
+    // the value comes from the web as text in JS notation; the host culture (de-DE reads "2.5" as 25) must not apply
+    else if (double.TryParse(newValue.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
     {
       doubleValue = parsed;
     }

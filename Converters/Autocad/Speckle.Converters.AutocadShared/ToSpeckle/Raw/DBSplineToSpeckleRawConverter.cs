@@ -1,5 +1,3 @@
-using Autodesk.AutoCAD.Geometry;
-using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
@@ -8,19 +6,19 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Curve>
 {
-  private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
+  private readonly ITypedConverter<ADB.Spline, SOG.Polyline> _displayValueConverter;
   private readonly ITypedConverter<AG.Interval, SOP.Interval> _intervalConverter;
   private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBSplineToSpeckleRawConverter(
-    ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
+    ITypedConverter<ADB.Spline, SOG.Polyline> displayValueConverter,
     ITypedConverter<AG.Interval, SOP.Interval> intervalConverter,
     IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _doublesConverter = doublesConverter;
+    _displayValueConverter = displayValueConverter;
     _intervalConverter = intervalConverter;
     _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
@@ -38,7 +36,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     double length = 0;
     SOP.Interval domain = SOP.Interval.UnitInterval;
     using AG.Curve3d curve3d = target.GetGeCurve();
-    if (curve3d is NurbCurve3d nurbs)
+    if (curve3d is AG.NurbCurve3d nurbs)
     {
       length = nurbs.GetLength(nurbs.StartParameter, nurbs.EndParameter, 0.001);
       domain = _intervalConverter.Convert(nurbs.GetInterval());
@@ -49,8 +47,8 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     }
 
     // get points, transformed by reference point setting
-    List<Point3d> points = new();
-    foreach (Point3d point in data.GetControlPoints().OfType<Point3d>())
+    List<AG.Point3d> points = new();
+    foreach (AG.Point3d point in data.GetControlPoints().OfType<AG.Point3d>())
     {
       points.Add(_referencePointConverter.ConvertWCSPointToExternalCoordinates(point));
     }
@@ -113,43 +111,11 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       length = length,
       domain = domain,
       units = _settingsStore.Current.SpeckleUnits,
-      displayValue = target.Database is not null ? GetDisplayValue(target) : null!, //TODO change?
+      // POC: get display value if this is a database-resident spline
+      // POC: if this is called by another converter that has created a spline, assumes the display value is set by that converter
+      displayValue = target.Database is not null ? _displayValueConverter.Convert(target) : null!,
     };
 
-    // POC: get display value if this is a database-resident spline
-    // POC: if this is called by another converter that has created a spline, assumes the display value is set by that converter
-
     return curve;
-  }
-
-  // POC: we might have DisplayValue converter/mapper?
-  private SOG.Polyline GetDisplayValue(ADB.Spline spline)
-  {
-    using ADB.Curve polySpline = spline.ToPolylineWithPrecision(10, false, false);
-    List<double> verticesList = new();
-    switch (polySpline)
-    {
-      case ADB.Polyline2d o:
-        verticesList = o.GetSubEntities<ADB.Vertex2d>(
-            ADB.OpenMode.ForRead,
-            _settingsStore.Current.Document.TransactionManager.TopTransaction
-          )
-          .Where(e => e.VertexType != ADB.Vertex2dType.SplineControlVertex) // POC: not validated yet!
-          .SelectMany(o => o.Position.ToArray())
-          .ToList();
-
-        break;
-      case ADB.Polyline3d o:
-        verticesList = o.GetSubEntities<ADB.PolylineVertex3d>(
-            ADB.OpenMode.ForRead,
-            _settingsStore.Current.Document.TransactionManager.TopTransaction
-          )
-          .Where(e => e.VertexType != ADB.Vertex3dType.ControlVertex)
-          .SelectMany(o => o.Position.ToArray())
-          .ToList();
-        break;
-    }
-
-    return _doublesConverter.Convert(verticesList);
   }
 }

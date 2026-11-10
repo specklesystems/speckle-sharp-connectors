@@ -15,7 +15,7 @@ public sealed class TsdWallPropertyExtractor
     _logger = logger;
   }
 
-  public Dictionary<string, object?> Extract(IStructuralWall wall, IReadOnlyList<IStructuralWallPanel> panels)
+  public Dictionary<string, object?> Extract(IStructuralWall wall)
   {
     IStructuralWallData? data = null;
     try
@@ -60,28 +60,10 @@ public sealed class TsdWallPropertyExtractor
       properties["Mesh"] = mesh;
     }
 
-    var panelProperties = new Dictionary<string, object?>();
-    int index = 1;
-    foreach (var panel in panels)
-    {
-      var extracted = ExtractPanel(panel);
-      if (extracted.Count > 0)
-      {
-        panelProperties[$"Panel {index}"] = extracted;
-      }
-
-      index++;
-    }
-
-    if (panelProperties.Count > 0)
-    {
-      properties["Panels"] = panelProperties;
-    }
-
     return properties;
   }
 
-  private Dictionary<string, object?> ExtractPanel(IStructuralWallPanel panel)
+  public Dictionary<string, object?> ExtractPanel(IStructuralWallPanel panel)
   {
     IStructuralWallPanelData? data = null;
     try
@@ -94,14 +76,28 @@ public sealed class TsdWallPropertyExtractor
     }
 
     var properties = new Dictionary<string, object?>();
+
+    var objectId = new Dictionary<string, object?>();
+    TryAdd(objectId, "GUID", () => panel.Id.ToString());
+    TryAdd(objectId, "Index", () => panel.Index);
+    if (objectId.Count > 0)
+    {
+      properties["Object ID"] = objectId;
+    }
+
     if (data is not null)
     {
-      AddDimension(properties, "Thickness", () => data.Thickness.Value);
-      AddDimension(properties, "Nominal Cover", () => data.NominalCover.Value);
-      TryAdd(properties, "Concrete Type", () => data.ConcreteType.Value.ToString());
-      TryAdd(properties, "Alignment", () => data.Alignment.Value.ToString());
-      TryAdd(properties, "Reinforcement Layers", () => data.ReinforcementLayers.Value);
-      TryAdd(properties, "Material", () => ExtractMaterial(data.Material.Value));
+      var section = new Dictionary<string, object?>();
+      AddDimension(section, "Thickness", () => data.Thickness.Value);
+      AddDimension(section, "Nominal Cover", () => data.NominalCover.Value);
+      TryAdd(section, "Concrete Type", () => data.ConcreteType.Value.ToString());
+      TryAdd(section, "Alignment", () => data.Alignment.Value.ToString());
+      TryAdd(section, "Reinforcement Layers", () => data.ReinforcementLayers.Value);
+      TryAdd(section, "Material", () => ExtractMaterial(data.Material.Value));
+      if (section.Count > 0)
+      {
+        properties["Section"] = section;
+      }
     }
 
     return properties;

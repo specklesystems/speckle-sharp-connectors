@@ -39,8 +39,35 @@ public class RhinoDocumentStore : DocumentModelStore
     {
       return; // Should throw
     }
+#if RHINO_MAC
+    uint docSerialNumber = RhinoDoc.ActiveDoc.RuntimeSerialNumber;
+
+    void Write()
+    {
+      // the doc may have closed while the write was queued
+      var doc = RhinoDoc.FromRuntimeSerialNumber(docSerialNumber);
+      if (doc == null)
+      {
+        return;
+      }
+      doc.Strings.Delete(SPECKLE_KEY);
+      doc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, modelCardState);
+    }
+
+    // Bindings run on a worker thread, and on macOS writing a doc string marks the NSDocument edited, which AppKit
+    // only allows on the main thread (fatal NSInternalInconsistencyException otherwise). FEA-124.
+    if (RhinoApp.InvokeRequired)
+    {
+      RhinoApp.InvokeOnUiThread(Write);
+    }
+    else
+    {
+      Write();
+    }
+#else
     RhinoDoc.ActiveDoc.Strings.Delete(SPECKLE_KEY);
     RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, modelCardState);
+#endif
   }
 
   protected override void LoadState()

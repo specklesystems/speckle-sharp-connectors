@@ -29,7 +29,7 @@ This repo is the home of our next-generation Speckle .NET projects:
   - [`DUI3`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/DUI3): our next generation Desktop User Interface for all connectors.
 - **Speckle Connectors**
   - [`AutoCAD Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Autocad): for Autodesk AutoCAD and Civil3D 2023 - 2027
-  - [`Rhino Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Rhino): for McNeel Rhino 7 - 8 (macOS: **Alpha**, no official distribution yet — see [`Connectors/Rhino/README-mac.md`](Connectors/Rhino/README-mac.md) to build it yourself)
+  - [`Rhino Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Rhino): for McNeel Rhino 7 - 8 (macOS: **Alpha** — see [`Connectors/Rhino/README-mac.md`](Connectors/Rhino/README-mac.md))
   - [`Revit Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Revit): for Autodesk Revit 2023 - 2027
   - [`CSi Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/CSi): for CSi ETABS 21 - 23
   - [`Tekla Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Tekla): for Trimble Tekla Structures 2023 - 2025
@@ -60,9 +60,9 @@ Make sure to also check and ⭐️ these other Speckle next generation repositor
 
 ## Developing
 
-To build solutions in this repo, [10.0.2xx of the .NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) is required.
+To build solutions in this repo, [10.0.4xx of the .NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) is required.
 
-It is recommended to use Jetbrains Rider (version 2025.3 or greater) or Visual Studio 2026 (version 18.4 or greater)
+It is recommended to use Jetbrains Rider (version 2026.1 or greater) or Visual Studio 2026 (version 18.4 or greater)
 
 From there you can open the main `Speckle.Connectors.slnx` solution and build the project.
 

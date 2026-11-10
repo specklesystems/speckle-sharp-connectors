@@ -8,9 +8,9 @@ public class ParameterChangeRequest
   public string? InternalDefinitionName { get; set; }
 
   /// <summary>
-  /// When true, the widget is requesting a new parameter be created rather than an existing one updated.
-  /// Host apps that support open key-value storage (Rhino) will create the key automatically.
-  /// Schema-bound apps (Revit, Civil3D) will return a descriptive error.
+  /// When true, the widget could not see a value for this parameter on the object. Host apps with open key-value
+  /// storage (Rhino) set the key; schema-bound apps (Revit, Civil3D) update the parameter when the path resolves
+  /// to one and create it otherwise.
   /// </summary>
   public bool IsCreation { get; init; }
 }
@@ -19,6 +19,12 @@ public class ParameterChangesWrapper
 {
   public List<ParameterChangeRequest>? Changes { get; set; }
 }
+
+/// <summary>
+/// What the host app did with a change request payload; the DUI keeps the request open while <see cref="Failed"/>
+/// is non-zero.
+/// </summary>
+public record ParameterUpdateSummary(int Applied, int Failed, IReadOnlyList<string> Errors);
 
 public readonly struct UpdateResult
 {
