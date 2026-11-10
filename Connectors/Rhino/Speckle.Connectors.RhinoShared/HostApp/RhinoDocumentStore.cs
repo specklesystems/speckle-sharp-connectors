@@ -31,6 +31,14 @@ public class RhinoDocumentStore : DocumentModelStore
         LoadState();
         OnDocumentChanged();
       });
+#if RHINO_MAC
+    // Rhino Mac loads the plug-in on first use, after a double-clicked file has already opened, so EndOpenDocument
+    // above never fires for it and the file's model cards would stay unread. FEA-124.
+    if (RhinoDoc.ActiveDoc != null)
+    {
+      LoadState();
+    }
+#endif
   }
 
   protected override void HostAppSaveState(string modelCardState)
