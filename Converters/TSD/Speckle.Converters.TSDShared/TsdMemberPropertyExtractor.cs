@@ -112,6 +112,61 @@ public sealed class TsdMemberPropertyExtractor
     return geometry;
   }
 
+  private static Dictionary<string, object?>? ExtractCompositeDesign(IReadOnlyList<IMemberSpan> spans)
+  {
+    if (spans[0].Data.Value is not ISteelBeamSpanData beam)
+    {
+      return null;
+    }
+
+    var composite = new Dictionary<string, object?>();
+
+    var precamber = beam.Precamber.Value;
+    if (precamber is null)
+    {
+      return null;
+    }
+
+    composite["Precamber Method"] = precamber.PrecamberMethod.Value.ToString();
+    composite["Precamber Applied"] = precamber.ShouldBeApplied.Value;
+    if (precamber.PrecamberMethod.Value == PrecamberMethod.Absolute)
+    {
+      composite["Precamber"] = new TsdQuantityValue("Precamber", precamber.AbsoluteCamber.Value, Quantity.Dimension, "mm");
+    }
+
+    int studs = 0;
+    var groups = new Dictionary<string, object?>();
+    foreach (var span in spans)
+    {
+      if (span.Data.Value is not ISteelBeamSpanData spanBeam)
+      {
+        continue;
+      }
+
+      var layout = spanBeam.ShearConnectorLayout.Value;
+      if (layout is null)
+      {
+        continue;
+      }
+
+      foreach (var groupProperty in layout.Groups.Value)
+      {
+        var group = groupProperty.Value;
+        int count = group.ConnectorCount.Value;
+        studs += count;
+        groups[$"Group {groups.Count + 1}"] = new Dictionary<string, object?>
+          {
+            ["Count"] = count,
+            ["Distance"] = new TsdQuantityValue("Distance", group.Distance.Value, Quantity.Dimension, "mm"),
+          };
+      }
+    }
+
+    composite["Shear Stud Count"] = studs;
+    composite["Shear Stud Groups"] = groups;
+    return composite;
+  }
+
   private Dictionary<string, object?> ExtractAssignments(
     IMember member,
     IMemberData? memberData,
@@ -133,6 +188,7 @@ public sealed class TsdMemberPropertyExtractor
     {
       TryAdd(assignments, "Section", () => TryGetSectionName(spans[0]));
       TryAdd(assignments, "Material", () => ExtractMaterial(spans[0].Material.Value));
+      TryAdd(assignments, "Composite Design", () => ExtractCompositeDesign(spans));
 
       var endReleases = new Dictionary<string, object?>();
       TryAdd(endReleases, "I-End", () => ExtractReleases(spans[0].StartReleases.Value));
