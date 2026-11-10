@@ -52,7 +52,7 @@ public sealed class TsdSectionPrismResolver
     }
     if (Math.Abs(outline.Area - hostArea) / hostArea > AREA_TOLERANCE)
     {
-      return new(null, $"{shape}/area-mismatch");
+      return new(null, $"{shape}/area-mismatch (drawn {outline.Area:G5}, host {hostArea:G5})");
     }
 
     var prism = PrismBuilder.TryBuildUnitPrism(outline);
