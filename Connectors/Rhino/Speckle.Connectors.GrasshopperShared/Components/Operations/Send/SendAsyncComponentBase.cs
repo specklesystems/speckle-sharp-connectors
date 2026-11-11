@@ -213,7 +213,7 @@ public abstract class SendAsyncComponentBase : GH_AsyncComponent<SendAsyncCompon
     base.RemovedFromDocument(document);
   }
 
-  public override void DisplayProgress(object sender, ElapsedEventArgs e)
+  public override void DisplayProgress(object? sender, ElapsedEventArgs e)
   {
     if (WorkerCount == 0)
     {

@@ -1,3 +1,4 @@
+using System.Diagnostics.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
@@ -66,14 +67,17 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     }
   }
 
-  private HostAppVersion GetVersion()
+  [Pure]
+  private static HostAppVersion GetVersion()
   {
 #if RHINO7
     return HostAppVersion.v7;
 #elif RHINO8
     return HostAppVersion.v8;
+#elif RHINO9
+    return HostAppVersion.v9;
 #else
-    throw new NotImplementedException();
+#error Invalid Preprocessor Directives
 #endif
   }
 

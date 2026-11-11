@@ -11,6 +11,7 @@ internal static class Consts
       [
         new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48"),
         new("Connectors/Rhino/Speckle.Connectors.Rhino8", "net48"),
+        new("Connectors/Rhino/Speckle.Connectors.Rhino9", "net10.0-windows"),
       ]
     ),
     new(
@@ -67,7 +68,6 @@ internal static class Consts
       ]
     ),
     new("tsd", [new("Connectors/TSD/Speckle.Connectors.TSD2027", "net10.0-windows")]),
-    new("rhino-importer", [new("Importers/Rhino/Speckle.Importers.JobProcessor", "net8.0-windows")]),
   };
 }
 

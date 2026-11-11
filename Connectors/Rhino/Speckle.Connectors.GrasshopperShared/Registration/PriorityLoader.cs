@@ -1,3 +1,4 @@
+using System.Diagnostics.Contracts;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,14 +107,17 @@ public class PriorityLoader : GH_AssemblyPriority
     }
   }
 
-  private HostAppVersion GetVersion()
+  [Pure]
+  private static HostAppVersion GetVersion()
   {
 #if RHINO7
     return HostAppVersion.v7;
 #elif RHINO8
     return HostAppVersion.v8;
+#elif RHINO9
+    return HostAppVersion.v9;
 #else
-    throw new NotImplementedException();
+#error Invalid Preprocessor Directives
 #endif
   }
 }
