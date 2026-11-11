@@ -122,9 +122,8 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     return HostAppVersion.v2023;
 #elif TEKLA2025
     return HostAppVersion.v2025;
-
 #else
-    throw new NotImplementedException();
+#error Compiler directives misconfigured or the host app version is not supported
 #endif
   }
 }

@@ -77,7 +77,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 #elif RHINO9
     return HostAppVersion.v9;
 #else
-#error Invalid Preprocessor Directives
+#error Compiler directives misconfigured or the host app version is not supported
 #endif
   }
 
