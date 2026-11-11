@@ -26,12 +26,16 @@ namespace Speckle.Connectors.GrasshopperShared.Registration;
 
 public static class ServiceScopeExtensions
 {
-  public static T Get<T>(this IServiceScope scope) => scope.ServiceProvider.GetRequiredService<T>();
+  public static T Get<T>(this IServiceScope scope)
+    where T : notnull => scope.ServiceProvider.GetRequiredService<T>();
 }
 
 public class PriorityLoader : GH_AssemblyPriority
 {
-  public static ServiceProvider? Container { get; set; }
+#nullable disable
+  public static ServiceProvider Container { get; set; }
+
+#nullable restore
 
   public static IServiceScope CreateScopeForActiveDocument()
   {

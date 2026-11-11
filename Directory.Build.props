@@ -36,6 +36,8 @@
       NETSDK1206;
       <!-- NuGet audit: transitive SQLitePCLRaw.lib.e_sqlite3 advisory, pulled in via SDK deps -->
       NU1903;
+      <!--Analyisers that make it hard to multi-target-->
+      CA2249;
       $(NoWarn)
     </NoWarn>
   </PropertyGroup>

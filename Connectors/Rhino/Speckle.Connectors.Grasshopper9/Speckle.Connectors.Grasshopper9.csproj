@@ -5,6 +5,8 @@
     <TargetExt>.gha</TargetExt>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <!--Root Namespace needs to be aligned across all grasshopper csproj to ensure the .resx file in the shared project has the correct resource namespace-->
     <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
     <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO9;RHINO7_OR_GREATER;RHINO8_OR_GREATER;RHINO9_OR_GREATER</DefineConstants>
@@ -40,4 +42,9 @@
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino9\Speckle.Converters.Rhino9.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
   </ItemGroup>
+
+  <Import
+    Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems"
+    Label="Shared"
+  />
 </Project>

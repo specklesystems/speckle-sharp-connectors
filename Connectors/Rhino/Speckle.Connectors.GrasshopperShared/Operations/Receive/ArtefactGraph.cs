@@ -1,5 +1,8 @@
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
+#if !NETFRAMEWORK
+using System.IO;
+#endif
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
