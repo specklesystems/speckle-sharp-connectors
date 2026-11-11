@@ -6,6 +6,7 @@
   </Configurations>
   <Folder Name="/Build/">
     <Project Path="Build\Build.csproj" />
+    <File Path=".github/workflows/extended-ci-test.yml" />
     <File Path=".github\workflows\pr.yml" />
     <File Path=".github\workflows\release.yml" />
   </Folder>
@@ -77,8 +78,8 @@
     <Project Path="Converters\CSi\Speckle.Converters.ETABS22\Speckle.Converters.ETABS22.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/ETABS23/">
-    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS23/Speckle.Connectors.ETABS23.csproj" />
-    <Project Path="Converters/CSi/Speckle.Converters.ETABS23/Speckle.Converters.ETABS23.csproj" />
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABS23\Speckle.Connectors.ETABS23.csproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABS23\Speckle.Converters.ETABS23.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/Shared/">
     <Project Path="Converters\CSi\Speckle.Converters.CSi.Tests\Speckle.Converters.CSi.Tests.csproj" />
