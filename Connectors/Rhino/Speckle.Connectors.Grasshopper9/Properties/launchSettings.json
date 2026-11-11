@@ -1,17 +1,9 @@
 {
   "profiles": {
-    "Rhino8Core": {
+    "Speckle.Connectors.Grasshopper9": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
-      "commandLineArgs": "/netcore /runscript=\"_Grasshopper\"",
-      "environmentVariables": {
-        "RHINO_PACKAGE_DIRS": "$(ProjectDir)$(OutputPath)\\"
-      }
-    },
-    "Rhino8NetFx": {
-      "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
-      "commandLineArgs": "/netfx /runscript=\"_Grasshopper\"",
+      "executablePath": "C:\\Program Files\\Rhino 9\\System\\Rhino.exe",
+      "commandLineArgs": "/runscript=\"_Grasshopper\"",
       "environmentVariables": {
         "RHINO_PACKAGE_DIRS": "$(ProjectDir)$(OutputPath)\\"
       }

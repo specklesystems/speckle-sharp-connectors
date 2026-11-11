@@ -6,6 +6,7 @@
   </Configurations>
   <Folder Name="/Build/">
     <Project Path="Build\Build.csproj" />
+    <File Path=".github/workflows/extended-ci-test.yml" />
     <File Path=".github\workflows\pr.yml" />
     <File Path=".github\workflows\release.yml" />
   </Folder>
@@ -41,13 +42,6 @@
     <Project Path="Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.shproj" />
     <Project Path="Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.shproj" />
     <Project Path="Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.shproj" />
-  </Folder>
-  <Folder Name="/Importers/" />
-  <Folder Name="/Importers/Rhino/">
-    <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj">
-      <Configuration Solution="Local|Any CPU" Project="Debug|Any CPU" />
-    </Project>
-    <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
     <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
