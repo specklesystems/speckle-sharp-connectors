@@ -84,7 +84,7 @@ jobs:
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
-          ref: jrm/macos-pkg-installers
+          ref: main
           wait-for-completion: true
           sync-status: true
         timeout-minutes: 15
