@@ -10,7 +10,11 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// The <see cref="ADB.PolyFaceMesh"/> class converter. Converts to <see cref="SOG.Mesh"/>.
 /// </summary>
 /// <remarks>
-/// The IToSpeckleTopLevelConverter inheritance should only expect database-resident <see cref="ADB.PolyFaceMesh"/> objects. IRawConversion inheritance can expect non database-resident objects, when generated from other converters.
+/// Accepts both database-resident and non database-resident <see cref="ADB.PolyFaceMesh"/> objects
+/// (e.g. produced by <c>Explode()</c> in the Plant 3D converter).
+/// Resident sub-entities are opened via the top transaction, which owns their lifetime.
+/// Non-resident sub-entities are owned by this converter and disposed after reading.
+/// Degenerate face records (fewer than 3 vertices) are skipped.
 /// </remarks>
 [NameAndRankValue(typeof(ADB.PolyFaceMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
@@ -36,6 +40,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     List<int> faceVisibility = new();
     List<int> colors = new();
     bool hasExplicitVertexColors = true;
+    bool ownsSubEntities = target.Database is null;
 
     foreach (
       var obj in target.GetSubEntities<ADB.Vertex>(
@@ -44,50 +49,35 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
       )
     )
     {
-      switch (obj)
+      try
       {
-        case ADB.PolyFaceMeshVertex o:
-          vertices.Add(o.Position.X);
-          vertices.Add(o.Position.Y);
-          vertices.Add(o.Position.Z);
+        switch (obj)
+        {
+          case ADB.PolyFaceMeshVertex o:
+            vertices.Add(o.Position.X);
+            vertices.Add(o.Position.Y);
+            vertices.Add(o.Position.Z);
 
-          hasExplicitVertexColors &= IsColorExplicit(o.Color);
-          if (hasExplicitVertexColors)
-          {
-            colors.Add(o.Color.ColorValue.ToArgb());
-          }
-          break;
-        case ADB.FaceRecord o:
-          List<int> indices = new();
-          List<int> hidden = new();
-          for (short i = 0; i < 4; i++)
-          {
-            short index = o.GetVertexAt(i);
-            if (index == 0)
+            if (hasExplicitVertexColors && TryGetExplicitColor(o.Color, out var argb))
             {
-              continue;
+              colors.Add(argb);
             }
-
-            // vertices are 1 indexed, and can be negative (hidden)
-            int adjustedIndex = index > 0 ? index - 1 : Math.Abs(index) - 1;
-            indices.Add(adjustedIndex);
-
-            // 0 indicates hidden vertex on the face: 1 indicates a visible vertex
-            hidden.Add(index < 0 ? 0 : 1);
-          }
-
-          if (indices.Count == 4)
-          {
-            faces.AddRange(new List<int> { 4, indices[0], indices[1], indices[2], indices[3] });
-            faceVisibility.AddRange(new List<int> { 4, hidden[0], hidden[1], hidden[2], hidden[3] });
-          }
-          else
-          {
-            faces.AddRange(new List<int> { 3, indices[0], indices[1], indices[2] });
-            faceVisibility.AddRange(new List<int> { 3, hidden[0], hidden[1], hidden[2] });
-          }
-
-          break;
+            else
+            {
+              hasExplicitVertexColors = false;
+            }
+            break;
+          case ADB.FaceRecord o:
+            AddFace(o, faces, faceVisibility);
+            break;
+        }
+      }
+      finally
+      {
+        if (ownsSubEntities)
+        {
+          obj.Dispose();
+        }
       }
     }
 
@@ -103,5 +93,44 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     return speckleMesh;
   }
 
-  private static bool IsColorExplicit(Color color) => color.ColorMethod is ColorMethod.ByAci or ColorMethod.ByColor;
+  private static void AddFace(ADB.FaceRecord face, List<int> faces, List<int> faceVisibility)
+  {
+    List<int> indices = new(4);
+    List<int> hidden = new(4);
+    for (short i = 0; i < 4; i++)
+    {
+      short index = face.GetVertexAt(i);
+      if (index == 0)
+      {
+        continue;
+      }
+
+      // vertices are 1 indexed, and can be negative (hidden)
+      indices.Add(Math.Abs(index) - 1);
+      // 0 indicates hidden vertex on the face: 1 indicates a visible vertex
+      hidden.Add(index < 0 ? 0 : 1);
+    }
+
+    if (indices.Count < 3)
+    {
+      return;
+    }
+
+    faces.Add(indices.Count);
+    faces.AddRange(indices);
+    faceVisibility.Add(hidden.Count);
+    faceVisibility.AddRange(hidden);
+  }
+
+  private static bool TryGetExplicitColor(Color color, out int argb)
+  {
+    if (color.ColorMethod is ColorMethod.ByAci or ColorMethod.ByColor)
+    {
+      argb = color.ColorValue.ToArgb();
+      return true;
+    }
+
+    argb = 0;
+    return false;
+  }
 }
