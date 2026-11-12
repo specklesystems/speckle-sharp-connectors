@@ -1,3 +1,4 @@
+using Autodesk.AutoCAD.Colors;
 using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -34,6 +35,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     List<int> faces = new();
     List<int> faceVisibility = new();
     List<int> colors = new();
+    bool hasExplicitVertexColors = true;
 
     foreach (
       var obj in target.GetSubEntities<ADB.Vertex>(
@@ -48,7 +50,12 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
           vertices.Add(o.Position.X);
           vertices.Add(o.Position.Y);
           vertices.Add(o.Position.Z);
-          colors.Add(o.Color.ColorValue.ToArgb());
+
+          hasExplicitVertexColors &= IsColorExplicit(o.Color);
+          if (hasExplicitVertexColors)
+          {
+            colors.Add(o.Color.ColorValue.ToArgb());
+          }
           break;
         case ADB.FaceRecord o:
           List<int> indices = new();
@@ -88,11 +95,13 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
       faces = faces,
-      colors = colors,
+      colors = hasExplicitVertexColors ? colors : [],
       units = _settingsStore.Current.SpeckleUnits,
       ["faceVisibility"] = faceVisibility,
     };
 
     return speckleMesh;
   }
+
+  private static bool IsColorExplicit(Color color) => color.ColorMethod is ColorMethod.ByAci or ColorMethod.ByColor;
 }
