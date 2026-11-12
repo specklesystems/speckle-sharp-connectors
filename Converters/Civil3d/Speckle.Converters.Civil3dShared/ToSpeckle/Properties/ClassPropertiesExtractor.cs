@@ -543,10 +543,11 @@ public class ClassPropertiesExtractor
 
     if (profile.AlignmentId != ADB.ObjectId.Null)
     {
-      properties[ASSIGNMENT_PROP] = new Dictionary<string, object?>
+      Dictionary<string, object?> assignmentProps = new()
       {
         [ALIGNMENTID_PROP] = profile.AlignmentId.GetSpeckleApplicationId(),
       };
+      AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
     }
 
     var entities = Enumerable
@@ -582,6 +583,7 @@ public class ClassPropertiesExtractor
           entityProperties["curveType"] = curve.CurveType.ToString();
           entityProperties["gradeIn"] = curve.GradeIn;
           entityProperties["gradeOut"] = curve.GradeOut;
+          entityProperties["length"] = curve.Length;
           entityProperties["length1"] = curve.AsymmetricLength1;
           entityProperties["length2"] = curve.AsymmetricLength2;
           break;
@@ -592,8 +594,9 @@ public class ClassPropertiesExtractor
           entityProperties["gradeOut"] = curve.GradeOut;
           entityProperties["radius"] = curve.Radius;
           break;
+        // unknown entity types keep the generic fields: extra properties must never fail the profile's conversion
         default:
-          throw new SpeckleException($"Profile entity type '{entity.EntityType}' is not supported.");
+          break;
       }
 
       profileEntitiesDict[entityIndex.ToString()] = entityProperties;
