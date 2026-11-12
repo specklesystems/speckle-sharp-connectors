@@ -12,7 +12,6 @@ using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Bindings;
 using Speckle.Connectors.Rhino.Filters;
 using Speckle.Connectors.Rhino.HostApp;
@@ -24,6 +23,11 @@ using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Connectors.Rhino.Plugin;
 using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk.Models.GraphTraversal;
+#if RHINO_MAC
+using Speckle.Connectors.DUI.EtoWebView;
+#else
+using Speckle.Connectors.DUI.WebView;
+#endif
 
 namespace Speckle.Connectors.Rhino.DependencyInjection;
 
@@ -37,7 +41,11 @@ public static class ServiceRegistration
       serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
       serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
       serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
+#if RHINO_MAC
+      serviceCollection.AddDUIEtoView();
+#else
       serviceCollection.AddDUIView();
+#endif
     }
 
     serviceCollection.AddConnectors();
