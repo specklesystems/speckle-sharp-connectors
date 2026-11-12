@@ -47,6 +47,13 @@ public sealed class DisplayValueExtractor
         }
         break;
 
+      case TSM.BaseWeld weld:
+        if (weld.GetSolid() is TSM.Solid weldSolid)
+        {
+          yield return _meshConverter.Convert(weldSolid);
+        }
+        break;
+
       case TSM.Reinforcement reinforcement:
         if (_settingsStore.Current.SendRebarsAsSolid)
         {

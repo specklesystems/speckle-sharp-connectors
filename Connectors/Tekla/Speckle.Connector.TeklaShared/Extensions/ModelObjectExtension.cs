@@ -1,11 +1,10 @@
-﻿namespace Speckle.Connectors.TeklaShared.Extensions;
+namespace Speckle.Connectors.TeklaShared.Extensions;
 
 public static class ModelObjectExtensions
 {
   private static readonly IReadOnlyList<Type> s_excludedTypes = new[]
   {
     typeof(TSM.ControlPoint),
-    typeof(TSM.Weld),
     typeof(TSM.Fitting),
     typeof(TSM.BooleanPart),
   };

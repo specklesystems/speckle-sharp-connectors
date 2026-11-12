@@ -61,19 +61,43 @@ public sealed class TsdSlabPropertyExtractor
       }
     }
 
-    if (slabData is not null)
+    AddSlabMaterial(properties, slabData);
+    return properties;
+  }
+
+  public Dictionary<string, object?> ExtractSlab(ISlab slab, ISlabData? slabData)
+  {
+    var properties = new Dictionary<string, object?>();
+
+    var objectId = new Dictionary<string, object?>();
+    TryAdd(objectId, "GUID", () => slab.Id.ToString());
+    TryAdd(objectId, "Label", () => slab.Name);
+    TryAdd(objectId, "Index", () => slab.Index);
+    TryAdd(objectId, "Slab Item Count", () => slab.SlabItemIndices.Count);
+    if (objectId.Count > 0)
     {
-      var material = new Dictionary<string, object?>();
-      TryAdd(material, "Slab Type", () => slabData.SlabType.Value.ToString());
-      TryAdd(material, "Concrete Type", () => slabData.ConcreteType.Value.ToString());
-      TryAdd(material, "Material", () => ExtractMaterial(slabData.Material.Value));
-      if (material.Count > 0)
-      {
-        properties["Material"] = material;
-      }
+      properties["Object ID"] = objectId;
     }
 
+    AddSlabMaterial(properties, slabData);
     return properties;
+  }
+
+  private void AddSlabMaterial(Dictionary<string, object?> properties, ISlabData? slabData)
+  {
+    if (slabData is null)
+    {
+      return;
+    }
+
+    var material = new Dictionary<string, object?>();
+    TryAdd(material, "Slab Type", () => slabData.SlabType.Value.ToString());
+    TryAdd(material, "Concrete Type", () => slabData.ConcreteType.Value.ToString());
+    TryAdd(material, "Material", () => ExtractMaterial(slabData.Material.Value));
+    if (material.Count > 0)
+    {
+      properties["Material"] = material;
+    }
   }
 
   private static Dictionary<string, object?>? ExtractMaterial(IMaterial? material)

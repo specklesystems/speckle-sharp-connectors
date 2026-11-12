@@ -15,6 +15,8 @@ namespace Speckle.Connectors.TSDShared.Operations.Send;
 
 internal sealed class TsdEntitySnapshotBuilder
 {
+  private const string PANEL_TYPE = "StructuralWallPanel";
+
   private static readonly Quantity[] s_propertyQuantities =
   {
     Quantity.Dimension,
@@ -35,9 +37,28 @@ internal sealed class TsdEntitySnapshotBuilder
   private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
   private readonly ILogger<TsdEntitySnapshotBuilder> _logger;
   private readonly Dictionary<string, IReadOnlyList<SOG.Line>> _centerlinesByAppId = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, IReadOnlyList<int>> _nodeIndicesByAppId = new(StringComparer.Ordinal);
+  private readonly Dictionary<int, int> _horizontalPlaneByNodeIndex = new();
+  private readonly Dictionary<string, string> _groupByAppId = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, SlabItemPlacement> _slabItemPlacementByAppId = new(StringComparer.Ordinal);
 
   /// <summary>Analytical span lines per member application id, filled only for volumetric sends (ENG-9048).</summary>
   public IReadOnlyDictionary<string, IReadOnlyList<SOG.Line>> CenterlinesByAppId => _centerlinesByAppId;
+
+  /// <summary>
+  /// Construction point indices each converted entity sits on: a member's span end nodes, a slab item's or wall's
+  /// corner points. Only these points are sent, as the targets of <c>CONNECTS_TO</c> (ENG-11155).
+  /// </summary>
+  public IReadOnlyDictionary<string, IReadOnlyList<int>> NodeIndicesByAppId => _nodeIndicesByAppId;
+
+  /// <summary>Horizontal construction plane index per converted construction point that sits on one (ENG-11156).</summary>
+  public IReadOnlyDictionary<int, int> HorizontalPlaneByNodeIndex => _horizontalPlaneByNodeIndex;
+
+  /// <summary>Element group name per converted entity that belongs to one (ENG-11156).</summary>
+  public IReadOnlyDictionary<string, string> GroupByAppId => _groupByAppId;
+
+  /// <summary>Slab index and own index per converted slab item, to hang it off its slab (ENG-11157).</summary>
+  public IReadOnlyDictionary<string, SlabItemPlacement> SlabItemPlacementByAppId => _slabItemPlacementByAppId;
 
   public TsdEntitySnapshotBuilder(
     ITSDApplicationService applicationService,
@@ -69,7 +90,7 @@ internal sealed class TsdEntitySnapshotBuilder
     return new TsdModelUnits(speckleUnits, units, lengthUnit);
   }
 
-  public async Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IReadOnlyList<IEntity> entities)
+  public async Task<IReadOnlyDictionary<int, ISlab>> GetSlabsAsync(IReadOnlyList<IEntity> entities)
   {
     var slabIndices = new HashSet<int>();
     foreach (var slabItem in entities.OfType<ISlabItem>())
@@ -81,38 +102,38 @@ internal sealed class TsdEntitySnapshotBuilder
     }
 
     return slabIndices.Count == 0
-      ? new Dictionary<int, ISlabData>()
-      : await _applicationService.GetSlabDataAsync(slabIndices).ConfigureAwait(false);
+      ? new Dictionary<int, ISlab>()
+      : await _applicationService.GetSlabsAsync(slabIndices).ConfigureAwait(false);
   }
 
   public async Task<(SendConversionResult result, TsdObject? converted)> ConvertEntityAsync(
     IEntity entity,
-    IReadOnlyDictionary<int, ISlabData> slabDataByIndex,
+    IReadOnlyDictionary<int, ISlab> slabsByIndex,
     IUnitBase? unit,
     string speckleUnits
   )
   {
     string applicationId = entity.Id.ToString();
     string type = GetEntityType(entity);
+    RememberGroup(applicationId, entity);
 
     try
     {
-      var (displayValue, properties) = entity switch
+      var converted = entity switch
       {
         IMember member => await ConvertMemberAsync(member, applicationId, unit, speckleUnits).ConfigureAwait(false),
-        ISlabItem slabItem => await ConvertSlabAsync(slabItem, slabDataByIndex, unit, speckleUnits)
-          .ConfigureAwait(false),
+        ISlabItem slabItem => await ConvertSlabAsync(slabItem, slabsByIndex, unit, speckleUnits).ConfigureAwait(false),
         IStructuralWall wall => await ConvertWallAsync(wall, unit, speckleUnits).ConfigureAwait(false),
-        _ => (new List<Base>(), new Dictionary<string, object?>()),
+        _ => Converted.Empty(),
       };
 
       var tsdObject = new TsdObject
       {
         name = (entity as IHaveName)?.Name ?? type,
         type = type,
-        elements = new List<TsdObject>(),
-        displayValue = displayValue,
-        properties = properties,
+        elements = converted.Elements,
+        displayValue = converted.DisplayValue,
+        properties = converted.Properties,
         units = speckleUnits,
         applicationId = applicationId,
       };
@@ -123,6 +144,165 @@ internal sealed class TsdEntitySnapshotBuilder
     {
       _logger.LogError(ex, "Failed to convert TSD object {ApplicationId}", applicationId);
       return (new SendConversionResult(Status.ERROR, applicationId, type, null, ex), null);
+    }
+  }
+
+  /// <summary>A slab as a geometry-less parent of its slab items, with the slab-level data (ENG-11157).</summary>
+  public TsdObject ConvertSlabParent(ISlab slab, string speckleUnits) =>
+    new()
+    {
+      name = (slab as IHaveName)?.Name ?? $"Slab {slab.Index}",
+      type = nameof(EntityType.Slab),
+      elements = new List<TsdObject>(),
+      displayValue = new List<Base>(),
+      properties = _slabPropertyExtractor.ExtractSlab(slab, TryGetSlabData(slab)),
+      units = speckleUnits,
+      applicationId = slab.Id.ToString(),
+    };
+
+  /// <summary>Converts the construction points at <paramref name="indices"/> to node objects with a point display.</summary>
+  public async Task<IReadOnlyList<(int Index, TsdObject Node)>> ConvertConstructionPointsAsync(
+    IReadOnlyCollection<int> indices,
+    IUnitBase? unit,
+    string speckleUnits,
+    CancellationToken cancellationToken
+  )
+  {
+    var nodes = new List<(int, TsdObject)>();
+    if (indices.Count == 0)
+    {
+      return nodes;
+    }
+
+    var model = await _applicationService.GetModelAsync().ConfigureAwait(false);
+    if (model is null)
+    {
+      return nodes;
+    }
+
+    var points =
+      (await model.GetConstructionPointsAsync(indices, cancellationToken).ConfigureAwait(false))?.ToList()
+      ?? new List<IConstructionPoint>();
+    var displayValues = await _displayValueExtractor
+      .GetConstructionPointDisplayValueAsync(points, unit, speckleUnits)
+      .ConfigureAwait(false);
+
+    for (int i = 0; i < points.Count && i < displayValues.Count; i++)
+    {
+      var point = points[i];
+      RememberPlane(point);
+      nodes.Add(
+        (
+          point.Index,
+          new TsdObject
+          {
+            name = point.Name ?? $"Node {point.Index}",
+            type = nameof(EntityType.ConstructionPoint),
+            elements = new List<TsdObject>(),
+            displayValue = new List<Base> { displayValues[i] },
+            properties = ExtractNodeProperties(point),
+            units = speckleUnits,
+            applicationId = point.Id.ToString(),
+          }
+        )
+      );
+    }
+
+    return nodes;
+  }
+
+  /// <summary>The horizontal construction planes at <paramref name="planeIndices"/> as levels, elevation in model units.</summary>
+  public async Task<IReadOnlyList<TsdLevel>> ConvertLevelsAsync(
+    IReadOnlyCollection<int> planeIndices,
+    IUnitBase? unit,
+    CancellationToken cancellationToken
+  )
+  {
+    var levels = new List<TsdLevel>();
+    if (planeIndices.Count == 0)
+    {
+      return levels;
+    }
+
+    var model = await _applicationService.GetModelAsync().ConfigureAwait(false);
+    if (model is null)
+    {
+      return levels;
+    }
+
+    var planes =
+      (await model.GetLevelsAsync(planeIndices, cancellationToken).ConfigureAwait(false))?.ToList()
+      ?? new List<IHorizontalConstructionPlane>();
+    var baseElevations = planes.Select(plane => plane.Level.Value).ToList();
+    var elevations = unit is null
+      ? baseElevations
+      : await _applicationService.ConvertFromBaseAsync(baseElevations, unit).ConfigureAwait(false);
+
+    for (int i = 0; i < planes.Count && i < elevations.Count; i++)
+    {
+      var plane = planes[i];
+      string name = string.IsNullOrWhiteSpace(plane.Name) ? $"Level {plane.Index}" : plane.Name;
+      levels.Add(new TsdLevel(plane.Index, name, elevations[i]));
+    }
+
+    return levels;
+  }
+
+  private void RememberPlane(IConstructionPoint point)
+  {
+    try
+    {
+      if (point.PlaneInfo.Value is { } plane && plane.Type == EntityType.HorizontalConstructionPlane)
+      {
+        _horizontalPlaneByNodeIndex[point.Index] = plane.Index;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read the plane of TSD construction point {Index}", point.Index);
+    }
+  }
+
+  private void RememberGroup(string applicationId, IEntity entity)
+  {
+    try
+    {
+      string? group = entity.ElementGroupName;
+      if (!string.IsNullOrWhiteSpace(group))
+      {
+        _groupByAppId[applicationId] = group;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read the element group of {ApplicationId}", applicationId);
+    }
+  }
+
+  private Dictionary<string, object?> ExtractNodeProperties(IConstructionPoint point)
+  {
+    var objectId = new Dictionary<string, object?>();
+    TryAdd(objectId, "GUID", () => point.Id.ToString());
+    TryAdd(objectId, "Index", () => point.Index);
+    TryAdd(objectId, "Point Type", () => point.PointType.Value.ToString());
+    TryAdd(objectId, "Solver Node Index", () => point.SolverNodeIndex.Value);
+    TryAdd(objectId, "Group Index", () => point.GroupIndex.Value);
+    return new Dictionary<string, object?> { ["Object ID"] = objectId };
+  }
+
+  private void TryAdd(Dictionary<string, object?> target, string key, Func<object?> getter)
+  {
+    try
+    {
+      var value = getter();
+      if (value is not null)
+      {
+        target[key] = value;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read TSD construction point property {Key}", key);
     }
   }
 
@@ -185,7 +365,7 @@ internal sealed class TsdEntitySnapshotBuilder
     return entity.EntityType.ToString();
   }
 
-  private async Task<(List<Base>, Dictionary<string, object?>)> ConvertMemberAsync(
+  private async Task<Converted> ConvertMemberAsync(
     IMember member,
     string applicationId,
     IUnitBase? unit,
@@ -200,43 +380,102 @@ internal sealed class TsdEntitySnapshotBuilder
     {
       _centerlinesByAppId[applicationId] = centerlines;
     }
+    RememberNodes(applicationId, () => spans.SelectMany(SpanNodes));
     var properties = _memberPropertyExtractor.Extract(member, spans);
-    return (displayValue, properties);
+    return new Converted(displayValue, properties, new List<TsdObject>());
   }
 
-  private async Task<(List<Base>, Dictionary<string, object?>)> ConvertSlabAsync(
+  private static IEnumerable<int> SpanNodes(IMemberSpan span)
+  {
+    yield return span.StartMemberNode.ConstructionPointIndex.Value;
+    yield return span.EndMemberNode.ConstructionPointIndex.Value;
+  }
+
+  private void RememberNodes(string applicationId, Func<IEnumerable<int>> indices)
+  {
+    try
+    {
+      var distinct = indices().Distinct().ToList();
+      if (distinct.Count > 0)
+      {
+        _nodeIndicesByAppId[applicationId] = distinct;
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read TSD construction point indices of {ApplicationId}", applicationId);
+    }
+  }
+
+  private async Task<Converted> ConvertSlabAsync(
     ISlabItem slabItem,
-    IReadOnlyDictionary<int, ISlabData> slabDataByIndex,
+    IReadOnlyDictionary<int, ISlab> slabsByIndex,
     IUnitBase? unit,
     string speckleUnits
   )
   {
+    string applicationId = slabItem.Id.ToString();
     var displayValue = await _displayValueExtractor
       .GetSlabDisplayValueAsync(slabItem, unit, speckleUnits)
       .ConfigureAwait(false);
+    RememberNodes(applicationId, () => slabItem.ConstructionPointIndices);
 
     ISlabData? slabData = null;
     if (TryGetSlabIndex(slabItem) is int slabIndex)
     {
-      slabDataByIndex.TryGetValue(slabIndex, out slabData);
+      _slabItemPlacementByAppId[applicationId] = new SlabItemPlacement(slabIndex, slabItem.Index);
+      if (slabsByIndex.TryGetValue(slabIndex, out var slab))
+      {
+        slabData = TryGetSlabData(slab);
+      }
     }
 
     var properties = _slabPropertyExtractor.Extract(slabItem, slabData);
-    return (displayValue, properties);
+    return new Converted(displayValue, properties, new List<TsdObject>());
   }
 
-  private async Task<(List<Base>, Dictionary<string, object?>)> ConvertWallAsync(
-    IStructuralWall wall,
-    IUnitBase? unit,
-    string speckleUnits
-  )
+  // The wall is a geometry-less parent: each panel carries its display and section data as a child, in span order.
+  // The construction-point edges stay on the wall, which is where TSD attaches the points (ENG-11157).
+  private async Task<Converted> ConvertWallAsync(IStructuralWall wall, IUnitBase? unit, string speckleUnits)
   {
     var panels = (await wall.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IStructuralWallPanel>();
-    var displayValue = await _displayValueExtractor
-      .GetWallDisplayValueAsync(panels, unit, speckleUnits)
-      .ConfigureAwait(false);
-    var properties = _wallPropertyExtractor.Extract(wall, panels);
-    return (displayValue, properties);
+    RememberNodes(wall.Id.ToString(), () => wall.ConstructionPointIndices);
+
+    var elements = new List<TsdObject>(panels.Count);
+    for (int i = 0; i < panels.Count; i++)
+    {
+      var panel = panels[i];
+      var displayValue = await _displayValueExtractor
+        .GetWallDisplayValueAsync(new[] { panel }, unit, speckleUnits)
+        .ConfigureAwait(false);
+      elements.Add(
+        new TsdObject
+        {
+          name = $"Panel {i + 1}",
+          type = PANEL_TYPE,
+          elements = new List<TsdObject>(),
+          displayValue = displayValue,
+          properties = _wallPropertyExtractor.ExtractPanel(panel),
+          units = speckleUnits,
+          applicationId = panel.Id.ToString(),
+        }
+      );
+    }
+
+    return new Converted(new List<Base>(), _wallPropertyExtractor.Extract(wall), elements);
+  }
+
+  private ISlabData? TryGetSlabData(ISlab slab)
+  {
+    try
+    {
+      return slab.SlabData.Value;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read TSD slab data of slab {Index}", slab.Index);
+      return null;
+    }
   }
 
   private int? TryGetSlabIndex(ISlabItem slabItem)
@@ -278,6 +517,15 @@ internal sealed class TsdEntitySnapshotBuilder
       ["units"] = units,
     };
 
+  private sealed record Converted(
+    List<Base> DisplayValue,
+    Dictionary<string, object?> Properties,
+    List<TsdObject> Elements
+  )
+  {
+    public static Converted Empty() => new(new List<Base>(), new Dictionary<string, object?>(), new List<TsdObject>());
+  }
+
   private static string MapToSpeckleUnits(string? abbreviation)
   {
     if (string.IsNullOrWhiteSpace(abbreviation))
@@ -295,6 +543,10 @@ internal sealed class TsdEntitySnapshotBuilder
     }
   }
 }
+
+internal sealed record TsdLevel(int Index, string Name, double Elevation);
+
+internal sealed record SlabItemPlacement(int SlabIndex, int ItemIndex);
 
 internal sealed record TsdModelUnits(
   string SpeckleUnits,
