@@ -14,6 +14,8 @@ concurrency:
 
 jobs:
   test-deploy-pipeline:
+    # dependabot doesn't have the CONNECTORS_GH_TOKEN secret, so the job would fail otherwise
+    if: github.actor != 'dependabot[bot]'
     uses: './.github/workflows/release.yml' # zizmor: ignore[secrets-inherit] zizmor's suggested fix here doesn't work
     permissions:
       contents: read
