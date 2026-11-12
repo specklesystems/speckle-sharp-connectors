@@ -1,7 +1,7 @@
 using System.Drawing.Drawing2D;
 using Speckle.Sdk;
 using Speckle.Sdk.Api.GraphQL.Models;
-#if !NETFRAMEWORK
+#if !NETFRAMEWORK && !RHINO_MAC
 using System.IO;
 #endif
 

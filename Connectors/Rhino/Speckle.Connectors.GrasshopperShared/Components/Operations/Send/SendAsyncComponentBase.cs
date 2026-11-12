@@ -19,7 +19,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Pipelines.Progress;
-#if !NETFRAMEWORK
+#if !NETFRAMEWORK && !RHINO_MAC
 using System.IO;
 #endif
 

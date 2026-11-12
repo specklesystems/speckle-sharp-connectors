@@ -11,7 +11,7 @@
       Include="RhinoCommon"
       IncludeAssets="compile; build"
       PrivateAssets="all"
-      VersionOverride="8.31.26126.13431"
+      VersionOverride="8.21.25188.17001"
     />
   </ItemGroup>
 

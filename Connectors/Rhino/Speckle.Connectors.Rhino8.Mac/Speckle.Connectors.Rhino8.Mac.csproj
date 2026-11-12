@@ -26,7 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference
+      Include="RhinoCommon"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="8.21.25188.17001"
+    />
     <PackageReference Include="IronCompress" PrivateAssets="all" />
   </ItemGroup>
 

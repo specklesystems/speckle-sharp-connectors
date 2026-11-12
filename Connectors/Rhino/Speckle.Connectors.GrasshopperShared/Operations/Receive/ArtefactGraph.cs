@@ -1,6 +1,6 @@
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
-#if !NETFRAMEWORK
+#if !NETFRAMEWORK && !RHINO_MAC
 using System.IO;
 #endif
 
