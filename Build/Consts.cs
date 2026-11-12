@@ -11,6 +11,7 @@ internal static class Consts
       [
         new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48"),
         new("Connectors/Rhino/Speckle.Connectors.Rhino8", "net48"),
+        new("Connectors/Rhino/Speckle.Connectors.Rhino8.Mac", "net8.0"),
         new("Connectors/Rhino/Speckle.Connectors.Rhino9", "net10.0-windows"),
       ]
     ),

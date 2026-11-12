@@ -13,6 +13,11 @@
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <Title>Speckle.Connectors.Rhino8</Title>
+    <Description>Speckle connector for Rhino 8</Description>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference
       Include="RhinoCommon"

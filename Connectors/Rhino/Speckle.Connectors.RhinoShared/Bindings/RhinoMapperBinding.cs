@@ -97,6 +97,13 @@ public class RhinoMapperBinding : IBinding
   /// </remarks>
   public void AssignObjectsToCategory(string[] objectIds, string categoryValue)
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => AssignObjectsToCategory(objectIds, categoryValue));
+      return;
+    }
+#endif
     var objectsToModify = new HashSet<RhinoObject>();
     var processedDefinitions = new HashSet<int>(); // Tracks unique block definitions
 
@@ -150,6 +157,13 @@ public class RhinoMapperBinding : IBinding
   /// </remarks>
   public void ClearObjectsCategoryAssignment(string[] objectIds)
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => ClearObjectsCategoryAssignment(objectIds));
+      return;
+    }
+#endif
     var objectsToModify = new HashSet<RhinoObject>();
     var processedDefinitions = new HashSet<int>(); // Tracks unique block definitions
 
@@ -199,6 +213,13 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void ClearAllObjectsCategoryAssignments()
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => ClearAllObjectsCategoryAssignments());
+      return;
+    }
+#endif
     foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
     {
       if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
@@ -257,6 +278,13 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void AssignLayerToCategory(string[] layerIds, string categoryValue)
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => AssignLayerToCategory(layerIds, categoryValue));
+      return;
+    }
+#endif
     foreach (var layerId in layerIds)
     {
       var layer = _rhinoLayerHelper.GetLayer(layerId);
@@ -272,6 +300,13 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void ClearLayerCategoryAssignment(string[] layerIds)
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => ClearLayerCategoryAssignment(layerIds));
+      return;
+    }
+#endif
     foreach (var layerId in layerIds)
     {
       // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
@@ -288,6 +323,13 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void ClearAllLayerCategoryAssignments()
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => ClearAllLayerCategoryAssignments());
+      return;
+    }
+#endif
     foreach (var layer in RhinoDoc.ActiveDoc.Layers)
     {
       if (!string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
