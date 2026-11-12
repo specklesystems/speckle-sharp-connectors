@@ -1,14 +1,14 @@
 # Rhino / Grasshopper on macOS
 
-> **Alpha.** A working prototype, not a supported release: no test coverage beyond manual
-> smoke checks, and no compatibility guarantee across Rhino point releases.
+> **Beta.** Tested by hand on one Rhino release, without automated coverage, and with no
+> compatibility guarantee across Rhino point releases.
 
 Rhino 8 on macOS only loads .NET Core plug-ins, so `Speckle.Connectors.Rhino8.Mac` and
 `Speckle.Connectors.Grasshopper8.Mac` are separate `net8.0` projects that share almost all of
 their code with the Windows heads (`RhinoShared`, `GrasshopperShared`). Tracked in FEA-124.
 
-Requires Rhino 8 for Mac **8.20 or later** on Apple Silicon. Intel Macs are untested, and publishing there
-likely fails: the bundled `libnironcompress.dylib` is built for `osx-arm64` only.
+Tested on Rhino 8.36 for Mac on Apple Silicon. Other Rhino 8 releases and Intel Macs are untested, and
+publishing on Intel likely fails: the bundled `libnironcompress.dylib` is built for `osx-arm64` only.
 
 ## Install
 
@@ -60,6 +60,5 @@ older transport needs. If you see a docked panel with nothing rendered in it:
 ## What isn't finished
 
 - Rhino 7 for Mac is out of scope (Mono runtime; Rhino 8 Mac is .NET Core only).
-- Alpha means alpha: this hasn't been through the review, testing, and hardening a
-  Speckle release normally gets. Treat it as a prototype you're trying, not something to
-  build a production workflow on yet.
+- Beta: tested by hand on Rhino 8.36 on Apple Silicon only, with no automated tests for the Mac
+  connector.

@@ -14,9 +14,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Shown in Rhino's own plug-in listing, so the "(Alpha)" tag reaches users there, not just in docs. -->
-    <Title>Speckle.Connectors.Rhino8.Mac (Alpha)</Title>
-    <Description>Speckle connector for Rhino 8 on macOS — Alpha</Description>
+    <!-- Shown in Rhino's own plug-in listing, so the "(Beta)" tag reaches users there, not just in docs. -->
+    <Title>Speckle.Connectors.Rhino8.Mac (Beta)</Title>
+    <Description>Speckle connector for Rhino 8 on macOS — Beta</Description>
   </PropertyGroup>
 
   <ItemGroup>
