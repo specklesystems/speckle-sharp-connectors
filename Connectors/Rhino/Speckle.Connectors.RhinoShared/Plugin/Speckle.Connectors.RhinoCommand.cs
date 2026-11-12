@@ -1,11 +1,14 @@
-using System.IO;
-using System.Reflection;
 using Rhino;
 using Rhino.Commands;
 using Rhino.Input.Custom;
 using Rhino.UI;
 using Speckle.Connectors.Rhino.HostApp;
-#if RHINO8_OR_GREATER
+#if !RHINO_MAC
+using System.IO;
+using System.Reflection;
+#endif
+
+#if RHINO8_OR_GREATER && !RHINO_MAC
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.DUI.WebView;
 #endif
@@ -19,6 +22,16 @@ public class SpeckleConnectorsRhinoCommand : Command
     // Rhino only creates one instance of each command class defined in a
     // plug-in, so it is safe to store a reference in a static property.
     Instance = this;
+#if RHINO_MAC
+    Panels.RegisterPanel(
+      SpeckleConnectorsRhinoPlugin.Instance,
+      typeof(SpeckleRhinoPanelHost),
+      "Speckle",
+      typeof(SpeckleConnectorsRhinoCommand).Assembly,
+      "Speckle.Connectors.Rhino.Resources.speckle32.ico",
+      PanelType.System
+    );
+#else
     string iconPath = Path.Combine(GetAssemblyDirectory(), "Resources", "speckle32.ico");
     Panels.RegisterPanel(
       SpeckleConnectorsRhinoPlugin.Instance,
@@ -27,8 +40,10 @@ public class SpeckleConnectorsRhinoCommand : Command
       new Icon(iconPath),
       PanelType.System
     );
+#endif
   }
 
+#if !RHINO_MAC
   // Method to get the directory of the currently executing assembly
   private string GetAssemblyDirectory()
   {
@@ -52,6 +67,7 @@ public class SpeckleConnectorsRhinoCommand : Command
 
     return path;
   }
+#endif
 
   ///<summary>The only instance of this command.</summary>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -67,7 +83,7 @@ public class SpeckleConnectorsRhinoCommand : Command
 
     if (mode == RunMode.Interactive)
     {
-#if RHINO8_OR_GREATER
+#if RHINO8_OR_GREATER && !RHINO_MAC
       SpeckleRhinoPanelHost.Reinitialize(
         SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>()
       );
