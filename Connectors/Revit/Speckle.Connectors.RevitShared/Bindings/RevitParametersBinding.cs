@@ -137,14 +137,14 @@ internal sealed class RevitParametersBinding : IParametersBinding
               continue;
             }
 
-            var paramName = ExtractCreationParamName(request.Path);
+            var (paramName, groupLabel) = ExtractCreationTarget(request.Path);
             if (string.IsNullOrEmpty(paramName))
             {
               errors.Add($"Invalid path for new parameter: '{request.Path}'");
               continue;
             }
 
-            Record(_parameterCreator.CreateAndSet(doc, element!, paramName, rawValue));
+            Record(_parameterCreator.CreateAndSet(doc, element!, paramName, groupLabel, rawValue));
           }
 
           t.Commit();
@@ -280,11 +280,11 @@ internal sealed class RevitParametersBinding : IParametersBinding
     System.Text.RegularExpressions.Regex.IsMatch(applicationId, @"_t[a-f0-9]+$");
 
   /// <summary>
-  /// The name a created parameter gets: the bare name behind the widget's "properties." / "parameters." prefix
-  /// (e.g. "properties.SpeckleTag" → "SpeckleTag"), or the leaf of a full scope.group.name path, so a creation
-  /// request on an existing path is never named after the whole path.
+  /// The name and group a created parameter gets: the bare name behind the widget's "properties." / "parameters."
+  /// prefix (e.g. "properties.SpeckleTag" → "SpeckleTag", no group), or the leaf and group of a full
+  /// scope.group.name path, so a creation request on an existing path is never named after the whole path.
   /// </summary>
-  private static string ExtractCreationParamName(string path)
+  private static (string Name, string? GroupLabel) ExtractCreationTarget(string path)
   {
     var name = StripPrefixes(path).Trim();
     var parts = name.Split(['.'], 3);
@@ -293,9 +293,9 @@ internal sealed class RevitParametersBinding : IParametersBinding
       && parts[0] is ParameterScopes.INSTANCE or ParameterScopes.TYPE or ParameterScopes.SYSTEM_TYPE
     )
     {
-      return parts[2].Trim();
+      return (parts[2].Trim(), parts[1].Trim());
     }
 
-    return name;
+    return (name, null);
   }
 }
