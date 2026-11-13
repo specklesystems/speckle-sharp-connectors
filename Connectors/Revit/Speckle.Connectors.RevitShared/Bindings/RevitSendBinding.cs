@@ -35,6 +35,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly RoomsAndAreasHandler _roomsAndAreasHandler;
+  private readonly DesignOptionsHandler _designOptionsHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
   private readonly ParameterUpdater _parameterUpdater;
@@ -55,6 +56,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
     RoomsAndAreasHandler roomsAndAreasHandler,
+    DesignOptionsHandler designOptionsHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory,
@@ -74,6 +76,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _linkedModelHandler = linkedModelHandler;
     _roomsAndAreasHandler = roomsAndAreasHandler;
+    _designOptionsHandler = designOptionsHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     _parameterUpdater = parameterUpdater;
@@ -155,6 +158,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new SendRebarsAsVolumetricSetting(),
       new SendAreasAsMeshSetting(),
       new AppendRoomsAndAreasSetting(),
+      new SendAllDesignOptionsSetting(),
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -332,6 +336,19 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           .CollectRoomsAndAreas(document, roomsAndAreasMode)
           .Where(e => !existingIds.Contains(e.UniqueId))
       );
+    }
+
+    // a view shows one option per set; categories already collect every option and a selection is the user's pick
+    if (
+      modelCard.SendFilter is RevitViewsFilter
+      && _toSpeckleSettingsManager.GetSendAllDesignOptions(document, modelCard)
+    )
+    {
+      var existingIds = elementsOnMainModel.Select(e => e.UniqueId).ToHashSet();
+      var optionElements = await _threadContext.RunOnMainAsync(() =>
+        Task.FromResult(_designOptionsHandler.CollectDesignOptionElements(document))
+      );
+      elementsOnMainModel.AddRange(optionElements.Where(e => !existingIds.Contains(e.UniqueId)));
     }
 
     // update ID map
