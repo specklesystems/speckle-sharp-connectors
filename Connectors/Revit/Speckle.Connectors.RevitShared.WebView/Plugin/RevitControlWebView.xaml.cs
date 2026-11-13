@@ -43,7 +43,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
   {
     _browser = new WebView2
     {
-      CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = "C:\\temp" },
+      CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = WebView2UserData.FolderPath },
       HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
       VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
       Source = DuiUrl,
