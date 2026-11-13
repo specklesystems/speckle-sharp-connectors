@@ -22,9 +22,11 @@ jobs:
     env:
       SEMVER: "unset"
       FILE_VERSION: "unset"
+      PLATFORMS: "unset"
     outputs:
       semver: ${{ steps.set-version.outputs.semver }}
       file_version: ${{ steps.set-version.outputs.file_version }}
+      platforms: ${{ steps.set-version.outputs.platforms }}
     permissions:
       contents: read
 
@@ -60,9 +62,11 @@ jobs:
         run: |
           echo "semver=$env:SEMVER"
           echo "file_version=$env:FILE_VERSION"
+          echo "platforms=$env:PLATFORMS"
           
           echo "semver=$env:SEMVER" >> "$Env:GITHUB_OUTPUT"
           echo "file_version=$env:FILE_VERSION" >> "$Env:GITHUB_OUTPUT"
+          echo "platforms=$env:PLATFORMS" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     name: Deploy Installers
@@ -83,7 +87,7 @@ jobs:
             "file_version": "${{ needs.build-connectors.outputs.file_version }}",
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }},
-            "platforms": "win,mac"
+            "platforms": "${{ needs.build-connectors.outputs.platforms }}"
             }'
           ref: main
           wait-for-completion: true
