@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Connectors\Rhino\Speckle.Connectors.Grasshopper8.Mac\Speckle.Connectors.Grasshopper8.Mac.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.EtoWebView\Speckle.Connectors.DUI.EtoWebView.csproj" />
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
   </ItemGroup>

@@ -200,12 +200,25 @@
           "SQLitePCLRaw.core": "2.1.4"
         }
       },
+      "System.Collections.Immutable": {
+        "type": "Transitive",
+        "resolved": "9.0.4",
+        "contentHash": "wfm2NgK22MmBe5qJjp52qzpkeDZKb4l9LbdubhZSehY1z4LS+lld6R+B+UQNb2AZRHu/QJlHxEUcRst5hIEejg=="
+      },
       "System.Drawing.Common": {
         "type": "Transitive",
         "resolved": "7.0.0",
         "contentHash": "KIX+oBU38pxkKPxvLcLfIkOV5Ien8ReN78wro7OF5/erwcmortzeFx+iBswlh2Vz6gVne0khocQudGwaO1Ey6A==",
         "dependencies": {
           "Microsoft.Win32.SystemEvents": "7.0.0"
+        }
+      },
+      "System.Formats.Nrbf": {
+        "type": "Transitive",
+        "resolved": "9.0.4",
+        "contentHash": "HuDjUInoaQvnX+3bRg2lX+KLD2raiDJA0v3c4hmukAHSQT8rpa6+2NKRoz+1W8Jmbu5ocvc+xPPKgHMVjeJpOg==",
+        "dependencies": {
+          "System.Reflection.Metadata": "9.0.4"
         }
       },
       "System.Memory": {
@@ -217,6 +230,14 @@
         "type": "Transitive",
         "resolved": "5.0.0",
         "contentHash": "erBZjkQHWL9jpasCE/0qKAryzVBJFxGHVBAvgRN1bzM0q2s1S4oYREEEL0Vb+1kA/6BKb5FjUZMp5VXmy+gzkQ=="
+      },
+      "System.Reflection.Metadata": {
+        "type": "Transitive",
+        "resolved": "9.0.4",
+        "contentHash": "qeJNsMmZPc/Lieg0Md+D4F6LoLcxV3b9QsUNmBRXc2ZVOkMbAcwuO9l2jbQFv3n+fLiHJilN8v6i5aJNivjrCQ==",
+        "dependencies": {
+          "System.Collections.Immutable": "9.0.4"
+        }
       },
       "ZstdSharp.Port": {
         "type": "Transitive",
@@ -243,6 +264,15 @@
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
+      "speckle.connectors.grasshopper8.mac": {
+        "type": "Project",
+        "dependencies": {
+          "GrasshopperAsyncComponent": "[2.1.0, )",
+          "Speckle.Connectors.Common": "[1.0.0, )",
+          "Speckle.Converters.Rhino8": "[1.0.0, )",
+          "System.Resources.Extensions": "[9.0.4, )"
+        }
+      },
       "speckle.connectors.logging": {
         "type": "Project"
       },
@@ -257,6 +287,12 @@
         "dependencies": {
           "Speckle.Converters.Common": "[1.0.0, )"
         }
+      },
+      "GrasshopperAsyncComponent": {
+        "type": "CentralTransitive",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "v2s4uHzH0195WRSoIthUlewtl2NRxrITHZN9afvutUNiTIC95f7TWX59Z+mDIDWEA+xpEOrYkB3o5olz7J8qPQ=="
       },
       "Speckle.DoubleNumerics": {
         "type": "CentralTransitive",
@@ -278,6 +314,15 @@
           "Speckle.Newtonsoft.Json": "13.0.2",
           "Speckle.Sdk.Dependencies": "2026.9.0-beta.7",
           "Speckle.Sdk.Parquet": "2026.9.0-beta.7"
+        }
+      },
+      "System.Resources.Extensions": {
+        "type": "CentralTransitive",
+        "requested": "[9.0.4, )",
+        "resolved": "9.0.4",
+        "contentHash": "X1oj5i1gy6O4TDU8Z48djqbDJJz4qkT+LgvD0Z2pbCsXieJNms9H5yBbvahXdEJad07Ntai5bST4J5XWoNmMsg==",
+        "dependencies": {
+          "System.Formats.Nrbf": "9.0.4"
         }
       }
     }
