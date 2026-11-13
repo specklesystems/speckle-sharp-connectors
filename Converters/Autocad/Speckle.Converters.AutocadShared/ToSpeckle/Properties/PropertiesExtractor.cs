@@ -23,6 +23,10 @@ public class PropertiesExtractor : IPropertiesExtractor
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
   {
     Dictionary<string, object?> properties = new();
+    if (ReceivedCivilDefinitionStore.Read(entity) is { } received)
+    {
+      properties["receivedCivilDefinition"] = received;
+    }
     AddDictionaryToPropertyDictionary(
       _extensionDictionaryExtractor.GetExtensionDictionary(entity),
       "Extension Dictionary",

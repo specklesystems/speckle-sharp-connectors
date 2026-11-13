@@ -78,6 +78,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private const string LAYER_STAMP_PREFIX = "SPK-";
   private Matrix3d? _receivePlacementTransform;
 
+  /// <summary>Use a distinct receive namespace and retain earlier objects when replacing is unsafe.</summary>
+  protected virtual bool PreservePreviousReceives => false;
+
   public AutocadHostObjectArtefactBuilder(
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
     IRootToHostConverter converter,
@@ -125,6 +128,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // (Contains), so a legacy bake is replaced by an artefact receive of the same card and vice versa, instead of
     // the two conventions stacking a second copy of the model next to each other's orphans.
     var baseLayerName = _autocadContext.RemoveInvalidChars($"{LAYER_STAMP_PREFIX}{projectName}-{modelName}-");
+    if (PreservePreviousReceives)
+    {
+      baseLayerName += Guid.NewGuid().ToString("N") + "-";
+    }
     using var activity = _activityFactory.Start("Build (artefact)");
     using var session = ArtefactSessionLog.Start(
       "Autocad",
@@ -158,8 +165,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     using var docLock = doc.LockDocument();
 
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
-    PreClean(db, baseLayerName);
-    PreCleanAdditional(baseLayerName);
+    if (!PreservePreviousReceives)
+    {
+      PreClean(db, baseLayerName);
+      PreCleanAdditional(baseLayerName);
+    }
     EnsureLayerFilter(db, projectName, modelName, baseLayerName);
 
     // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
