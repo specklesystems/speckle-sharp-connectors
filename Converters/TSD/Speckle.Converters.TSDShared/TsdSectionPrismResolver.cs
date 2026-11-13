@@ -50,13 +50,26 @@ public sealed class TsdSectionPrismResolver
     {
       return new(null, $"{shape}/no-host-area");
     }
-    if (Math.Abs(outline.Area - hostArea) / hostArea > AREA_TOLERANCE)
+    double drawnArea = outline.Area + RootFilletArea(section);
+    if (Math.Abs(drawnArea - hostArea) / hostArea > AREA_TOLERANCE)
     {
-      return new(null, $"{shape}/area-mismatch");
+      return new(null, $"{shape}/area-mismatch (drawn {drawnArea:G5}, host {hostArea:G5})");
     }
 
     var prism = PrismBuilder.TryBuildUnitPrism(outline);
     return prism is null ? new(null, $"{shape}/tessellation-failed") : new(prism, shape);
+  }
+
+  // The four web-flange root fillets are not drawn but are in the host area, so they count towards the comparison.
+  private static double RootFilletArea(ISection section)
+  {
+    double radius = section switch
+    {
+      ISymmetricISection s => s.RootRadius,
+      IAsymmetricBeamSection s => s.RootRadius,
+      _ => 0,
+    };
+    return double.IsNaN(radius) || radius <= 0 ? 0 : 4 * (1 - Math.PI / 4) * radius * radius;
   }
 
   // Flipped parametric tees and angles are inverted shapes the catalog does not draw; they fall back.
