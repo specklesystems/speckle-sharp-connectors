@@ -19,6 +19,9 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Pipelines.Progress;
+#if !NETFRAMEWORK && !RHINO_MAC
+using System.IO;
+#endif
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
@@ -213,7 +216,7 @@ public abstract class SendAsyncComponentBase : GH_AsyncComponent<SendAsyncCompon
     base.RemovedFromDocument(document);
   }
 
-  public override void DisplayProgress(object sender, ElapsedEventArgs e)
+  public override void DisplayProgress(object? sender, ElapsedEventArgs e)
   {
     if (WorkerCount == 0)
     {

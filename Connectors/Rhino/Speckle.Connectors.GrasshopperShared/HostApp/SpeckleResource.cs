@@ -141,7 +141,9 @@ public record AccountResource(string? AccountId, string? Token, string Server)
   {
     if (Token is not null)
     {
-      return scope.Get<IAccountFactory>().CreateAccount(new Uri(Server), Token).GetAwaiter().GetResult();
+      return Task.Run(() => scope.Get<IAccountFactory>().CreateAccount(new Uri(Server), Token))
+        .GetAwaiter()
+        .GetResult();
     }
     return AccountId != null
       ? scope.Get<IAccountManager>().GetAccount(AccountId)

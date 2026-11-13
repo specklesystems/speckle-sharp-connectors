@@ -13,17 +13,13 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case InstanceDefinition instanceDefinition:
-        return TryConvertDefinition(
-          instanceDefinition.GetObjects().Cast<object>(),
-          instanceDefinition.Name,
-          instanceDefinition.Id.ToString()
-        );
+        return TryConvertDefinition(instanceDefinition.GetObjects(), instanceDefinition.Name, instanceDefinition.Id);
 
       case ModelInstanceDefinition modelInstanceDef:
         return TryConvertDefinition(
-          modelInstanceDef.Objects.Cast<object>(),
+          modelInstanceDef.Objects,
           modelInstanceDef.Name,
-          modelInstanceDef.Id.ToString()
+          modelInstanceDef.Id ?? Guid.NewGuid()
         );
 
       default:
@@ -35,7 +31,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
   /// Attempts to convert block definition objects to SpeckleGeometryWrappers.
   /// Returns false if all objects are unsupported, true if at least one converts.
   /// </summary>
-  private bool TryConvertDefinition(IEnumerable<object> definitionObjects, string definitionName, string definitionId)
+  private bool TryConvertDefinition(IEnumerable<object> definitionObjects, string definitionName, Guid definitionId)
   {
     var objects = definitionObjects as object[] ?? definitionObjects.ToArray();
     int totalCount = objects.Length;
@@ -68,9 +64,9 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     return true;
   }
 
-  private void SetValueFromDefinitionProps(List<SpeckleGeometryWrapper> objs, string name, string id)
+  private void SetValueFromDefinitionProps(List<SpeckleGeometryWrapper> objs, string name, Guid id)
   {
-    string validAppId = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id;
+    string validAppId = id.ToString();
     Value = new SpeckleBlockDefinitionWrapper()
     {
       Base = new InstanceDefinitionProxy

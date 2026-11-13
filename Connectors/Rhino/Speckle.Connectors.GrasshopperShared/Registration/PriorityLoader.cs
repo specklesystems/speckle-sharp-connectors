@@ -1,3 +1,4 @@
+using System.Diagnostics.Contracts;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,12 +26,16 @@ namespace Speckle.Connectors.GrasshopperShared.Registration;
 
 public static class ServiceScopeExtensions
 {
-  public static T Get<T>(this IServiceScope scope) => scope.ServiceProvider.GetRequiredService<T>();
+  public static T Get<T>(this IServiceScope scope)
+    where T : notnull => scope.ServiceProvider.GetRequiredService<T>();
 }
 
 public class PriorityLoader : GH_AssemblyPriority
 {
-  public static ServiceProvider? Container { get; set; }
+#nullable disable
+  public static ServiceProvider Container { get; set; }
+
+#nullable restore
 
   public static IServiceScope CreateScopeForActiveDocument()
   {
@@ -106,14 +111,17 @@ public class PriorityLoader : GH_AssemblyPriority
     }
   }
 
-  private HostAppVersion GetVersion()
+  [Pure]
+  private static HostAppVersion GetVersion()
   {
 #if RHINO7
     return HostAppVersion.v7;
 #elif RHINO8
     return HostAppVersion.v8;
+#elif RHINO9
+    return HostAppVersion.v9;
 #else
-    throw new NotImplementedException();
+#error Compiler directives misconfigured or the host app version is not supported
 #endif
   }
 }

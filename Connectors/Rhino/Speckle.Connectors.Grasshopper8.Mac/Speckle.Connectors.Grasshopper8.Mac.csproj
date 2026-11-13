@@ -10,15 +10,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <!--Root Namespace needs to be aligned across all grasshopper csproj to ensure the .resx file in the shared project has the correct resource namespace-->
     <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
-    <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
-    <!-- GrasshopperAsyncComponent publishes net48 only; it is pure managed and its references (Grasshopper, WinForms)
-         resolve against Rhino 8 Mac's own assemblies. -->
-    <!-- CA1866/CA2249/CA2263 suggest net core-only overloads (StartsWith(char), Contains(char), Enum.GetValues<T>) in
-         GrasshopperShared, which the net48 heads compile too; the shared code stays on the common API surface. -->
-    <!-- CS86xx: net8's annotated BCL/DI surfaces 12 nullability sites in GrasshopperShared that net48's unannotated
-         references hide (PriorityLoader.Container is ServiceProvider?, GetService vs GetRequiredService, EventHandler
-         sender, ...). Suppressed here so the Windows-shared files stay unchanged (FEA-124). -->
-    <NoWarn>$(NoWarn);NU1701;CA1866;CA2249;CA2263;CS8602;CS8603;CS8604;CS8622;CS8714;CA1508</NoWarn>
+    <DefineConstants>$(DefineConstants);RHINO_MAC;GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -42,8 +34,18 @@
 
   <ItemGroup>
     <PackageReference Include="GrasshopperAsyncComponent" />
-    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference
+      Include="RhinoCommon"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="8.21.25188.17001"
+    />
+    <PackageReference
+      Include="Grasshopper"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="8.21.25188.17001"
+    />
     <PackageReference Include="System.Resources.Extensions" />
     <!-- managed IronCompress reference; the osx native comes through runtimes/ via EnableDynamicLoading -->
     <PackageReference Include="IronCompress" PrivateAssets="all" />

@@ -29,7 +29,7 @@ public class SpeckleOutputParam : Param_GenericObject
   /// <summary>
   /// Extract parameter implementation - taken from v2 legacy and simplified for v3.
   /// </summary>
-  private void Menu_ExtractOutputParameterClicked(object sender, EventArgs e)
+  private void Menu_ExtractOutputParameterClicked(object? sender, EventArgs e)
   {
     var archive = new GH_Archive();
     if (!archive.AppendObject(this, "Parameter"))

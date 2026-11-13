@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Speckle.Connectors.Rhino9": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Rhino 9\\System\\Rhino.exe",
+      "commandLineArgs": "\"$(TargetDir)Speckle.Connectors.Rhino9.rhp\""
+    }
+  }
+}
