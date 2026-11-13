@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Receive;
@@ -16,6 +17,10 @@ namespace Speckle.Connectors.Civil3dShared.Operations.Receive;
 public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
 {
   private readonly PropertySetBaker _propertySetBaker;
+
+  // Civil objects have dependencies outside the incoming selection. Keep earlier receives
+  // intact, including their layers and property-set definitions, throughout validation.
+  protected override bool PreservePreviousReceives => true;
 
   public Civil3dHostObjectArtefactBuilder(
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
@@ -103,6 +108,20 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     ArtefactSessionLog session
   )
   {
+    var retained = properties.FirstOrDefault(p => p.Key == "properties.receivedCivilDefinition").Value as string;
+    if (retained is null && properties.Any(p => p.Key.StartsWith("civil.", StringComparison.Ordinal) || p.Key == "properties.civilDefinition"))
+    {
+      retained = JsonSerializer.Serialize(new
+      {
+        schema = "speckle.received-civil/1", representation = "display-only",
+        properties = properties.ToDictionary(p => p.Key, p => p.Value),
+      });
+    }
+    if (retained is not null)
+    {
+      Speckle.Converters.AutocadShared.ToSpeckle.ReceivedCivilDefinitionStore.Write(entity, retained, tr);
+      session.Increment("civilDefinitionsRetained");
+    }
     var tree = properties.Under("properties");
     if (tree.Under("Property Sets").Count > 0)
     {
