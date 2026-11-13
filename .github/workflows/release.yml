@@ -82,7 +82,8 @@ jobs:
             "semver": "${{ needs.build-connectors.outputs.semver }}",
             "file_version": "${{ needs.build-connectors.outputs.file_version }}",
             "repo": "${{ github.repository }}",
-            "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
+            "is_public_release": ${{ env.IS_PUBLIC_RELEASE }},
+            "platforms": "win,mac"
             }'
           ref: main
           wait-for-completion: true
