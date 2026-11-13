@@ -277,8 +277,9 @@ Target(
     File.AppendAllText(githubEnv, $"SEMVER={version}{Environment.NewLine}");
     File.AppendAllText(githubEnv, $"FILE_VERSION={fileVersion}{Environment.NewLine}");
 
-    var platforms = groups.SelectMany(x => x.Projects).Select(x => x.Platform).Distinct().Order();
-    File.AppendAllText(githubEnv, $"PLATFORMS={string.Join(',', platforms).ToLowerInvariant()}{Environment.NewLine}");
+    var platforms = groups.SelectMany(x => x.Projects).Aggregate(Platform.None, (all, x) => all | x.Platform);
+    var platformsCsv = platforms.ToString().ToLowerInvariant().Replace(", ", ",");
+    File.AppendAllText(githubEnv, $"PLATFORMS={platformsCsv}{Environment.NewLine}");
   }
 );
 

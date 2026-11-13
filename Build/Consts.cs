@@ -80,8 +80,10 @@ internal readonly record struct ProjectGroup(string HostAppSlug, IReadOnlyList<I
 
 internal readonly record struct InstallerAsset(string ProjectPath, string TargetName, Platform Platform = Platform.Win);
 
+[Flags]
 internal enum Platform
 {
-  Win,
-  Mac,
+  None = 0,
+  Win = 1,
+  Mac = 2,
 }
