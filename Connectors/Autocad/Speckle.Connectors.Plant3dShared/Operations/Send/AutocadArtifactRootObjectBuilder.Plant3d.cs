@@ -16,12 +16,18 @@ public partial class AutocadArtifactRootObjectBuilder
   private const string CLASS_PREFIX = "p3d:class:";
   private const string LINE_GROUP_PREFIX = "p3d:group:";
   private const string LINE_GROUP_OBJECT_SUFFIX = ":object"; // keeps the group's object id distinct from its container id
+  private const string LINE_NUMBER_KEY = "Line Number";
+  private const string GROUP_ID_KEY = "Group Id";
+  private const string GROUP_TYPE_KEY = "Group Type";
+  private const string TAG_KEY = "Tag";
+
+  private static string LevelKey(int level) => $"Level {level}";
 
   private readonly record struct LineGroup(int Id, string Type, string LineNumber)
   {
     public string Key => $"{LINE_GROUP_PREFIX}{Type}:{Id}";
-    public string DisplayId => string.IsNullOrWhiteSpace(LineNumber) ? $"#{Id}" : LineNumber;
-    public string Name => $"{Type} {DisplayId}";
+    public string ReadableId => string.IsNullOrWhiteSpace(LineNumber) ? $"#{Id}" : LineNumber;
+    public string Name => $"{Type} {ReadableId}";
     public string ObjectId => Key + LINE_GROUP_OBJECT_SUFFIX;
   }
 
@@ -51,9 +57,9 @@ public partial class AutocadArtifactRootObjectBuilder
       var pidProperties = ReadDataLinksProperties(dataLinksManager, group.Id);
       pidProperties[DATA_MANAGER_KEY] = new Dictionary<string, object?>(StringComparer.Ordinal)
       {
-        ["Group Id"] = group.Id,
-        ["Group Type"] = group.Type,
-        ["Line Number"] = group.LineNumber,
+        [GROUP_ID_KEY] = group.Id,
+        [GROUP_TYPE_KEY] = group.Type,
+        [LINE_NUMBER_KEY] = group.LineNumber,
       };
 
       var properties = new Dictionary<string, object?>(StringComparer.Ordinal) { [PID_KEY] = pidProperties };
@@ -111,8 +117,11 @@ public partial class AutocadArtifactRootObjectBuilder
     return properties;
   }
 
-  private static string ResolveLineGroupName(LineGroup group, IReadOnlyDictionary<string, object?> pidProperties) =>
-    pidProperties.GetValueOrDefault("Tag")?.ToString() is { } tag && !string.IsNullOrWhiteSpace(tag) ? tag : group.Name;
+  private static string ResolveLineGroupName(LineGroup group, IReadOnlyDictionary<string, object?> pidProperties)
+  {
+    var tag = pidProperties.GetValueOrDefault(TAG_KEY)?.ToString();
+    return string.IsNullOrWhiteSpace(tag) ? group.Name : tag;
+  }
 
   // ── Phase 2: emit relations (worker thread) ──
   // Builds relations from the "Data Manager" properties written by Plant3dDataExtractor:
@@ -208,7 +217,7 @@ public partial class AutocadArtifactRootObjectBuilder
     var levels = new List<string>();
     for (
       int i = 1;
-      dataManagerProperties.TryGetValue($"Level {i}", out var lvl) && lvl is string s && !string.IsNullOrWhiteSpace(s);
+      dataManagerProperties.TryGetValue(LevelKey(i), out var lvl) && lvl is string s && !string.IsNullOrWhiteSpace(s);
       i++
     )
     {
@@ -222,10 +231,10 @@ public partial class AutocadArtifactRootObjectBuilder
   private static bool TryGetLineGroup(IReadOnlyDictionary<string, object?> dataManagerProperties, out LineGroup group)
   {
     if (
-      !dataManagerProperties.TryGetValue("Group Id", out var gid)
+      !dataManagerProperties.TryGetValue(GROUP_ID_KEY, out var gid)
       || gid is not int id
       || id <= 0
-      || !dataManagerProperties.TryGetValue("Group Type", out var gt)
+      || !dataManagerProperties.TryGetValue(GROUP_TYPE_KEY, out var gt)
       || gt is not string type
       || string.IsNullOrWhiteSpace(type)
     )
@@ -234,7 +243,7 @@ public partial class AutocadArtifactRootObjectBuilder
       return false;
     }
 
-    var lineNumber = dataManagerProperties.GetValueOrDefault("Line Number")?.ToString() ?? "";
+    var lineNumber = dataManagerProperties.GetValueOrDefault(LINE_NUMBER_KEY)?.ToString() ?? "";
     group = new LineGroup(id, type, lineNumber);
     return true;
   }
