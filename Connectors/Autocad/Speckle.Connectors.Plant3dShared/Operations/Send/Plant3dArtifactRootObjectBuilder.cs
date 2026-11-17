@@ -1,19 +1,44 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Common.Threading;
+using Speckle.Converters.Autocad;
+using Speckle.Converters.Common;
 using Speckle.Objects.Data;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Pipelines.Send.Artifacts;
 using PPDL = Autodesk.ProcessPower.DataLinks;
 using SpecContainer = Speckle.Bundle.Spec.Container;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
-public partial class AutocadArtifactRootObjectBuilder
+public class Plant3dArtifactRootObjectBuilder(
+  IRootToSpeckleConverter converter,
+  IConverterSettingsStore<AutocadConversionSettings> converterSettings,
+  AutocadInstanceUnpacker instanceUnpacker,
+  AutocadMaterialUnpacker materialUnpacker,
+  AutocadColorUnpacker colorUnpacker,
+  IThreadContext threadContext,
+  IArtifactPipelineFactory artifactPipelineFactory,
+  ISpeckleApplication speckleApplication,
+  ILogger<AutocadArtifactRootObjectBuilder> logger
+)
+  : AutocadArtifactRootObjectBuilder(
+    converter,
+    converterSettings,
+    instanceUnpacker,
+    materialUnpacker,
+    colorUnpacker,
+    threadContext,
+    artifactPipelineFactory,
+    speckleApplication,
+    logger
+  )
 {
   private static readonly string[] s_plant3dKeys = [PID_KEY, "Plant3D Data"];
   private const string PID_KEY = "P&ID";
   private const string DATA_MANAGER_KEY = "Data Manager";
-  private const string CLASS_PREFIX = "p3d:class:";
   private const string LINE_GROUP_PREFIX = "p3d:group:";
   private const string LINE_GROUP_OBJECT_SUFFIX = ":object"; // keeps the group's object id distinct from its container id
   private const string LINE_NUMBER_KEY = "Line Number";
@@ -21,7 +46,8 @@ public partial class AutocadArtifactRootObjectBuilder
   private const string GROUP_TYPE_KEY = "Group Type";
   private const string TAG_KEY = "Tag";
 
-  private static string LevelKey(int level) => $"Level {level}";
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings = converterSettings;
+  private readonly ILogger<AutocadArtifactRootObjectBuilder> _logger = logger;
 
   private readonly record struct LineGroup(int Id, string Type, string LineNumber)
   {
@@ -31,9 +57,15 @@ public partial class AutocadArtifactRootObjectBuilder
     public string ObjectId => Key + LINE_GROUP_OBJECT_SUFFIX;
   }
 
+  private sealed class SystemSlot(int containerK)
+  {
+    public int ContainerK { get; } = containerK;
+    public int NextOrd { get; set; }
+  }
+
   // ── Phase 1: collect line-group objects (UI thread) ──
   // No geometry; they carry the group's Data Links properties.
-  partial void CollectVerticalObjects(List<CollectedObject> objects)
+  protected override void CollectVerticalObjects(List<CollectedObject> objects)
   {
     if (!TryGetDataLinksManager(out var dataLinksManager))
     {
@@ -41,9 +73,8 @@ public partial class AutocadArtifactRootObjectBuilder
     }
 
     var collectedGroupKeys = new HashSet<string>(StringComparer.Ordinal);
-    var lineGroupObjects = new List<CollectedObject>();
 
-    foreach (var co in objects)
+    foreach (var co in objects.ToList())
     {
       if (
         !TryGetDataManagerProperties(co.Properties, out var dataManagerProperties)
@@ -73,21 +104,19 @@ public partial class AutocadArtifactRootObjectBuilder
       };
 
       // Layer: the first member's layer keeps it in the default IN_COLLECTION scene view.
-      lineGroupObjects.Add(new CollectedObject(applicationId, group.Type, co.LayerName, properties, lineGroupObject));
+      objects.Add(new CollectedObject(applicationId, group.Type, co.LayerName, properties, lineGroupObject));
     }
-
-    objects.AddRange(lineGroupObjects);
   }
 
   private bool TryGetDataLinksManager([NotNullWhen(true)] out PPDL.DataLinksManager? dataLinksManager)
   {
     try
     {
-      dataLinksManager = PPDL.DataLinksManager.GetManager(converterSettings.Current.Document.Database);
+      dataLinksManager = PPDL.DataLinksManager.GetManager(_converterSettings.Current.Document.Database);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      logger.LogWarning(ex, "Plant 3D DataLinksManager unavailable");
+      _logger.LogWarning(ex, "Plant 3D DataLinksManager unavailable");
       dataLinksManager = null;
     }
 
@@ -111,7 +140,7 @@ public partial class AutocadArtifactRootObjectBuilder
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      logger.LogWarning(ex, "Failed to read Data Links properties for line group {GroupId}", rowId);
+      _logger.LogWarning(ex, "Failed to read Data Links properties for line group {GroupId}", rowId);
     }
 
     return properties;
@@ -127,16 +156,15 @@ public partial class AutocadArtifactRootObjectBuilder
   // Builds relations from the "Data Manager" properties written by Plant3dDataExtractor:
   //   IN_SYSTEM: part → "MEP System" container per line group; the group's own object joins it too.
   //   Class tree: part → leaf "Group" container; each level def_refs its parent.
-  partial void EmitVerticalRelations(
+  protected override void EmitVerticalRelations(
     ObjectsArtifactPipeline pipeline,
-    CollectedModel model,
+    IReadOnlyList<CollectedObject> objects,
     HashSet<string> definitionMemberIds
   )
   {
-    var lineGroupKByKey = new Dictionary<string, int>(StringComparer.Ordinal);
-    var classKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
+    var systemsByKey = new Dictionary<string, SystemSlot>(StringComparer.Ordinal);
 
-    foreach (var co in LineGroupObjectsFirst(model.Objects))
+    foreach (var co in LineGroupObjectsFirst(objects))
     {
       if (
         definitionMemberIds.Contains(co.ApplicationId)
@@ -148,22 +176,21 @@ public partial class AutocadArtifactRootObjectBuilder
 
       var objK = pipeline.InternObject(co.ApplicationId);
       var systemName = IsLineGroupObject(co) ? (co.Converted as DataObject)?.name : null;
-      AddLineGroupAsSystem(pipeline, dataManagerProperties, lineGroupKByKey, objK, systemName);
-      AddClassHierarchyAsGroups(pipeline, dataManagerProperties, classKByPath, objK);
+      AddLineGroupAsSystem(pipeline, dataManagerProperties, systemsByKey, objK, systemName);
     }
   }
 
   /// <summary>
-  /// Yields line-group objects before all other objects, so each "MEP System" container is created (and named)
-  /// from its group object rather than from whichever member is seen first.
+  /// Line-group objects first (so each container is named from its group object), then members in a
+  /// deterministic order so IN_SYSTEM ords are stable across sends of the same model.
   /// </summary>
   private static IEnumerable<CollectedObject> LineGroupObjectsFirst(IEnumerable<CollectedObject> objects) =>
-    objects.OrderBy(co => IsLineGroupObject(co) ? 0 : 1);
+    objects.OrderBy(co => IsLineGroupObject(co) ? 0 : 1).ThenBy(co => co.ApplicationId, StringComparer.Ordinal);
 
   private static void AddLineGroupAsSystem(
     ObjectsArtifactPipeline pipeline,
     IReadOnlyDictionary<string, object?> dataManagerProperties,
-    Dictionary<string, int> lineGroupKByKey,
+    Dictionary<string, SystemSlot> systemsByKey,
     int objK,
     string? systemName = null
   )
@@ -173,57 +200,14 @@ public partial class AutocadArtifactRootObjectBuilder
       return;
     }
 
-    if (!lineGroupKByKey.TryGetValue(group.Key, out var groupK))
+    if (!systemsByKey.TryGetValue(group.Key, out var slot))
     {
       var name = string.IsNullOrWhiteSpace(systemName) ? group.Name : systemName;
-      groupK = pipeline.AddContainer(group.Key, new SpecContainer(name, null, "MEP System", null));
-      lineGroupKByKey[group.Key] = groupK;
+      var groupK = pipeline.AddContainer(group.Key, new SpecContainer(name, null, "MEP System", null));
+      systemsByKey[group.Key] = slot = new SystemSlot(groupK);
     }
 
-    pipeline.InSystem(objK, groupK, ord: 0);
-  }
-
-  private static void AddClassHierarchyAsGroups(
-    ObjectsArtifactPipeline pipeline,
-    IReadOnlyDictionary<string, object?> dataManagerProperties,
-    Dictionary<string, int> classKByPath,
-    int objK
-  )
-  {
-    var levels = ReadClassLevels(dataManagerProperties);
-    if (levels.Count == 0)
-    {
-      return;
-    }
-
-    int? parentK = null; // def_ref = parent container's node K (null for the root level)
-    var leafK = 0;
-    for (var i = 0; i < levels.Count; i++)
-    {
-      var path = CLASS_PREFIX + string.Join("|", levels.Take(i + 1));
-      if (!classKByPath.TryGetValue(path, out var k))
-      {
-        k = pipeline.AddContainer(path, new SpecContainer(levels[i], parentK, "Group", null));
-        classKByPath[path] = k;
-      }
-      parentK = leafK = k;
-    }
-
-    pipeline.InGroup(objK, leafK, ord: 0);
-  }
-
-  private static List<string> ReadClassLevels(IReadOnlyDictionary<string, object?> dataManagerProperties)
-  {
-    var levels = new List<string>();
-    for (
-      int i = 1;
-      dataManagerProperties.TryGetValue(LevelKey(i), out var lvl) && lvl is string s && !string.IsNullOrWhiteSpace(s);
-      i++
-    )
-    {
-      levels.Add(s);
-    }
-    return levels;
+    pipeline.InSystem(objK, slot.ContainerK, slot.NextOrd++);
   }
 
   // ── Shared helpers ──

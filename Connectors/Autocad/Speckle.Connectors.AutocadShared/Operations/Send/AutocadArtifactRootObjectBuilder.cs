@@ -68,7 +68,7 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
   "CA1506:Avoid excessive class coupling",
   Justification = "One builder serves AutoCAD, Civil3D and Plant3D, so it touches all three verticals' types."
 )]
-public partial class AutocadArtifactRootObjectBuilder(
+public class AutocadArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<AutocadConversionSettings> converterSettings,
   AutocadInstanceUnpacker instanceUnpacker,
@@ -214,14 +214,7 @@ public partial class AutocadArtifactRootObjectBuilder(
     // Vertical-specific objects (e.g. Plant 3D line groups) are an optional extra: a failure here must not discard
     // the already-converted model. Runs after material/colour unpacking and the all-failed check, so these objects
     // carry no material/colour edges and don't count toward conversion success.
-    try
-    {
-      CollectVerticalObjects(collectedObjects);
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogWarning(ex, "Failed to collect vertical-specific objects; continuing without them");
-    }
+    CollectVerticalObjects(collectedObjects);
 
     return new CollectedModel(
       units,
@@ -503,16 +496,8 @@ public partial class AutocadArtifactRootObjectBuilder(
     EmitCivilNetworkTopology(pipeline, model.Objects);
 
     // Vertical-specific relations (e.g. Plant 3D line-group membership). Runs after the object loop so every
-    // collected object, vertical ones included, is already emitted. Optional like its collect step: a failure
-    // here must not fail the send.
-    try
-    {
-      EmitVerticalRelations(pipeline, model, definitionMemberIds);
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogWarning(ex, "Failed to emit vertical-specific relations; continuing without them");
-    }
+    // collected object, vertical ones included, is already emitted. Optional like its collect step.
+    EmitVerticalRelations(pipeline, model.Objects, definitionMemberIds);
 
     EmitModelPlacement(pipeline, model);
     EmitAdditionalNodes(pipeline);
@@ -1059,20 +1044,17 @@ public partial class AutocadArtifactRootObjectBuilder(
 
   // Phase 1 (UI thread, host API available): lets a vertical (a host variant compiled into this shared project, e.g.
   // Plant 3D) append extra objects to the snapshot — e.g. geometry-less line groups. Must leave plain, Base-free
-  // records only; phase 2 cannot touch the host API. Failures are logged and swallowed, never failing the send.
-  // A partial method (not virtual) because verticals share this class via the shared project rather than subclassing;
-  // compiled out where unimplemented.
-  partial void CollectVerticalObjects(List<CollectedObject> objects);
+  // records only; phase 2 cannot touch the host API.
+  protected virtual void CollectVerticalObjects(List<CollectedObject> objects) { }
 
   // Phase 2 (worker thread, pure-Speckle snapshot only): lets a vertical emit its own relations and supporting
   // nodes (e.g. CONTAINER nodes + membership edges) into the bundle. Objects in definitionMemberIds are block-definition
   // members and must not receive scene edges (same rule as IN_COLLECTION / IN_GROUP).
-  // Compiled out where unimplemented.
-  partial void EmitVerticalRelations(
+  protected virtual void EmitVerticalRelations(
     ObjectsArtifactPipeline pipeline,
-    CollectedModel model,
+    IReadOnlyList<CollectedObject> objects,
     HashSet<string> definitionMemberIds
-  );
+  ) { }
 
   // modelPlacement.* — same contract as the Revit producer: transform / options.*.transform map WCS (the drawing's
   // internal frame) → that datum's space and are emitted regardless of baking; appliedToGeometry says whether the
@@ -1268,7 +1250,7 @@ public partial class AutocadArtifactRootObjectBuilder(
     };
 
   // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
-  private sealed record CollectedObject(
+  protected sealed record CollectedObject(
     string ApplicationId,
     string SourceType,
     string LayerName,

@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\Plant3dConnectorModule.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadArtifactRootObjectBuilder.Plant3d.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Plant3dArtifactRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Plant3dRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\Plant3dSendBinding.cs" />
   </ItemGroup>
