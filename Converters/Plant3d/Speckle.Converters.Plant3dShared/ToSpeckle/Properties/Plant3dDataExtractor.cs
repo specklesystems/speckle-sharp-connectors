@@ -119,6 +119,21 @@ public class Plant3dDataExtractor
       properties["Group Id"] = groupInfo.GroupId;
       properties["Group Type"] = groupInfo.GroupType;
       properties["Line Number"] = groupInfo.LineNumber;
+
+      if (groupInfo.Tag is not null)
+      {
+        properties["Group Tag"] = groupInfo.Tag;
+      }
+
+      if (groupInfo.NominalSize is not null)
+      {
+        properties["Nominal Size"] = groupInfo.NominalSize;
+      }
+
+      if (groupInfo.NominalSpec is not null)
+      {
+        properties["Nominal Spec"] = groupInfo.NominalSpec;
+      }
     }
   }
 }
