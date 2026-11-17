@@ -11,7 +11,7 @@ internal static class Consts
       [
         new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48"),
         new("Connectors/Rhino/Speckle.Connectors.Rhino8", "net48"),
-        new("Connectors/Rhino/Speckle.Connectors.Rhino8.Mac", "net8.0"),
+        new("Connectors/Rhino/Speckle.Connectors.Rhino8.Mac", "net8.0", Platform.Mac),
         new("Connectors/Rhino/Speckle.Connectors.Rhino9", "net10.0-windows"),
       ]
     ),
@@ -78,4 +78,12 @@ internal readonly record struct ProjectGroup(string HostAppSlug, IReadOnlyList<I
   public override string ToString() => $"{HostAppSlug}";
 }
 
-internal readonly record struct InstallerAsset(string ProjectPath, string TargetName);
+internal readonly record struct InstallerAsset(string ProjectPath, string TargetName, Platform Platform = Platform.Win);
+
+[Flags]
+internal enum Platform
+{
+  None = 0,
+  Win = 1,
+  Mac = 2,
+}
