@@ -58,6 +58,7 @@ internal static class Consts
         new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
         new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48"),
         new("Connectors/Tekla/Speckle.Connector.Tekla2025", "net48"),
+        new("Connectors/Tekla/Speckle.Connector.Tekla2026", "net48"),
       ]
     ),
     new(
