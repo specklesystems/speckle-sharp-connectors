@@ -614,12 +614,14 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: _speckleApplication);
     var collectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
+    var materialKs = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
     int count = 0;
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddCollection(pipeline, co.Type, collectionKByName);
-      EmitObject(pipeline, co.Object, collK, model.Units);
+      EmitObject(pipeline, co.Object, collK, model.Units, materialKs);
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -699,6 +701,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     TsdObject obj,
     int collK,
     string units,
+    Dictionary<string, int> materialKs,
     int? parentObjK = null,
     int subelementOrd = 0
   )
@@ -717,6 +720,8 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       RootScalars(obj.speckle_type, obj.name, units, obj.type)
     );
 
+    int? matK = ResolveMaterialK(pipeline, obj.properties, materialKs);
+
     int ord = 0;
     foreach (Base fragment in obj.displayValue)
     {
@@ -725,6 +730,10 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
         string gAppId = fragment.applicationId ?? $"{appId}:g{ord}";
         int gK = pipeline.AddGeometry(gAppId, fragment);
         pipeline.Display(objK, gK, ord++);
+        if (matK is int m && fragment is Speckle.Objects.Geometry.Mesh)
+        {
+          pipeline.HasMaterial(gK, m);
+        }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -751,8 +760,64 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     int childOrd = 0;
     foreach (TsdObject child in obj.elements)
     {
-      EmitObject(pipeline, child, collK, units, objK, childOrd++);
+      EmitObject(pipeline, child, collK, units, materialKs, objK, childOrd++);
     }
+  }
+
+  private static readonly Dictionary<string, int> s_materialColors = new(StringComparer.OrdinalIgnoreCase)
+  {
+    ["Steel"] = unchecked((int)0xFF8C9AA8),
+    ["Concrete"] = unchecked((int)0xFFB8B5AE),
+  };
+
+  private static int? ResolveMaterialK(
+    ObjectsArtifactPipeline pipeline,
+    Dictionary<string, object?>? properties,
+    Dictionary<string, int> materialKs
+  )
+  {
+    string? type = FindMaterialType(properties);
+    if (type is null || !s_materialColors.TryGetValue(type, out int argb))
+    {
+      return null;
+    }
+
+    if (!materialKs.TryGetValue(type, out int k))
+    {
+      k = pipeline.AddMaterial($"material:{type}", new(type, argb, 1.0, 0.0, 1.0, null, null));
+      materialKs[type] = k;
+    }
+    return k;
+  }
+
+  private static string? FindMaterialType(IDictionary<string, object?>? properties)
+  {
+    if (properties is null)
+    {
+      return null;
+    }
+
+    foreach (var (key, value) in properties)
+    {
+      if (key == "Material Type" && value is string materialType)
+      {
+        return materialType;
+      }
+      if (
+        key == "Material"
+        && value is IDictionary<string, object?> material
+        && material.TryGetValue("Type", out var t)
+        && t is string typeName
+      )
+      {
+        return typeName;
+      }
+      if (value is IDictionary<string, object?> nested && FindMaterialType(nested) is { } found)
+      {
+        return found;
+      }
+    }
+    return null;
   }
 
   private static int GetOrAddCollection(ObjectsArtifactPipeline pipeline, string name, Dictionary<string, int> cache)

@@ -52,7 +52,11 @@ public static class PrismBuilder
   }
 
   /// <summary>Extrudes a planar 3D outline half the thickness to each side of its plane; null when degenerate.</summary>
-  public static PrismMesh? TryExtrudeOutline(IReadOnlyList<Vector3> outline, double thickness)
+  public static PrismMesh? TryExtrudeOutline(IReadOnlyList<Vector3> outline, double thickness) =>
+    TryExtrudeOutline(outline, thickness, Vector3.Zero);
+
+  /// <summary>As above, with the whole solid then moved by <paramref name="translation"/> (world units).</summary>
+  public static PrismMesh? TryExtrudeOutline(IReadOnlyList<Vector3> outline, double thickness, Vector3 translation)
   {
     if (outline is null)
     {
@@ -100,7 +104,7 @@ public static class PrismBuilder
     return built is null
       ? null
       : new PrismMesh(
-        ToWorld(built.Value.Vertices, centre, frame.Value, 1, Vector2.Zero, Vector2.Zero),
+        ToWorld(built.Value.Vertices, centre + translation, frame.Value, 1, Vector2.Zero, Vector2.Zero),
         built.Value.Faces
       );
   }
