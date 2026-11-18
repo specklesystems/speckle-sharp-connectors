@@ -42,7 +42,11 @@ public record SpeckleResourceBuilder
       throw new NotSupportedException("Fetching all models is not supported.");
     }
 
+#if NET6_0_OR_GREATER
+    if (model.Value.StartsWith('$'))
+#else
     if (model.Value.StartsWith("$"))
+#endif
     {
       throw new NotSupportedException("Federation model urls are not supported");
     }

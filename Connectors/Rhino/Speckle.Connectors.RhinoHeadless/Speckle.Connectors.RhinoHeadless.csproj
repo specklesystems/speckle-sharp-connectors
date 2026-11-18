@@ -21,12 +21,9 @@
 
   <ItemGroup>
     <!-- Same exact pin as the Rhino 9 head (see its csproj for the lockstep rule). -->
-    <PackageReference
-      Include="RhinoCommon"
-      IncludeAssets="compile; build"
-      PrivateAssets="all"
-      VersionOverride="9.0.26167.11545-wip"
-    />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+    <!-- Resolver for hosts that boot Rhino in-process -->
+    <!--    <PackageReference Include="Rhino.Inside" />-->
   </ItemGroup>
 
   <ItemGroup>
