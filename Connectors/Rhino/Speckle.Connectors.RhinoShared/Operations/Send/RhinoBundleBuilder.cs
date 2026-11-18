@@ -20,6 +20,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Bundles;
 using Speckle.Sdk.Bundles.Handles;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
@@ -173,7 +174,12 @@ public class RhinoBundleBuilder(
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogError(ex, "Failed to convert {SourceType}", sourceType);
+        logger.Log(
+          ex is ConversionNotSupportedException ? LogLevel.Warning : LogLevel.Error,
+          ex,
+          "Failed to convert {SourceType}",
+          sourceType
+        );
         results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
         session.RecordObject(applicationId, sourceType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
       }

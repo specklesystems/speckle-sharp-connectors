@@ -18,5 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Sdk\Speckle.Testing\Speckle.Testing.csproj" />
     <ProjectReference Include="..\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\Speckle.Connectors.DUI.EtoWebView\Speckle.Connectors.DUI.EtoWebView.csproj" />
   </ItemGroup>
 </Project>

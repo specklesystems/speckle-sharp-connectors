@@ -6,12 +6,16 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
   xmlns:local="clr-namespace:Speckle.Connectors.DUI.WebView"
+  xmlns:bridge="clr-namespace:Speckle.Connectors.DUI.Bridge;assembly=Speckle.Connectors.DUI"
   mc:Ignorable="d"
   d:DesignHeight="450"
   d:DesignWidth="800"
 >
   <UserControl.Resources>
-    <wv2:CoreWebView2CreationProperties x:Key="EvergreenWebView2CreationProperties" UserDataFolder="C:\temp" />
+    <wv2:CoreWebView2CreationProperties
+      x:Key="EvergreenWebView2CreationProperties"
+      UserDataFolder="{x:Static bridge:WebView2UserData.FolderPath}"
+    />
   </UserControl.Resources>
   <DockPanel>
     <wv2:WebView2

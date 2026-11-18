@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <TeklaVersion>2026</TeklaVersion>
+    <UseWpf>true</UseWpf>
+    <DefineConstants>$(DefineConstants);TEKLA2026</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+    <!--Events is IDisposable from 2026, our subscriptions live as long as Tekla does-->
+    <NoWarn>$(NoWarn);CA1001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="WindowsFormsIntegration" />
+    <PackageReference
+      Include="Tekla.Structures.Dialog"
+      IncludeAssets="compile; build"
+      VersionOverride="2026.0.0"
+      PrivateAssets="all"
+    />
+    <PackageReference
+      Include="Tekla.Structures.Drawing"
+      IncludeAssets="compile; build"
+      VersionOverride="2026.0.0"
+      PrivateAssets="all"
+    />
+    <PackageReference
+      Include="Tekla.Structures.Model"
+      IncludeAssets="compile; build"
+      VersionOverride="2026.0.0"
+      PrivateAssets="all"
+    />
+    <PackageReference
+      Include="Tekla.Structures.Plugins"
+      IncludeAssets="compile; build"
+      VersionOverride="2026.0.0"
+      PrivateAssets="all"
+    />
+    <!--To match host app-->
+    <PackageReference Include="System.Text.Json" VersionOverride="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="9.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Logging" VersionOverride="9.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Tekla\Speckle.Converter.Tekla2026\Speckle.Converter.Tekla2026.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Connector.TeklaShared\Net48.IronCompress.props" />
+  <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />
+</Project>

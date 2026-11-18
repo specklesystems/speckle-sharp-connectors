@@ -21,12 +21,9 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   public Model Model { get; private set; }
   public static new ServiceProvider? Container { get; private set; }
 
-  // NOTE: Somehow tekla triggers this class twice at the beginning and on first dialog our webview appears
-  // with small size of render in Host even if we set it as Dock.Fill. But on second trigger dialog initializes as expected.
-  // So, we do not init our plugin at first attempt, we just close it at first.
-  // On second, we init plugin and mark plugin as 'Initialized' to handle later init attempts nicely.
-  // We make 'IsInitialized' as 'false' only whenever our main dialog is closed explicitly by user.
-  private static bool IsFirst { get; set; } = true;
+  // Tekla constructs this form on every click (twice on the first) and shows it itself as a dialog.
+  // Showing or closing that instance ourselves throws in Tekla, so it only stands in:
+  // it opens our own panel, stays invisible and closes once Tekla has shown it.
   public static bool IsInitialized { get; private set; }
 
   //window owner call
@@ -38,28 +35,27 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 
   public SpeckleTeklaPanelHost()
   {
-    if (IsFirst)
+    if (!IsInitialized)
     {
-      IsFirst = false;
-      Close();
-    }
-    else
-    {
-      if (IsInitialized)
-      {
-        s_instance?.BringToFront();
-        Close();
-        return;
-      }
       IsInitialized = true;
-      InitializeInstance();
-      s_instance?.BringToFront();
+      _ = new SpeckleTeklaPanelHost(true);
     }
+    s_instance?.BringToFront();
+
+    Opacity = 0;
+    ShowInTaskbar = false;
+    Shown += (_, _) => BeginInvoke(new Action(Close));
   }
+
+  private SpeckleTeklaPanelHost(bool _) => InitializeInstance();
 
   protected override void OnClosed(EventArgs e)
   {
-    s_instance?.Dispose();
+    if (this != s_instance)
+    {
+      return;
+    }
+    s_instance.Dispose();
     IsInitialized = false;
   }
 
@@ -122,7 +118,8 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     return HostAppVersion.v2023;
 #elif TEKLA2025
     return HostAppVersion.v2025;
-
+#elif TEKLA2026
+    return HostAppVersion.v2026;
 #else
     throw new NotImplementedException();
 #endif
