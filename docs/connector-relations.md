@@ -66,10 +66,10 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **10 IN_COLLECTION** | ● | ● | ● | ● | ● | ● | · | ● | ● | ● |
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
 | **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | ● | ● |
-| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | ● | ● |
+| **17 IN_GROUP** | ● | · | ● | ● | ● | · | ● | · | ● | ● |
 | **3 SUBELEMENT** | · | ◐³ | · | · | ● | · | ● | ● | · | ● |
 | **18 IN_ASSEMBLY** | · | ◐³ | · | · | · | · | · | ● | · | · |
-| **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
+| **14 IN_SYSTEM** | · | · | · | ● | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
 | **21 CONNECTS_TO** | · | ◐³ | · | · | ● | · | ● | ● | ● | ● |
 | **22 HOSTED_ON** | · | ◐³ | · | · | · | · | ● | ● | · | · |
@@ -85,7 +85,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 ² Only with the "Send Volumetric Geometry" card setting (ENG-9048): members ship their analytical line as `CENTERLINE` while the extruded solid takes `DISPLAY`. CSi lost this gate in ENG-11149: every frame carries its `CENTERLINE` and its section material's colour whatever the setting, as `etabsextract` does.
 ³ Grasshopper writes these only when the user authors them with the **Speckle Relation** component (ENG-9475); nothing is derived from the canvas.
 
-Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them**. Plant3D is send-only. SketchUp is a pure-Ruby producer.
+Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them from that path**. Plant3D emits its own `IN_SYSTEM` (line groups) from `Plant3dArtifactRootObjectBuilder`. Plant3D is send-only. SketchUp is a pure-Ruby producer.
 
 ---
 
@@ -233,7 +233,38 @@ The ACIS-SAT blob is the lossless SOLID; layers are single top-level CONTAINERs 
 
 ### Plant3D — CAD · vertical · send-only
 
-No builder of its own — reuses AutoCAD's send path verbatim. Same 9 relations, same node shapes as AutoCAD, nothing Plant3D-specific on the 4.0 path. Registers the shared AutoCAD `IArtifactRootObjectBuilder`; its own root builder is legacy-v1 only. P&ID / spec-driven data survives as eav properties, not as dedicated relations. **No receive path is registered** — any Plant3D-native round-trip needs a dedicated receive builder (doesn't exist yet).
+`Plant3dArtifactRootObjectBuilder` subclasses AutoCAD's send builder — same base relations and node shapes as AutoCAD, plus line-group systems.
+
+Each member (3D parts via `P3dLineGroupPartRelationship`, P&ID pipe/signal line segments via `PipeLineGroupRelationship` / `SignalLineGroupRelationship`, resolved by `Plant3dLineGroupResolver`) joins a CONTAINER(`"MEP System"`) per line group via `IN_SYSTEM`, keyed by group row id and named from the members' `Group Tag` (falling back to type + line number).
+
+**Line groups** — `IN_SYSTEM`
+
+```mermaid
+graph
+  subgraph "3D piping drawing"
+    P([obj · Pipe]):::obj
+    F([obj · Fitting / Valve]):::obj
+    LG{{node · MEP System · LineGroup}}:::nd
+    P -->|IN_SYSTEM| LG
+    F -->|IN_SYSTEM| LG
+  end
+  subgraph "P&ID drawing"
+    PL([obj · Pipe line segment]):::obj
+    SL([obj · Signal line segment]):::obj
+    PLG{{node · MEP System · PipeLineGroup}}:::nd
+    SLG{{node · MEP System · SignalLineGroup}}:::nd
+    PL -->|IN_SYSTEM| PLG
+    SL -->|IN_SYSTEM| SLG
+  end
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
+```
+
+Authored AutoCAD groups ride the inherited base-builder path (`CollectGroups` → `EmitGroups`) → CONTAINER(`"Group"`) + `IN_GROUP`, identical to AutoCAD.
+
+Other P&ID / spec-driven data survives as eav properties, not as dedicated relations.
+
+**No receive path is registered** — any Plant3D-native round-trip needs a dedicated receive builder (doesn't exist yet).
 
 ---
 

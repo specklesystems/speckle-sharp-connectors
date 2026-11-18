@@ -74,7 +74,7 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 - 🔶 Rhino **HAS_COLOR** — object display colours (GH already emits it).
 - ⛔ **Groups** — `RhinoGroupUnpacker` exists but grouping has no clean live relation (see decision below).
 
-### AutoCAD / Civil3D / Plant3D — `AutocadArtifactRootObjectBuilder` (one builder, three verticals)
+### AutoCAD / Civil3D / Plant3D — `AutocadArtifactRootObjectBuilder` (+ `Civil3dArtifactRootObjectBuilder`, `Plant3dArtifactRootObjectBuilder` subclasses)
 - ✅ IN_COLLECTION (layers), SOLID (ACIS-SAT), DISPLAY, DISPLAY_INSTANCE, DEFINES/_INSTANCE, HAS_MATERIAL,
   HAS_COLOR.
 - ✅ **Civil3D SUBELEMENT** — `Civil3dObject.elements` tree (corridor→baseline→region→assembly→subassembly;
@@ -83,8 +83,9 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
   `Assignments.networkId`.
 - ✅ **Civil3D CONNECTS_TO** — pipe → start/end structure (`Assignments.startStructureId/endStructureId`),
   guarded to sent objects.
-- 🔶 **Plant3D IN_SYSTEM** — component → line-number / service (`Plant3dDataExtractor` PnP row); the
-  line-number field is the grouping key (new: read the PnP row + CONTAINER).
+- ✅ **Plant3D IN_SYSTEM** — member → line group CONTAINER (subtype `MEP System`, keyed by group row id)
+  via `Plant3dLineGroupResolver`: 3D parts (`P3dLineGroupPartRelationship`), P&ID pipe/signal line segments
+  (`PipeLineGroupRelationship` / `SignalLineGroupRelationship`)
 - 🔶 **Plant3D CONNECTS_TO** — pipe↔fitting port connectivity via the PnP `Port` API (new walk; not
   extracted anywhere today).
 - ⛔ **AutoCAD groups** — `AutocadGroupUnpacker` exists; same grouping blocker as Rhino.
@@ -175,7 +176,7 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 - **Phase 0** (SDK) — ✅ `Bounds` façade + scoped `ConnectsTo(…,scope)` overload + `InRoom` doc fix.
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D, TSD slabs and walls (ENG-11157).
 - **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
-- **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
+- **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. ✅ Plant3D line-group IN_SYSTEM. 🔶 Plant3D ports.
 - **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO, story ON_LEVEL, group IN_GROUP (ENG-11148); TSD member/area → construction point CONNECTS_TO (ENG-11155). 🔶 pier-spandrel IN_SYSTEM / section HAS_MATERIAL. ✅ Tekla assemblies + pour units (ENG-11151), rebar hosting + components (ENG-11152), welds + bolts (ENG-11153).
 - **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079), TSD element groups + construction-plane levels (ENG-11156). ✅ CSi groups (ENG-11148). 🔶 rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
