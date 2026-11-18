@@ -531,7 +531,7 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
   {
-    return new()
+    Dictionary<string, object?> properties = new()
     {
       ["offset"] = profile.Offset,
       ["startingStation"] = profile.StartingStation,
@@ -540,6 +540,67 @@ public class ClassPropertiesExtractor
       ["elevationMin"] = profile.ElevationMin,
       ["elevationMax"] = profile.ElevationMax,
     };
+
+    if (profile.AlignmentId != ADB.ObjectId.Null)
+    {
+      properties[ASSIGNMENT_PROP] = new Dictionary<string, object?>
+      {
+        [ALIGNMENTID_PROP] = profile.AlignmentId.GetSpeckleApplicationId(),
+      };
+    }
+
+    var entities = Enumerable
+      .Range(0, profile.Entities.Count)
+      .Select(index => profile.Entities[index])
+      .OrderBy(entity => entity.StartStation)
+      .ToList();
+    Dictionary<string, object?> profileEntitiesDict = new();
+    for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
+    {
+      CDB.ProfileEntity entity = entities[entityIndex];
+      Dictionary<string, object?> entityProperties = new()
+      {
+        ["type"] = entity.EntityType.ToString(),
+        ["startStation"] = entity.StartStation,
+        ["startElevation"] = entity.StartElevation,
+        ["endStation"] = entity.EndStation,
+        ["endElevation"] = entity.EndElevation,
+      };
+
+      switch (entity)
+      {
+        case CDB.ProfileTangent tangent:
+          entityProperties["grade"] = tangent.Grade;
+          break;
+        case CDB.ProfileParabolaSymmetric curve:
+          entityProperties["curveType"] = curve.CurveType.ToString();
+          entityProperties["length"] = curve.Length;
+          entityProperties["gradeIn"] = curve.GradeIn;
+          entityProperties["gradeOut"] = curve.GradeOut;
+          break;
+        case CDB.ProfileParabolaAsymmetric curve:
+          entityProperties["curveType"] = curve.CurveType.ToString();
+          entityProperties["gradeIn"] = curve.GradeIn;
+          entityProperties["gradeOut"] = curve.GradeOut;
+          entityProperties["length1"] = curve.AsymmetricLength1;
+          entityProperties["length2"] = curve.AsymmetricLength2;
+          break;
+        case CDB.ProfileCircular curve:
+          entityProperties["curveType"] = curve.CurveType.ToString();
+          entityProperties["length"] = curve.Length;
+          entityProperties["gradeIn"] = curve.GradeIn;
+          entityProperties["gradeOut"] = curve.GradeOut;
+          entityProperties["radius"] = curve.Radius;
+          break;
+        default:
+          throw new SpeckleException($"Profile entity type '{entity.EntityType}' is not supported.");
+      }
+
+      profileEntitiesDict[entityIndex.ToString()] = entityProperties;
+    }
+    AddDictionaryToDictionary(profileEntitiesDict, properties, "Profile Entities");
+
+    return properties;
   }
 
   // Stock (.NET catalog) subassemblies hand back the UNRESOLVED string-resource id of the label as DisplayName
