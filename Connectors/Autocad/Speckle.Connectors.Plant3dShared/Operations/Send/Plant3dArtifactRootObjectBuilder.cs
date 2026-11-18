@@ -20,7 +20,7 @@ public class Plant3dArtifactRootObjectBuilder(
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ISpeckleApplication speckleApplication,
-  ILogger<AutocadArtifactRootObjectBuilder> logger
+  ILogger<Plant3dArtifactRootObjectBuilder> logger
 )
   : AutocadArtifactRootObjectBuilder(
     converter,
@@ -59,7 +59,6 @@ public class Plant3dArtifactRootObjectBuilder(
   // ── Emit relations (worker thread) ──
   // Builds relations from the "Data Manager" properties written by Plant3dDataExtractor:
   //   IN_SYSTEM: part → "MEP System" container per line group, named from the members' "Group Tag".
-  //   Class tree: part → leaf "Group" container; each level def_refs its parent.
   protected override void EmitVerticalRelations(
     ObjectsArtifactPipeline pipeline,
     IReadOnlyList<CollectedObject> objects,

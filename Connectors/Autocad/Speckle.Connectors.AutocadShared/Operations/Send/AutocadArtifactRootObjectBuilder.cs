@@ -59,9 +59,10 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 /// thread (the AutoCAD API + converters are document-bound) producing a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) runs on a worker thread and builds the parquet bundle (the pipeline does
 /// sync-over-async parquet IO that deadlocks on the UI thread).</para>
-/// <para>The single builder serves AutoCAD, Civil3D and Plant3D: the injected <see cref="IRootToSpeckleConverter"/>
-/// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct
-/// without subclassing. Deferred this pass: Civil3D property-set definitions.</para>
+/// <para>This builder serves AutoCAD, Civil3D and Plant3D: the injected <see cref="IRootToSpeckleConverter"/>
+/// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct.
+/// Plant3D derives from it (<c>Plant3dArtifactRootObjectBuilder</c>) to add its own relations through the
+/// <see cref="EmitVerticalRelations"/> hook. Deferred this pass: Civil3D property-set definitions.</para>
 /// </remarks>
 [SuppressMessage(
   "Maintainability",
@@ -210,11 +211,6 @@ public class AutocadArtifactRootObjectBuilder(
 
     // Authored scene groups → plain snapshot records (Base-free — no GroupProxy). Membership lists OBJECT ids.
     var groups = CollectGroups(atomicObjects);
-
-    // Vertical-specific objects (e.g. Plant 3D line groups) are an optional extra: a failure here must not discard
-    // the already-converted model. Runs after material/colour unpacking and the all-failed check, so these objects
-    // carry no material/colour edges and don't count toward conversion success.
-    CollectVerticalObjects(collectedObjects);
 
     return new CollectedModel(
       units,
@@ -495,8 +491,7 @@ public class AutocadArtifactRootObjectBuilder(
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
 
-    // Vertical-specific relations (e.g. Plant 3D line-group membership). Runs after the object loop so every
-    // collected object, vertical ones included, is already emitted. Optional like its collect step.
+    // Vertical-specific relations (e.g. Plant 3D line-group membership).
     EmitVerticalRelations(pipeline, model.Objects, definitionMemberIds);
 
     EmitModelPlacement(pipeline, model);
@@ -1041,11 +1036,6 @@ public class AutocadArtifactRootObjectBuilder(
   }
 
   protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
-
-  // Phase 1 (UI thread, host API available): lets a vertical (a host variant compiled into this shared project, e.g.
-  // Plant 3D) append extra objects to the snapshot — e.g. geometry-less line groups. Must leave plain, Base-free
-  // records only; phase 2 cannot touch the host API.
-  protected virtual void CollectVerticalObjects(List<CollectedObject> objects) { }
 
   // Phase 2 (worker thread, pure-Speckle snapshot only): lets a vertical emit its own relations and supporting
   // nodes (e.g. CONTAINER nodes + membership edges) into the bundle. Objects in definitionMemberIds are block-definition
