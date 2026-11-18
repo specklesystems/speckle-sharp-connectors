@@ -1,4 +1,5 @@
 using Speckle.Connectors.Autocad.Operations;
+using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
@@ -21,7 +22,8 @@ public abstract class AutocadReceiveBaseBinding(
   private ReceiveBindingUICommands Commands { get; } = new(parent);
 
 #pragma warning disable CA1024
-  public List<ICardSetting> GetReceiveSettings() => [new ReceiveApplyTransformSetting()];
+  public List<ICardSetting> GetReceiveSettings() =>
+    [new ReceiveApplyTransformSetting(), new ReceivePreferPolyFaceMeshSetting()];
 #pragma warning restore CA1024
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc);
