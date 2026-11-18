@@ -10,7 +10,7 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// <summary>
 /// Creates new shared parameters on Revit elements and sets their value in one step.
 /// Parameters are defined under a "Speckle" group in a Speckle-managed shared parameter
-/// file, bound as Instance parameters under the PG_DATA ("Data") group.
+/// file, bound as Instance parameters under the requested built-in group, or "Data" when none resolves.
 /// </summary>
 public class RevitParameterCreator
 {
@@ -19,6 +19,7 @@ public class RevitParameterCreator
 
   private readonly RevitContext _revitContext;
   private readonly ILogger<RevitParameterCreator> _logger;
+  private readonly Lazy<Dictionary<string, ForgeTypeId>> _groupsByLabel = new(BuildGroupsByLabel);
 
   public RevitParameterCreator(RevitContext revitContext, ILogger<RevitParameterCreator> logger)
   {
@@ -30,7 +31,8 @@ public class RevitParameterCreator
   /// Creates the named parameter on the element's category (if it does not already exist)
   /// and sets its value. Must be called inside an open Revit transaction.
   /// </summary>
-  public UpdateResult CreateAndSet(Document doc, Element element, string paramName, object? value)
+  /// <param name="groupLabel">The parameter group as the send side labels it (e.g. "Identity Data"); null for Data.</param>
+  public UpdateResult CreateAndSet(Document doc, Element element, string paramName, string? groupLabel, object? value)
   {
     var app = _revitContext.UIApplication?.Application;
     if (app is null)
@@ -41,7 +43,7 @@ public class RevitParameterCreator
     try
     {
       using var file = OpenSpeckleSharedParameterFile(app);
-      return CreateAndSetCore(file.Definitions, doc, element, paramName, value);
+      return CreateAndSetCore(file.Definitions, doc, element, paramName, ResolveGroup(groupLabel), value);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -91,6 +93,7 @@ public class RevitParameterCreator
     Document doc,
     Element element,
     string paramName,
+    ForgeTypeId group,
     object? value
   )
   {
@@ -100,7 +103,7 @@ public class RevitParameterCreator
       return UpdateResult.Fail($"Could not create parameter definition for '{paramName}'");
     }
 
-    var bindResult = EnsureCategoryBinding(doc, definition, element);
+    var bindResult = EnsureCategoryBinding(doc, definition, element, group);
     if (!bindResult.IsSuccess)
     {
       return bindResult;
@@ -132,7 +135,48 @@ public class RevitParameterCreator
     return Path.Combine(speckleDir, SHARED_PARAMS_FILENAME);
   }
 
-  private static UpdateResult EnsureCategoryBinding(Document doc, ExternalDefinition definition, Element element)
+  /// <summary>
+  /// The path's group segment is a group label in the host's UI language, as published on send, so it is matched
+  /// by <see cref="LabelUtils.GetLabelForGroup"/> rather than by group id.
+  /// </summary>
+  private ForgeTypeId ResolveGroup(string? groupLabel)
+  {
+    if (string.IsNullOrWhiteSpace(groupLabel))
+    {
+      return GroupTypeId.Data;
+    }
+
+    if (_groupsByLabel.Value.TryGetValue(groupLabel!, out var group))
+    {
+      return group;
+    }
+
+    _logger.LogWarning("Unknown parameter group '{GroupLabel}', creating under Data", groupLabel);
+    return GroupTypeId.Data;
+  }
+
+  private static Dictionary<string, ForgeTypeId> BuildGroupsByLabel()
+  {
+    // ungrouped parameters publish as "Other", the label of the empty group id, which GetAllBuiltInGroups omits
+    var groups = new Dictionary<string, ForgeTypeId>();
+    foreach (var group in ParameterUtils.GetAllBuiltInGroups().Append(new ForgeTypeId()))
+    {
+      var label = LabelUtils.GetLabelForGroup(group);
+      if (!groups.ContainsKey(label))
+      {
+        groups[label] = group;
+      }
+    }
+
+    return groups;
+  }
+
+  private static UpdateResult EnsureCategoryBinding(
+    Document doc,
+    ExternalDefinition definition,
+    Element element,
+    ForgeTypeId group
+  )
   {
     var category = element.Category;
     if (category is null)
@@ -163,7 +207,9 @@ public class RevitParameterCreator
       }
 
       existingBinding.Categories.Insert(category);
-      bindingMap.ReInsert(definition, existingBinding, GroupTypeId.Data);
+      // the binding is shared by every category already using the parameter, so a request on one element keeps
+      // its current group rather than moving it for all of them (ENG-11170)
+      bindingMap.ReInsert(definition, existingBinding, iterator.Key.GetGroupTypeId());
       return UpdateResult.Success();
     }
 
@@ -172,7 +218,7 @@ public class RevitParameterCreator
     categorySet.Insert(category);
     var binding = new InstanceBinding(categorySet);
 
-    return bindingMap.Insert(definition, binding, GroupTypeId.Data)
+    return bindingMap.Insert(definition, binding, group)
       ? UpdateResult.Success()
       : UpdateResult.Fail(
         $"Revit rejected the parameter binding for '{definition.Name}' on category '{category.Name}'"
