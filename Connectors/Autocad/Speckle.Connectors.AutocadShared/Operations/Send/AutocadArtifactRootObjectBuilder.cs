@@ -59,9 +59,10 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 /// thread (the AutoCAD API + converters are document-bound) producing a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) runs on a worker thread and builds the parquet bundle (the pipeline does
 /// sync-over-async parquet IO that deadlocks on the UI thread).</para>
-/// <para>The single builder serves AutoCAD, Civil3D and Plant3D: the injected <see cref="IRootToSpeckleConverter"/>
-/// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct
-/// without subclassing. Deferred this pass: Civil3D property-set definitions.</para>
+/// <para>This builder serves AutoCAD, Civil3D and Plant3D: the injected <see cref="IRootToSpeckleConverter"/>
+/// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct.
+/// Plant3D derives from it (<c>Plant3dArtifactRootObjectBuilder</c>) to add its own relations through the
+/// <see cref="EmitVerticalRelations"/> hook. Deferred this pass: Civil3D property-set definitions.</para>
 /// </remarks>
 [SuppressMessage(
   "Maintainability",
@@ -489,6 +490,10 @@ public class AutocadArtifactRootObjectBuilder(
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, layerCollectionKByName);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
+
+    // Vertical-specific relations (e.g. Plant 3D line-group membership).
+    EmitVerticalRelations(pipeline, model.Objects, definitionMemberIds);
+
     EmitModelPlacement(pipeline, model);
     EmitAdditionalNodes(pipeline);
 
@@ -1032,6 +1037,15 @@ public class AutocadArtifactRootObjectBuilder(
 
   protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
 
+  // Phase 2 (worker thread, pure-Speckle snapshot only): lets a vertical emit its own relations and supporting
+  // nodes (e.g. CONTAINER nodes + membership edges) into the bundle. Objects in definitionMemberIds are block-definition
+  // members and must not receive scene edges (same rule as IN_COLLECTION / IN_GROUP).
+  protected virtual void EmitVerticalRelations(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<CollectedObject> objects,
+    HashSet<string> definitionMemberIds
+  ) { }
+
   // modelPlacement.* — same contract as the Revit producer: transform / options.*.transform map WCS (the drawing's
   // internal frame) → that datum's space and are emitted regardless of baking; appliedToGeometry says whether the
   // sender already applied `transform` to stored coordinates.
@@ -1226,7 +1240,7 @@ public class AutocadArtifactRootObjectBuilder(
     };
 
   // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
-  private sealed record CollectedObject(
+  protected sealed record CollectedObject(
     string ApplicationId,
     string SourceType,
     string LayerName,
