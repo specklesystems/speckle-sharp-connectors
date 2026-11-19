@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Autocad.Operations;
+using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
@@ -47,6 +48,7 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
         _autocadConversionSettingsFactory.Create(document, ModelPlacementSettings.GetReceiveApplyTransform(mc)) with
         {
           SpeckleUnits = civilSettings.SpeckleUnits,
+          PreferPolyFaceMesh = ReceiveMeshSettings.GetPreferPolyFaceMesh(mc),
         }
       );
   }

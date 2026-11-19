@@ -16,5 +16,6 @@ public record AutocadConversionSettings(
   bool ApplyTransform = false,
   string ModelPlacementSource = "drawingWcs",
   IReadOnlyDictionary<string, AG.Matrix3d>? ModelPlacementOptions = null,
-  IReadOnlyDictionary<string, AutocadModelProperty>? CoordinateMetadata = null
+  IReadOnlyDictionary<string, AutocadModelProperty>? CoordinateMetadata = null,
+  bool PreferPolyFaceMesh = true
 );

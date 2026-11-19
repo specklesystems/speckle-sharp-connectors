@@ -232,7 +232,8 @@ Target(
   {
     var version = await Versions.ComputeVersion();
     var fileVersion = await Versions.ComputeFileVersion();
-    foreach (var group in await Affected.GetAffectedProjectGroups())
+    var groups = await Affected.GetAffectedProjectGroups();
+    foreach (var group in groups)
     {
       Console.WriteLine($"Zipping: {group.HostAppSlug} as {version}");
       var outputDir = Path.Combine(".", "output");
@@ -275,6 +276,10 @@ Target(
     Console.WriteLine($"GITHUB_ENV: {githubEnv}");
     File.AppendAllText(githubEnv, $"SEMVER={version}{Environment.NewLine}");
     File.AppendAllText(githubEnv, $"FILE_VERSION={fileVersion}{Environment.NewLine}");
+
+    var platforms = groups.SelectMany(x => x.Projects).Aggregate(Platform.None, (all, x) => all | x.Platform);
+    var platformsCsv = platforms.ToString().ToLowerInvariant().Replace(", ", ",");
+    File.AppendAllText(githubEnv, $"PLATFORMS={platformsCsv}{Environment.NewLine}");
   }
 );
 
