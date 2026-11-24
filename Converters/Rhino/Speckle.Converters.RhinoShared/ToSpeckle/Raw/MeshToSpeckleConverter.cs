@@ -63,11 +63,13 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       var vertIndices = polygon.BoundaryVertexIndexList();
 
       // speckle faces can't carry holes, so n-gons with holes (or a broken boundary) go out as their faces (ENG-11807)
-      if (polygon.FaceCount > 1 && !BoundaryCoversOpenEdges(target, polygon, vertIndices.Length))
+      if (polygon.FaceCount > 1 && !HasSingleBoundaryLoop(target, polygon, vertIndices.Length))
       {
         foreach (uint faceIndex in polygon.FaceIndexList())
         {
-          AddFace(faces, target.Faces[(int)faceIndex]);
+          int[] corners = Corners(target.Faces[(int)faceIndex]);
+          faces.Add(corners.Length);
+          faces.AddRange(corners);
         }
         continue;
       }
@@ -127,13 +129,12 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     };
   }
 
-  private static bool BoundaryCoversOpenEdges(RG.Mesh mesh, RG.MeshNgon ngon, int boundaryVertexCount)
+  private static bool HasSingleBoundaryLoop(RG.Mesh mesh, RG.MeshNgon ngon, int boundaryVertexCount)
   {
     var edgeUse = new Dictionary<(int, int), int>();
     foreach (uint faceIndex in ngon.FaceIndexList())
     {
-      RG.MeshFace face = mesh.Faces[(int)faceIndex];
-      int[] corners = face.IsQuad ? [face.A, face.B, face.C, face.D] : [face.A, face.B, face.C];
+      int[] corners = Corners(mesh.Faces[(int)faceIndex]);
       for (int i = 0; i < corners.Length; i++)
       {
         int a = corners[i];
@@ -146,15 +147,6 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     return edgeUse.Values.Count(count => count == 1) == boundaryVertexCount;
   }
 
-  private static void AddFace(List<int> faces, RG.MeshFace face)
-  {
-    if (face.IsQuad)
-    {
-      faces.AddRange([4, face.A, face.B, face.C, face.D]);
-    }
-    else
-    {
-      faces.AddRange([3, face.A, face.B, face.C]);
-    }
-  }
+  private static int[] Corners(RG.MeshFace face) =>
+    face.IsQuad ? [face.A, face.B, face.C, face.D] : [face.A, face.B, face.C];
 }
