@@ -62,8 +62,9 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       var vertIndices = polygon.BoundaryVertexIndexList();
 
-      // speckle faces can't carry holes, so n-gons with holes (or a broken boundary) go out as their faces (ENG-11807)
-      if (polygon.FaceCount > 1 && !HasSingleBoundaryLoop(target, polygon, vertIndices.Length))
+      // speckle faces can't carry holes, and the viewer can't fill a boundary that touches itself (holes joined to the
+      // outline through an unwelded seam), so those n-gons go out as their faces (ENG-11807)
+      if (polygon.FaceCount > 1 && !HasSingleBoundaryLoop(target, polygon, vertIndices))
       {
         foreach (uint faceIndex in polygon.FaceIndexList())
         {
@@ -129,8 +130,17 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     };
   }
 
-  private static bool HasSingleBoundaryLoop(RG.Mesh mesh, RG.MeshNgon ngon, int boundaryVertexCount)
+  private static bool HasSingleBoundaryLoop(RG.Mesh mesh, RG.MeshNgon ngon, uint[] boundary)
   {
+    var boundaryPoints = new HashSet<RG.Point3d>();
+    foreach (uint vertexIndex in boundary)
+    {
+      if (!boundaryPoints.Add(mesh.Vertices.Point3dAt((int)vertexIndex)))
+      {
+        return false;
+      }
+    }
+
     var edgeUse = new Dictionary<(int, int), int>();
     foreach (uint faceIndex in ngon.FaceIndexList())
     {
@@ -144,7 +154,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
-    return edgeUse.Values.Count(count => count == 1) == boundaryVertexCount;
+    return edgeUse.Values.Count(count => count == 1) == boundary.Length;
   }
 
   private static int[] Corners(RG.MeshFace face) =>
