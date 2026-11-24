@@ -62,9 +62,8 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       var vertIndices = polygon.BoundaryVertexIndexList();
 
-      // speckle faces can't carry holes, and the viewer can't fill a boundary that touches itself (holes joined to the
-      // outline through an unwelded seam), so those n-gons go out as their faces (ENG-11807)
-      if (polygon.FaceCount > 1 && !HasSingleBoundaryLoop(target, polygon, vertIndices))
+      // speckle faces can't carry holes, so n-gons with holes or a self-touching boundary go out as their faces (ENG-11807)
+      if (polygon.FaceCount > 1 && !IsSimpleBoundaryLoop(target, polygon, vertIndices))
       {
         foreach (uint faceIndex in polygon.FaceIndexList())
         {
@@ -130,7 +129,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     };
   }
 
-  private static bool HasSingleBoundaryLoop(RG.Mesh mesh, RG.MeshNgon ngon, uint[] boundary)
+  private static bool IsSimpleBoundaryLoop(RG.Mesh mesh, RG.MeshNgon ngon, uint[] boundary)
   {
     var boundaryPoints = new HashSet<RG.Point3d>();
     foreach (uint vertexIndex in boundary)
