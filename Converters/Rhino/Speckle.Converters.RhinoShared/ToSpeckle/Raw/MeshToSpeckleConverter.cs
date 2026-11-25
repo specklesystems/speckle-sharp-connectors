@@ -62,8 +62,8 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       var vertIndices = polygon.BoundaryVertexIndexList();
 
-      // speckle faces can't carry holes, so n-gons with holes or a self-touching boundary go out as their faces (ENG-11807)
-      if (polygon.FaceCount > 1 && !IsSimpleBoundaryLoop(target, polygon, vertIndices))
+      // the boundary list is the outer loop only, so n-gons with inner boundaries go out as their faces (ENG-11807)
+      if (polygon.FaceCount > 1 && HasHoles(target, polygon))
       {
         foreach (uint faceIndex in polygon.FaceIndexList())
         {
@@ -129,32 +129,8 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     };
   }
 
-  private static bool IsSimpleBoundaryLoop(RG.Mesh mesh, RG.MeshNgon ngon, uint[] boundary)
-  {
-    var boundaryPoints = new HashSet<RG.Point3d>();
-    foreach (uint vertexIndex in boundary)
-    {
-      if (!boundaryPoints.Add(mesh.Vertices.Point3dAt((int)vertexIndex)))
-      {
-        return false;
-      }
-    }
-
-    var edgeUse = new Dictionary<(int, int), int>();
-    foreach (uint faceIndex in ngon.FaceIndexList())
-    {
-      int[] corners = Corners(mesh.Faces[(int)faceIndex]);
-      for (int i = 0; i < corners.Length; i++)
-      {
-        int a = corners[i];
-        int b = corners[(i + 1) % corners.Length];
-        var key = a < b ? (a, b) : (b, a);
-        edgeUse[key] = edgeUse.TryGetValue(key, out int count) ? count + 1 : 1;
-      }
-    }
-
-    return edgeUse.Values.Count(count => count == 1) == boundary.Length;
-  }
+  private static bool HasHoles(RG.Mesh mesh, RG.MeshNgon ngon) =>
+    mesh.Ngons.NgonHasHoles(mesh.Ngons.NgonIndexFromFaceIndex((int)ngon.FaceIndexList()[0]));
 
   private static int[] Corners(RG.MeshFace face) =>
     face.IsQuad ? [face.A, face.B, face.C, face.D] : [face.A, face.B, face.C];
