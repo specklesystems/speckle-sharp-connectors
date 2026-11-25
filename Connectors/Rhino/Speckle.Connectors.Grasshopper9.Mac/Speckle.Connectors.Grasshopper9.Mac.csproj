@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Same shape as the Grasshopper8.Mac head: McNeel's own System.Drawing / System.Windows.Forms implementation on
+       Mac runs the shared WinForms/GDI+ component UI against the WinForms FrameworkReference (FEA-124). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <TargetExt>.gha</TargetExt>
+    <!-- Emits runtimes/ + deps.json so the osx natives ship next to the plug-in, where MacNativeLibraryResolver finds them -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!--Root Namespace needs to be aligned across all grasshopper csproj to ensure the .resx file in the shared project has the correct resource namespace-->
+    <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
+    <DefineConstants>$(DefineConstants);RHINO_MAC;GRASSHOPPER;RHINO9;RHINO7_OR_GREATER;RHINO8_OR_GREATER;RHINO9_OR_GREATER</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <GenerateResourceUsePreserializedResources>True</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Shown in Rhino/Grasshopper's own plug-in listing, so the "(Beta)" tag reaches users there, not just in docs. -->
+    <Title>Speckle.Connectors.Grasshopper9.Mac (Beta)</Title>
+    <Description>Speckle Grasshopper connector for Rhino 9 on macOS — Beta</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <!-- UseWindowsForms=true would add these implicit usings (and Windows-only build targets); the shared GH code
+         relies on them, so add them explicitly the way RhinoHeadless does. -->
+    <Using Include="System.Drawing" />
+    <Using Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GrasshopperAsyncComponent" />
+    <PackageReference
+      Include="RhinoCommon"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="9.0.26300.9401"
+    />
+    <PackageReference
+      Include="Grasshopper"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="9.0.26300.9401"
+    />
+    <!-- managed IronCompress reference; the osx native comes through runtimes/ via EnableDynamicLoading -->
+    <PackageReference Include="IronCompress" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino9\Speckle.Converters.Rhino9.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile
+      Include="..\Speckle.Connectors.Rhino8.Mac\MacNativeLibraryResolver.cs"
+      Link="MacNativeLibraryResolver.cs"
+    />
+  </ItemGroup>
+
+  <Import
+    Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems"
+    Label="Shared"
+  />
+</Project>

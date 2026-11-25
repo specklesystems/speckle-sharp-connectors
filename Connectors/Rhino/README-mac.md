@@ -3,25 +3,35 @@
 > **Beta.** Tested by hand on one Rhino release, without automated coverage, and with no
 > compatibility guarantee across Rhino point releases.
 
-Rhino 8 on macOS only loads .NET Core plug-ins, so `Speckle.Connectors.Rhino8.Mac` and
-`Speckle.Connectors.Grasshopper8.Mac` are separate `net8.0` projects that share almost all of
-their code with the Windows heads (`RhinoShared`, `GrasshopperShared`). Tracked in FEA-124.
+Rhino 8 and later on macOS only load .NET Core plug-ins, so the Mac heads are separate projects that
+share almost all of their code with the Windows heads (`RhinoShared`, `GrasshopperShared`). Tracked in
+FEA-124.
 
-Tested on Rhino 8.36 for Mac on Apple Silicon. Other Rhino 8 releases and Intel Macs are untested, and
-publishing on Intel likely fails: the bundled `libnironcompress.dylib` is built for `osx-arm64` only.
+| Rhino | Projects | Target |
+|---|---|---|
+| 8 | `Speckle.Connectors.Rhino8.Mac`, `Speckle.Connectors.Grasshopper8.Mac` | `net8.0` |
+| 9 | `Speckle.Connectors.Rhino9.Mac`, `Speckle.Connectors.Grasshopper9.Mac` | `net10.0` |
+
+The Mac-only sources live in `Speckle.Connectors.Rhino8.Mac` and are linked into the Rhino 9 head.
+
+Tested on Rhino 8.36 for Mac on Apple Silicon. Rhino 9, other Rhino 8 releases and Intel Macs are untested,
+and publishing on Intel likely fails: the bundled `libnironcompress.dylib` is built for `osx-arm64` only.
 
 ## Install
 
 Builds are packaged by specklesystems/connector-installers (`mac/connectors/rhino.conf`): one
-`.pkg` installs both heads. Rhino scans `MacPlugIns` at launch, so there is no load step —
+`.pkg` installs every head. Rhino scans `MacPlugIns` at launch, so there is no load step —
 restart Rhino and run the `Speckle` command; the Speckle tab appears in Grasshopper.
 
-| Head | Installed to (under `~/Library/Application Support/McNeel/Rhinoceros/8.0/`) |
-|---|---|
-| Rhino | `MacPlugIns/Speckle.Connectors.Rhino8.Mac/` |
-| Grasshopper | `Plug-ins/Grasshopper (b45a29b1-4343-4035-989e-044e8580d9cf)/Libraries/Speckle.Connectors.Grasshopper8.Mac/` |
+Each Rhino head references its Grasshopper head, so the `.gha` ships in the same folder as the `.rhp`
+and both load one set of dependencies.
 
-To test a local build, `dotnet build -c Release` the head and copy its `bin/Release/net8.0/`
+| Rhino | Installed to (under `~/Library/Application Support/McNeel/Rhinoceros/`) |
+|---|---|
+| 8 | `8.0/MacPlugIns/Speckle.Connectors.Rhino8.Mac/` |
+| 9 | `9.0/MacPlugIns/Speckle.Connectors.Rhino9.Mac/` |
+
+To test a local build, `dotnet build -c Release` the Rhino head and copy its `bin/Release/<target>/`
 output over the installed folder above. Don't install anywhere else: a second copy in another
 folder can be the one Rhino loads.
 
