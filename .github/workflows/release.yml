@@ -89,7 +89,7 @@ jobs:
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }},
             "platforms": "${{ needs.build-connectors.outputs.platforms }}"
             }'
-          ref: jrm/rhino9 # Change this back to main before merging
+          ref: jedd/rhino9-mac # TEMPORARY: connector-installers PR branch, for test installers. Reset to main before merging.
           wait-for-completion: true
           sync-status: true
         timeout-minutes: 15

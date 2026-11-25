@@ -139,10 +139,16 @@
         <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
     </Folder>
     <Folder Name="/Connectors/Rhino/9/">
-        <Project Path="Connectors/Rhino/Speckle.Connectors.Grasshopper9/Speckle.Connectors.Grasshopper9.csproj" />
-        <Project Path="Connectors/Rhino/Speckle.Connectors.Rhino9/Speckle.Connectors.Rhino9.csproj" />
         <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoHeadless\Speckle.Connectors.RhinoHeadless.csproj" />
         <Project Path="Converters\Rhino\Speckle.Converters.Rhino9\Speckle.Converters.Rhino9.csproj" />
+    </Folder>
+    <Folder Name="/Connectors/Rhino/9/MacOS/">
+        <Project Path="Connectors/Rhino/Speckle.Connectors.Grasshopper9.Mac/Speckle.Connectors.Grasshopper9.Mac.csproj" />
+        <Project Path="Connectors/Rhino/Speckle.Connectors.Rhino9.Mac/Speckle.Connectors.Rhino9.Mac.csproj" />
+    </Folder>
+    <Folder Name="/Connectors/Rhino/9/Win/">
+        <Project Path="Connectors/Rhino/Speckle.Connectors.Grasshopper9/Speckle.Connectors.Grasshopper9.csproj" />
+        <Project Path="Connectors/Rhino/Speckle.Connectors.Rhino9/Speckle.Connectors.Rhino9.csproj" />
     </Folder>
     <Folder Name="/Connectors/Rhino/Shared/">
         <Project Path="Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.shproj" />
