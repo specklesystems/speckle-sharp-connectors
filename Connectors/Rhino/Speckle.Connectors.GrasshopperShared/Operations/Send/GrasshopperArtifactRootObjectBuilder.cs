@@ -25,6 +25,9 @@ using Path = System.IO.Path;
 using SOG = Speckle.Objects.Geometry;
 using SpecContainer = Speckle.Bundle.Spec.Container;
 using SpecMaterial = Speckle.Bundle.Spec.Material;
+#if !NETFRAMEWORK && !RHINO_MAC
+using System.IO;
+#endif
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 

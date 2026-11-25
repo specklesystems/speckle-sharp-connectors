@@ -4,6 +4,7 @@ using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
@@ -109,8 +110,8 @@ public class CollectionsByName : GH_Component
       }
 
       // get the collection name
-      string collectionName = GetCollectionName(nameBranch[0]);
-      if (string.IsNullOrWhiteSpace(collectionName))
+      string? collectionName = GetCollectionName(nameBranch[0].NotNull());
+      if (collectionName is null || string.IsNullOrWhiteSpace(collectionName))
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Invalid collection name at path {path}");
         return;
@@ -187,7 +188,7 @@ public class CollectionsByName : GH_Component
   /// <summary>
   /// Extracts collection name, handling GH_String and other text types
   /// </summary>
-  private string GetCollectionName(object nameObj) =>
+  private string? GetCollectionName(object nameObj) =>
     nameObj switch
     {
       GH_String ghString => ghString.Value,

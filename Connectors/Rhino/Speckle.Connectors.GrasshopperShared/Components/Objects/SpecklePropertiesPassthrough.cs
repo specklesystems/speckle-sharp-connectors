@@ -194,7 +194,14 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     base.AppendAdditionalMenuItems(menu);
 
     Menu_AppendSeparator(menu); // modes section
-    foreach (PropertyMode mode in Enum.GetValues(typeof(PropertyMode)))
+
+    var propertyModes =
+#if NET6_0_OR_GREATER
+    Enum.GetValues<PropertyMode>();
+#else
+    Enum.GetValues(typeof(PropertyMode));
+#endif
+    foreach (PropertyMode mode in propertyModes)
     {
       // hide "legacy modes" (before cnx-3177 rewording) from the dropdown
       if (mode is PropertyMode.Update or PropertyMode.Overwrite)

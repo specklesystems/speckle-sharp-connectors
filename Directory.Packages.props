@@ -6,7 +6,7 @@
     <PackageVersion Include="Dapper" Version="2.1.66" />
     <PackageVersion Include="AwesomeAssertions" Version="8.1.0" />
     <PackageVersion Include="Glob" Version="1.1.9" />
-    <PackageVersion Include="GrasshopperAsyncComponent" Version="2.0.3" />
+    <PackageVersion Include="GrasshopperAsyncComponent" Version="2.1.0" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
     <!-- Native Zstd backend for Parquet.Net (transitive via Speckle.Sdk). Pinned here so the net48 Rhino plugin can
          copy the native nironcompress.dll next to the .rhp (4.0 artefact send). Must match Parquet.Net's IronCompress. -->
@@ -25,10 +25,10 @@
     <PackageVersion Include="NUnit.Analyzers" Version="4.12.0" />
     <PackageVersion Include="NUnit3TestAdapter" version="6.2.0" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
-    <PackageVersion Include="RhinoCommon" Version="8.31.26126.13431" />
-    <PackageVersion Include="Rhino.Inside" Version="8.0.7-beta" />
-    <PackageVersion Include="Grasshopper" Version="8.31.26126.13431" />
-    <PackageVersion Include="RhinoWindows" Version="8.31.26126.13431" />
+    <PackageVersion Include="RhinoCommon" Version="9.0.26300.9401" />
+    <PackageVersion Include="Rhino.Inside" Version="9.0.26084.13070-beta" />
+    <PackageVersion Include="Grasshopper" Version="9.0.26300.9401" />
+    <PackageVersion Include="RhinoWindows" Version="9.0.26300.9401" />
     <PackageVersion Include="Semver" Version="3.0.0" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Speckle.CSI.API" Version="2.4.0" />
