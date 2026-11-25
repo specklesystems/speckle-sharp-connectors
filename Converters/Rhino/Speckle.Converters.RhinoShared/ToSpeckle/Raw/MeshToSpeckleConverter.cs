@@ -61,6 +61,19 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     foreach (RG.MeshNgon polygon in target.GetNgonAndFacesEnumerable())
     {
       var vertIndices = polygon.BoundaryVertexIndexList();
+
+      // the boundary list is the outer loop only, so n-gons with inner boundaries go out as their faces (ENG-11807)
+      if (polygon.FaceCount > 1 && HasHoles(target, polygon))
+      {
+        foreach (uint faceIndex in polygon.FaceIndexList())
+        {
+          int[] corners = Corners(target.Faces[(int)faceIndex]);
+          faces.Add(corners.Length);
+          faces.AddRange(corners);
+        }
+        continue;
+      }
+
       int n = vertIndices.Length;
       faces.Add(n);
       for (int i = 0; i < n; i++)
@@ -115,4 +128,10 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       area = area,
     };
   }
+
+  private static bool HasHoles(RG.Mesh mesh, RG.MeshNgon ngon) =>
+    mesh.Ngons.NgonHasHoles(mesh.Ngons.NgonIndexFromFaceIndex((int)ngon.FaceIndexList()[0]));
+
+  private static int[] Corners(RG.MeshFace face) =>
+    face.IsQuad ? [face.A, face.B, face.C, face.D] : [face.A, face.B, face.C];
 }
