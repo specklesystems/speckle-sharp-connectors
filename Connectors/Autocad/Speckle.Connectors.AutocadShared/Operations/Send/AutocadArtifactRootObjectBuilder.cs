@@ -490,10 +490,7 @@ public class AutocadArtifactRootObjectBuilder(
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, layerCollectionKByName);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
-
-    // Vertical-specific relations (e.g. Plant 3D line-group membership).
     EmitVerticalRelations(pipeline, model.Objects, definitionMemberIds);
-
     EmitModelPlacement(pipeline, model);
     EmitAdditionalNodes(pipeline);
 
