@@ -118,11 +118,11 @@ public class SpeckleOperationWizard
     using var userScope = UserActivityScope.AddUserScope(SelectedAccount);
     IClient client = _clientFactory.Create(SelectedAccount);
 
-    var project = client.Project.Get(resource.ProjectId).Result;
-    var projectPermissions = client.Project.GetPermissions(resource.ProjectId).Result;
+    var project = RunSync(() => client.Project.Get(resource.ProjectId));
+    var projectPermissions = RunSync(() => client.Project.GetPermissions(resource.ProjectId));
     if (project != null && project.workspaceId != null)
     {
-      var workspace = client.Workspace.Get(project.workspaceId).Result;
+      var workspace = RunSync(() => client.Workspace.Get(project.workspaceId));
       WorkspaceMenuHandler.RedrawMenuButton(workspace);
     }
 
@@ -132,16 +132,16 @@ public class SpeckleOperationWizard
     switch (resource)
     {
       case SpeckleUrlLatestModelVersionResource r:
-        var model = client.Model.Get(r.ModelId, r.ProjectId).Result;
-        modelPermissions = client.Model.GetPermissions(r.ProjectId, r.ModelId).Result;
+        var model = RunSync(() => client.Model.Get(r.ModelId, r.ProjectId));
+        modelPermissions = RunSync(() => client.Model.GetPermissions(r.ProjectId, r.ModelId));
         ModelMenuHandler.RedrawMenuButton(model);
         break;
       case SpeckleUrlModelVersionResource r:
-        var m = client.Model.Get(r.ModelId, r.ProjectId).Result;
+        var m = RunSync(() => client.Model.Get(r.ModelId, r.ProjectId));
         ModelMenuHandler.RedrawMenuButton(m);
-        modelPermissions = client.Model.GetPermissions(r.ProjectId, r.ModelId).Result;
+        modelPermissions = RunSync(() => client.Model.GetPermissions(r.ProjectId, r.ModelId));
         // TODO: this wont be the case when we have separation between send and receive components
-        var v = client.Version.Get(r.VersionId, r.ProjectId).Result;
+        var v = RunSync(() => client.Version.Get(r.VersionId, r.ProjectId));
         VersionMenuHandler?.RedrawMenuButton(v, false);
         break;
       case SpeckleUrlModelObjectResource:
@@ -224,7 +224,7 @@ public class SpeckleOperationWizard
       return;
     }
     using IClient client = _clientFactory.Create(SelectedAccount);
-    var workspace = client.Workspace.Get(workspaceId).Result;
+    var workspace = RunSync(() => client.Workspace.Get(workspaceId));
     SelectedWorkspace = workspace;
     WorkspaceMenuHandler.RedrawMenuButton(SelectedWorkspace);
   }
@@ -236,7 +236,7 @@ public class SpeckleOperationWizard
       return;
     }
     using IClient client = _clientFactory.Create(SelectedAccount);
-    var project = client.Project.Get(projectId).Result;
+    var project = RunSync(() => client.Project.Get(projectId));
     SelectedProject = project;
     ProjectMenuHandler.RedrawMenuButton(SelectedProject);
   }
@@ -249,7 +249,7 @@ public class SpeckleOperationWizard
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
-    var model = client.Model.Get(modelId, SelectedProject.id).Result;
+    var model = RunSync(() => client.Model.Get(modelId, SelectedProject.id));
     SelectedModel = model;
     ModelMenuHandler.RedrawMenuButton(SelectedModel);
   }
@@ -262,7 +262,7 @@ public class SpeckleOperationWizard
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
-    var version = client.Version.Get(versionId, SelectedProject.id).Result;
+    var version = RunSync(() => client.Version.Get(versionId, SelectedProject.id));
     SelectedVersion = version;
     VersionMenuHandler?.RedrawMenuButton(SelectedVersion, IsLatestVersion);
   }
@@ -406,6 +406,12 @@ public class SpeckleOperationWizard
     return Task.Run(async () => await FetchVersions(versionCount)).GetAwaiter().GetResult();
   }
 
+  // It is important we never do a `.Result` from within a `SolveInstance` as this WILL cause deadlocking.
+  // You have to be careful here, because it will work for some rhino versions,
+  // particularly with Rhino9 we're seeing it's not safe.
+  // This function forces async work to run on a worker thread, such that the main thread never yields or awaits synchronisation.
+  private static T RunSync<T>(Func<Task<T>> work) => Task.Run(work).GetAwaiter().GetResult();
+
   public void SetDefaultWorkspaceSync()
   {
     if (SelectedAccount == null)
@@ -414,7 +420,7 @@ public class SpeckleOperationWizard
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
-    var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
+    var activeWorkspace = RunSync(() => client.ActiveUser.GetActiveWorkspace());
 
     LimitedWorkspace? selectedWorkspace =
       SelectedWorkspace
