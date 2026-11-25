@@ -19,9 +19,9 @@
       },
       "RhinoCommon": {
         "type": "Direct",
-        "requested": "[9.0.26167.11545-wip, )",
-        "resolved": "9.0.26167.11545-wip",
-        "contentHash": "ZGR2Zdv6P7avp6CAuMM1jK7suOZquHMSORbvIq4NthjVQwdYWJEPBVixFNJguPiEStGIoYzPgJe8RcVNhki5CA==",
+        "requested": "[9.0.26300.9401, )",
+        "resolved": "9.0.26300.9401",
+        "contentHash": "dHy7hJ0OffgidFZMrYmaRgirutzavd8RlE33UJwPQLKgMxclDl4Ekm1P+0Pl8IVgza01dvgE63IFb18t8R6OCw==",
         "dependencies": {
           "System.Drawing.Common": "8.0.0"
         }
@@ -216,18 +216,7 @@
       "speckle.converters.rhino9": {
         "type": "Project",
         "dependencies": {
-          "Rhino.Inside": "[9.0.26084.13070-beta, )",
           "Speckle.Converters.Common": "[1.0.0, )"
-        }
-      },
-      "Rhino.Inside": {
-        "type": "CentralTransitive",
-        "requested": "[8.0.7-beta, )",
-        "resolved": "9.0.26084.13070-beta",
-        "contentHash": "aCDeFv/AMA7qm4hXBGn8Dy8rdskP+u0kRuFpWU7ksmZH3rDeLmoyqJUweN70PW0wuG+2KtlgHU6sjMS/QcDQ/Q==",
-        "dependencies": {
-          "Grasshopper": "9.0.25350.305-wip",
-          "RhinoCommon": "9.0.25350.305-wip"
         }
       },
       "Speckle.DoubleNumerics": {

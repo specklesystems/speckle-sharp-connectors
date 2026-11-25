@@ -274,7 +274,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   hasObjColor ? objArgb
                   : colorArgbByGeometry.TryGetValue(geomK, out int geomArgb) ? geomArgb
                   : null;
-                foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK)))
+                AcadColor? color = nativeColor ?? (argb is int a ? ToAcadColor(a) : null);
+                foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK), color))
                 {
                   if (_receivePlacementTransform is Matrix3d placement)
                   {
@@ -284,14 +285,6 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   if (materialId != ObjectId.Null)
                   {
                     entity.MaterialId = materialId;
-                  }
-                  if (nativeColor is AcadColor native)
-                  {
-                    entity.Color = native;
-                  }
-                  else if (argb is int a)
-                  {
-                    entity.Color = ToAcadColor(a);
                   }
                   // The handle is read while the entity is still open in this transaction (it is assigned on append).
                   baked.Add((entity.ObjectId, entity.GetSpeckleApplicationId()));
@@ -399,13 +392,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Decodes one geometry index and appends the resulting native entity(ies) to the target block-table record,
-  // scaled to document units. SAT (unitless) uses the object's units; SGEO carries its own.
+  // scaled to document units. SAT (unitless) uses the object's units; SGEO carries its own. The entity colour is
+  // applied here rather than by the caller because a mesh must take it before its per-vertex colours (see BuildMesh).
   private List<AcadEntity> DecodeAndAppend(
     int geomK,
     ArtefactBundle bundle,
     BlockTableRecord target,
     Transaction tr,
-    string fallbackUnits
+    string fallbackUnits,
+    AcadColor? color
   )
   {
     var result = new List<AcadEntity>();
@@ -435,6 +430,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         target.AppendEntity(entity);
         tr.AddNewlyCreatedDBObject(entity, true);
         ScaleEntity(entity, fallbackUnits);
+        if (color is not null)
+        {
+          entity.Color = color;
+        }
         result.Add(entity);
       }
       return result;
@@ -445,7 +444,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
       if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
       {
-        var mesh = BuildMesh(sm, target, tr);
+        var mesh = BuildMesh(sm, target, tr, color, _converterSettings.Current.PreferPolyFaceMesh);
         ScaleEntity(mesh, sm.Units);
         result.Add(mesh);
         return result;
@@ -472,6 +471,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           // Some converters (Polyline3d, Hatch/Region) self-append to the CURRENT SPACE via the top transaction —
           // re-parent into the target record (matters for block-definition members). See v1's EntityExtensions.AppendToDb.
           target.AssumeOwnershipOf(new ObjectIdCollection { entity.ObjectId });
+        }
+        if (color is not null)
+        {
+          entity.Color = color;
         }
         result.Add(entity);
       }
@@ -589,11 +592,19 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // SGEO neutral mesh → native AutoCAD mesh. Mirrors the construction in MeshToHostConverter, Base-free: a
   // PolyFaceMesh (must be appended to a BTR before adding vertices/faces; vertex indices are 1-based; faces are
   // Speckle count-prefixed), or a SubDMesh once the mesh outgrows PolyFaceMesh's 16-bit vertex indices [ENG-8836].
-  private static AcadEntity BuildMesh(SgeoMesh sm, BlockTableRecord target, Transaction tr)
+  // Setting a PolyFaceMesh's colour overwrites the colour of every vertex it already owns, so the entity colour goes
+  // on once the mesh is complete and the per-vertex colours are written after it.
+  private static AcadEntity BuildMesh(
+    SgeoMesh sm,
+    BlockTableRecord target,
+    Transaction tr,
+    AcadColor? color,
+    bool preferPolyFaceMesh
+  )
   {
-    if (sm.Vertices.Length / 3 > MAX_POLYFACE_MESH_VERTICES)
+    if (!preferPolyFaceMesh || sm.Vertices.Length / 3 > MAX_POLYFACE_MESH_VERTICES)
     {
-      return BuildSubDMesh(sm, target, tr);
+      return BuildSubDMesh(sm, target, tr, color);
     }
 
     var mesh = new PolyFaceMesh();
@@ -603,24 +614,16 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     var v = sm.Vertices;
     int vertexCount = v.Length / 3;
+    var colored = new PolyFaceMeshVertex[Math.Min(vertexCount, sm.Colors.Length)];
     for (int i = 0; i + 2 < v.Length; i += 3)
     {
       var vertex = new PolyFaceMeshVertex(new Point3d(v[i], v[i + 1], v[i + 2]));
-      int idx = i / 3;
-      if (idx < sm.Colors.Length)
-      {
-        try
-        {
-          var c = System.Drawing.Color.FromArgb(sm.Colors[idx]);
-          vertex.Color = AcadColor.FromRgb(c.R, c.G, c.B);
-        }
-        catch (Exception e) when (!e.IsFatal())
-        {
-          // a bad vertex color must not abort the mesh
-        }
-      }
       mesh.AppendVertex(vertex);
       tr.AddNewlyCreatedDBObject(vertex, true);
+      if (i / 3 < colored.Length)
+      {
+        colored[i / 3] = vertex;
+      }
     }
 
     var f = sm.Faces;
@@ -655,6 +658,16 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       p += n + 1;
     }
 
+    if (color is not null)
+    {
+      mesh.Color = color;
+    }
+    for (int i = 0; i < colored.Length; i++)
+    {
+      var c = System.Drawing.Color.FromArgb(sm.Colors[i]);
+      colored[i].Color = AcadColor.FromRgb(c.R, c.G, c.B);
+    }
+
     return mesh;
   }
 
@@ -669,7 +682,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // A mesh too large for a PolyFaceMesh [ENG-8836]. The MESH entity takes its whole topology in one call: a vertex
   // array plus a count-prefixed, 0-based face array — the layout SGEO already carries — with 32-bit indices, and
   // per-vertex colours on its EntityColor array. Smooth level 0 keeps the faceting exactly as sent.
-  private static SubDMesh BuildSubDMesh(SgeoMesh sm, BlockTableRecord target, Transaction tr)
+  private static SubDMesh BuildSubDMesh(SgeoMesh sm, BlockTableRecord target, Transaction tr, AcadColor? color)
   {
     var v = sm.Vertices;
     int vertexCount = v.Length / 3;
@@ -685,27 +698,25 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var mesh = new SubDMesh();
     mesh.SetDatabaseDefaults();
     mesh.SetSubDMesh(vertices, faceArray, 0);
+    // VertexColorArray throws eNoDatabase on a mesh that is not yet database-resident.
+    target.AppendEntity(mesh);
+    tr.AddNewlyCreatedDBObject(mesh, true);
+    if (color is not null)
+    {
+      mesh.Color = color;
+    }
 
     if (sm.Colors.Length == vertexCount)
     {
-      try
+      var colors = new EntityColor[vertexCount];
+      for (int i = 0; i < vertexCount; i++)
       {
-        var colors = new EntityColor[vertexCount];
-        for (int i = 0; i < vertexCount; i++)
-        {
-          var c = System.Drawing.Color.FromArgb(sm.Colors[i]);
-          colors[i] = new EntityColor(c.R, c.G, c.B);
-        }
-        mesh.VertexColorArray = colors;
+        var c = System.Drawing.Color.FromArgb(sm.Colors[i]);
+        colors[i] = new EntityColor(c.R, c.G, c.B);
       }
-      catch (Exception e) when (!e.IsFatal())
-      {
-        // a bad vertex color must not abort the mesh (same rule as the polyface path)
-      }
+      mesh.VertexColorArray = colors;
     }
 
-    target.AppendEntity(mesh);
-    tr.AddNewlyCreatedDBObject(mesh, true);
     return mesh;
   }
 
@@ -946,7 +957,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               layerCache,
               layerMaterialByNode
             );
-            foreach (var entity in DecodeAndAppend(geomK, bundle, btr, tr, bundle.Units))
+            AcadColor memberColor = ResolveMemberColor(memberNativeColor, hasGeomColor, geomArgb, memberLayer);
+            foreach (var entity in DecodeAndAppend(geomK, bundle, btr, tr, bundle.Units, memberColor))
             {
               if (memberLayer is not null)
               {
@@ -956,7 +968,6 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               {
                 entity.MaterialId = geomMaterial;
               }
-              entity.Color = ResolveMemberColor(memberNativeColor, hasGeomColor, geomArgb, memberLayer);
               memberCount++;
             }
           }

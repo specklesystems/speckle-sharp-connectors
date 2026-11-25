@@ -330,6 +330,12 @@
           "Speckle.Connectors.Common": "[1.0.0, )"
         }
       },
+      "speckle.connectors.dui.etowebview": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Connectors.DUI": "[1.0.0, )"
+        }
+      },
       "speckle.connectors.logging": {
         "type": "Project"
       },

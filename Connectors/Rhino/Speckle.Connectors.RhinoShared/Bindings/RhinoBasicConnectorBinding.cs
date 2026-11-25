@@ -9,6 +9,9 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+#if RHINO_MAC
+using Speckle.Connectors.Rhino.HostApp;
+#endif
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -113,7 +116,11 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     var objects = GetObjectsFromIds(objectIds);
 
+#if RHINO_MAC
+    MacMainThread.Run(() => RhinoDoc.ActiveDoc.Objects.UnselectAll());
+#else
     RhinoDoc.ActiveDoc.Objects.UnselectAll();
+#endif
 
     if (objects.rhinoObjects.Count == 0 && objects.groups.Count == 0)
     {
@@ -142,6 +149,13 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   private void HighlightObjectsOnView(IReadOnlyList<RhinoObject> rhinoObjects, IReadOnlyList<Group> groups)
   {
+#if RHINO_MAC
+    if (RhinoApp.InvokeRequired)
+    {
+      MacMainThread.Run(() => HighlightObjectsOnView(rhinoObjects, groups));
+      return;
+    }
+#endif
     RhinoDoc.ActiveDoc.Objects.UnselectAll();
     List<RhinoObject> rhinoObjectsToSelect = new(rhinoObjects);
 
