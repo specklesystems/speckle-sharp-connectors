@@ -231,7 +231,7 @@ public abstract class ReceiveComponentBase(
     // Setup conversion context BEFORE unpacking (which triggers DataObjectConverter)
     SpeckleConversionContext.SetupCurrent(scope);
 
-    var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
+    var rootObjectUnpacker = scope.ServiceProvider.GetRequiredService<RootObjectUnpacker>();
     var unpackedRoot = rootObjectUnpacker.Unpack(root);
 
     // split atomic objects from block components before conversion

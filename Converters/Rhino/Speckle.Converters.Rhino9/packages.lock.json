@@ -2,15 +2,6 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
-      "Grasshopper": {
-        "type": "Direct",
-        "requested": "[9.0.26167.11545-wip, )",
-        "resolved": "9.0.26167.11545-wip",
-        "contentHash": "ZYBijH+YZYD/rbUeRD5tjrebYA5fVVUj4quKg4EI1FMR3N+pMQ0KOH+9XPzRv7OvYznoDB68GeRf2tsdbOJrYA==",
-        "dependencies": {
-          "RhinoCommon": "[9.0.26167.11545-wip]"
-        }
-      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
@@ -26,21 +17,11 @@
         "resolved": "1.15.0",
         "contentHash": "FbU0El+EEjdpuIX4iDbeS7ki1uzpJPx8vbqOzEtqnl1GZeAGJfq+jCbxeJL2y0EPnUNk8dRnnqR2xnYXg9Tf+g=="
       },
-      "Rhino.Inside": {
-        "type": "Direct",
-        "requested": "[9.0.26084.13070-beta, )",
-        "resolved": "9.0.26084.13070-beta",
-        "contentHash": "aCDeFv/AMA7qm4hXBGn8Dy8rdskP+u0kRuFpWU7ksmZH3rDeLmoyqJUweN70PW0wuG+2KtlgHU6sjMS/QcDQ/Q==",
-        "dependencies": {
-          "Grasshopper": "9.0.25350.305-wip",
-          "RhinoCommon": "9.0.25350.305-wip"
-        }
-      },
       "RhinoCommon": {
         "type": "Direct",
-        "requested": "[9.0.26167.11545-wip, )",
-        "resolved": "9.0.26167.11545-wip",
-        "contentHash": "ZGR2Zdv6P7avp6CAuMM1jK7suOZquHMSORbvIq4NthjVQwdYWJEPBVixFNJguPiEStGIoYzPgJe8RcVNhki5CA==",
+        "requested": "[9.0.26300.9401, )",
+        "resolved": "9.0.26300.9401",
+        "contentHash": "dHy7hJ0OffgidFZMrYmaRgirutzavd8RlE33UJwPQLKgMxclDl4Ekm1P+0Pl8IVgza01dvgE63IFb18t8R6OCw==",
         "dependencies": {
           "System.Drawing.Common": "8.0.0"
         }
