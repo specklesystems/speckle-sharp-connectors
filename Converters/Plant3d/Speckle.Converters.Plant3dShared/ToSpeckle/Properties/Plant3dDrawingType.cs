@@ -11,7 +11,7 @@ public enum Plant3dDrawingType
   Piping,
 }
 
-public static class Plant3dDrawingTypes
+public static class Plant3dDrawingTypeExtensions
 {
   /// <summary>
   /// Maps a Plant 3D project part name (e.g. from <c>PnPProjectUtils</c>) to a <see cref="Plant3dDrawingType"/>.

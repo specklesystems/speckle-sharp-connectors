@@ -38,6 +38,7 @@ public class Plant3dDataExtractor
   /// Gets Plant3D database properties for the given entity.
   /// Returns a dictionary of property name → value pairs from the project database.
   /// </summary>
+#pragma warning disable CA1031 // Plant3D data APIs can throw various exceptions
   public Dictionary<string, object?> GetDataProperties(ADB.Entity entity)
   {
     var result = new Dictionary<string, object?>();
@@ -84,39 +85,41 @@ public class Plant3dDataExtractor
   {
     if (!_dataLinksManagerResolved)
     {
-      _dataLinksManagerResolved = true;
-      try
-      {
-        (_dataLinksManager, _drawingType) = ResolveDataLinksManager();
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogWarning(ex, "Failed to resolve the Plant 3D DataLinksManager");
-      }
+      var doc = _settingsStore.Current.Document;
+      (_dataLinksManager, _drawingType) = TryGetProjectDataLinksManager(doc) ?? GetDocumentDataLinksManager(doc);
+      _dataLinksManagerResolved = _dataLinksManager is not null;
     }
     return (_dataLinksManager, _drawingType);
   }
 
-  private (PPDL.DataLinksManager? Manager, Plant3dDrawingType DrawingType) ResolveDataLinksManager()
+  private (PPDL.DataLinksManager Manager, Plant3dDrawingType DrawingType)? TryGetProjectDataLinksManager(Document doc)
   {
-    var doc = _settingsStore.Current.Document;
-
-    // The project part's manager is the instance Plant's Properties palette/Data Manager edit, so it reflects
-    // unsaved property changes; GetManager(db) only returns values as of the last open.
-    if (
-      PnPProjectUtils.DoesDocumentBelongToCurrentProject(doc, out var projectPart, out _) == DwgProject.eOk
-      && PlantApplication.ProjectPart(projectPart) is Project project
-      && project.DataLinksManager is not null
-    )
+    try
     {
-      return (project.DataLinksManager, Plant3dDrawingTypes.FromProjectPart(projectPart));
+      if (
+        PnPProjectUtils.DoesDocumentBelongToCurrentProject(doc, out var projectPart, out _) == DwgProject.eOk
+        && PlantApplication.ProjectPart(projectPart) is Project project
+        && project.DataLinksManager is not null
+      )
+      {
+        return (project.DataLinksManager, Plant3dDrawingTypeExtensions.FromProjectPart(projectPart));
+      }
     }
-
-    return (
-      PPDL.DataLinksManager.GetManager(doc.Database),
-      Plant3dDrawingTypes.FromProjectPart(PnPProjectUtils.GetDocumentProjectPartType(doc))
-    );
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Failed to resolve the project DataLinksManager, falling back to the document manager");
+    }
+    return null;
   }
+#pragma warning restore CA1031
+
+  private static (PPDL.DataLinksManager? Manager, Plant3dDrawingType DrawingType) GetDocumentDataLinksManager(
+    Document doc
+  ) =>
+    (
+      PPDL.DataLinksManager.GetManager(doc.Database),
+      Plant3dDrawingTypeExtensions.FromProjectPart(PnPProjectUtils.GetDocumentProjectPartType(doc))
+    );
 
   private static bool TryGetRowId(PPDL.DataLinksManager dataLinksManager, ADB.Entity entity, out int rowId)
   {
