@@ -22,7 +22,10 @@ yellow:
   - '**/.betterleaks.toml'
   - '**/.betterleaksignore'
   - '**/.gitleaksignore'
-  # Release: the build tool zips what the installers ship, GitVersion sets the version
+  # Release: the build scripts and build tool zip what the installers ship,
+  # GitVersion sets the version
+  - build.ps1
+  - build.sh
   - Build/**
   - GitVersion.yml
 red:

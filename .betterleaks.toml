@@ -12,13 +12,12 @@ let path = attributes["path"];
 let rule = finding["rule_id"];
 let secret = finding["secret"];
 let line = finding["line"];
-let generic = rule in ["generic-api-key", "generic-credential-uri", "generic-password"];
 
 // Local dev database of the importer launch profile.
 (rule == "generic-credential-uri" && secret == "speckle" && matchesAny(path, [`(?:^|/)Properties/launchSettings\.json$`]))
 
-// PostHog project keys (`phc_`) are sent by every client and are public by design.
-|| (rule == "posthog-project-api-key")
+// The PostHog project key (`phc_`) of the connectors: sent by every client, public by design.
+|| (rule == "posthog-project-api-key" && matchesAny(path, [`(?:^|/)Sdk/Speckle\.Connectors\.Common/Analytics/PostHogManager\.cs$`]))
 
 // Token of the telemetry gateway: compiled into every connector, so public by design.
 || (rule == "generic-api-key" && matchesAny(line, [`CONNECTOR_GATEWAY_TOKEN = `]) && matchesAny(path, [`(?:^|/)Sdk/Speckle\.Connectors\.Common/Connector\.cs$`]))
