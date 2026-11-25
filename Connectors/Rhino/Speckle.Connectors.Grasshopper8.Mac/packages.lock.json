@@ -4,21 +4,18 @@
     "net8.0": {
       "Grasshopper": {
         "type": "Direct",
-        "requested": "[8.31.26126.13431, )",
-        "resolved": "8.31.26126.13431",
-        "contentHash": "LkUwPx8kNsUItW5UgvjuK65/NpuXrLu0Ffb+CzMRRTcP9QwbUriyYk0Qr9G8VYg92E9LE2k+ddyc5J6CZi5fVg==",
+        "requested": "[8.21.25188.17001, )",
+        "resolved": "8.21.25188.17001",
+        "contentHash": "qpt9XQWuKLFfzn2cnYf5akfHRwYuffthK5AXsSY1UhjD0eG6bYSTtmAkNVH+Wdg130MZkGqJmPd012Om1kJPBA==",
         "dependencies": {
-          "RhinoCommon": "[8.31.26126.13431]"
+          "RhinoCommon": "[8.21.25188.17001]"
         }
       },
       "GrasshopperAsyncComponent": {
         "type": "Direct",
-        "requested": "[2.0.3, )",
-        "resolved": "2.0.3",
-        "contentHash": "AZvHP96WhYZWftVi7J3J65LiZmXO3hGS6W4AntMMb099gkrLqeiBKC2DOYD6YM9cOyQqly3S5knbUL2yr0jc4Q==",
-        "dependencies": {
-          "PolySharp": "1.14.1"
-        }
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "v2s4uHzH0195WRSoIthUlewtl2NRxrITHZN9afvutUNiTIC95f7TWX59Z+mDIDWEA+xpEOrYkB3o5olz7J8qPQ=="
       },
       "IronCompress": {
         "type": "Direct",
@@ -47,9 +44,9 @@
       },
       "RhinoCommon": {
         "type": "Direct",
-        "requested": "[8.31.26126.13431, )",
-        "resolved": "8.31.26126.13431",
-        "contentHash": "fEsA70P6K7oQxQKZ/TytKqZ7EWLa2l8394oHosSFabRJ1rJnT6Q/NsNVhtlmAWuAaOBDDDKLc46kqo0WnsOxJA==",
+        "requested": "[8.21.25188.17001, )",
+        "resolved": "8.21.25188.17001",
+        "contentHash": "Wo6JXheyDBvilyIwDY6xZCQJC4170jzAlTSlMgh8yokUY+vYyCl4KJVXZofIOynNt/xx5wLqb2On5gZZekXR6w==",
         "dependencies": {
           "System.Drawing.Common": "7.0.0"
         }
