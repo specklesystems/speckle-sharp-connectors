@@ -127,12 +127,12 @@ public class Plant3dDataExtractor
 
       if (groupInfo.NominalSize is not null)
       {
-        properties["Nominal Size"] = groupInfo.NominalSize;
+        properties["Group Nominal Size"] = groupInfo.NominalSize;
       }
 
       if (groupInfo.NominalSpec is not null)
       {
-        properties["Nominal Spec"] = groupInfo.NominalSpec;
+        properties["Group Nominal Spec"] = groupInfo.NominalSpec;
       }
     }
   }
