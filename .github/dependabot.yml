@@ -4,5 +4,11 @@ updates:
     directory: "/" # search in .github/workflows under root `/`
     schedule:
       interval: "weekly" # check for action update every week
+    # Pin updates of the shared workflows in specklesystems/.github move in one
+    # pull request (ADR-0002 amendment of 2026-11-24, ENG-11742).
+    groups:
+      dot-github:
+        patterns:
+          - "specklesystems/.github/*"
     cooldown:
       default-days: 7
