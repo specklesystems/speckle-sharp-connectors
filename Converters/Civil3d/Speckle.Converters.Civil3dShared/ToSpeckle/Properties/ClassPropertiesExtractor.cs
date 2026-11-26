@@ -538,12 +538,13 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
   {
+    CDB.ProfileType profileType = profile.ProfileType;
     Dictionary<string, object?> properties = new()
     {
       ["offset"] = profile.Offset,
       ["startingStation"] = profile.StartingStation,
       ["endingStation"] = profile.EndingStation,
-      ["profileType"] = profile.ProfileType.ToString(),
+      ["profileType"] = profileType.ToString(),
       ["elevationMin"] = profile.ElevationMin,
       ["elevationMax"] = profile.ElevationMax,
     };
@@ -555,6 +556,11 @@ public class ClassPropertiesExtractor
         [ALIGNMENTID_PROP] = profile.AlignmentId.GetSpeckleApplicationId(),
       };
       AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
+    }
+
+    if (profileType != CDB.ProfileType.FG)
+    {
+      return properties;
     }
 
     try
