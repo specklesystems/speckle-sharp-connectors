@@ -10,11 +10,14 @@ public sealed class ExtrusionFallbackTracker
 
   public int Total { get; private set; }
 
+  public string? LastKey { get; private set; }
+
   public IReadOnlyDictionary<string, int> Counts => _counts;
 
   public void Record(string elementType, string reason)
   {
     string key = $"{elementType}/{reason}";
+    LastKey = key;
     _counts[key] = _counts.TryGetValue(key, out int count) ? count + 1 : 1;
     Total++;
   }

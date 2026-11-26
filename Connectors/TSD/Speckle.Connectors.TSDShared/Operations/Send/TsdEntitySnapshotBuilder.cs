@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Common.StructuralExtrusion;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Converters.TSDShared;
@@ -35,6 +36,7 @@ internal sealed class TsdEntitySnapshotBuilder
   private readonly TsdMemberPropertyExtractor _memberPropertyExtractor;
   private readonly TsdSlabPropertyExtractor _slabPropertyExtractor;
   private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
+  private readonly ExtrusionFallbackTracker _extrusionFallbacks;
   private readonly ILogger<TsdEntitySnapshotBuilder> _logger;
   private readonly Dictionary<string, IReadOnlyList<SOG.Line>> _centerlinesByAppId = new(StringComparer.Ordinal);
   private readonly Dictionary<string, IReadOnlyList<int>> _nodeIndicesByAppId = new(StringComparer.Ordinal);
@@ -66,6 +68,7 @@ internal sealed class TsdEntitySnapshotBuilder
     TsdMemberPropertyExtractor memberPropertyExtractor,
     TsdSlabPropertyExtractor slabPropertyExtractor,
     TsdWallPropertyExtractor wallPropertyExtractor,
+    ExtrusionFallbackTracker extrusionFallbacks,
     ILogger<TsdEntitySnapshotBuilder> logger
   )
   {
@@ -74,6 +77,7 @@ internal sealed class TsdEntitySnapshotBuilder
     _memberPropertyExtractor = memberPropertyExtractor;
     _slabPropertyExtractor = slabPropertyExtractor;
     _wallPropertyExtractor = wallPropertyExtractor;
+    _extrusionFallbacks = extrusionFallbacks;
     _logger = logger;
   }
 
@@ -373,6 +377,7 @@ internal sealed class TsdEntitySnapshotBuilder
   )
   {
     var spans = (await member.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IMemberSpan>();
+    int fallbacksBefore = _extrusionFallbacks.Total;
     var (displayValue, centerlines) = await _displayValueExtractor
       .GetMemberDisplayValueAsync(spans, unit, speckleUnits)
       .ConfigureAwait(false);
@@ -382,6 +387,10 @@ internal sealed class TsdEntitySnapshotBuilder
     }
     RememberNodes(applicationId, () => spans.SelectMany(SpanNodes));
     var properties = _memberPropertyExtractor.Extract(member, spans);
+    if (_extrusionFallbacks.Total > fallbacksBefore)
+    {
+      properties["Extrusion Fallback"] = _extrusionFallbacks.LastKey;
+    }
     return new Converted(displayValue, properties, new List<TsdObject>());
   }
 

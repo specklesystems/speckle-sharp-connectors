@@ -88,6 +88,9 @@ public sealed class TsdVolumetricDisplayValueExtractor
         return Fallback(SLAB, "no-thickness");
       }
 
+      // The slab plane is the top of the slab; the depth hangs below it, moved by the vertical offset.
+      var translation = new Vector3(0, 0, -depth / 2 + ReadOrZero(slabItem.SlabItemData.Value.VerticalOffset));
+
       var contours = await slabItem.GetContoursAsync(SlabContourType.Complete).ConfigureAwait(false);
       if (contours is null)
       {
@@ -103,7 +106,7 @@ public sealed class TsdVolumetricDisplayValueExtractor
           continue;
         }
 
-        var prism = PrismBuilder.TryExtrudeOutline(outer, depth);
+        var prism = PrismBuilder.TryExtrudeOutline(outer, depth, translation);
         if (prism is null)
         {
           return Fallback(SLAB, "degenerate-outline");
@@ -200,18 +203,61 @@ public sealed class TsdVolumetricDisplayValueExtractor
     // global +X for vertical members; the span rotation angle (radians) then turns depth towards width about the axis.
     double sineToVertical = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y) / length;
     var reference = sineToVertical < VERTICAL_TOLERANCE ? Vector3.UnitX : Vector3.UnitZ;
-    var frame = LocalFrame.TryCreate(direction, reference, span.RotationAngle.Value);
+    var frame = LocalFrame.TryCreate(direction, reference, ReadRotation(span));
     if (frame is null)
     {
       reason = "degenerate-axes";
       return null;
     }
 
-    // TSD resolves alignment (snap level + offset) into per-end total offsets along the major (depth) and minor
-    // (width) axes, applied here in the +major / +minor directions of the frame.
-    var startOffset = new Vector2(ReadOrZero(span.StartMajorTotalOffset), ReadOrZero(span.StartMinorTotalOffset));
-    var endOffset = new Vector2(ReadOrZero(span.EndMajorTotalOffset), ReadOrZero(span.EndMinorTotalOffset));
+    var (startOffset, endOffset) = ReadAlignmentOffsets(span, frame.Value);
     return PrismBuilder.Place(prism.Template, start, frame.Value, length, startOffset, endOffset);
+  }
+
+  // The global alignment offsets (snap level + offset) are projected onto the section plane, so the major/minor
+  // sign convention of TSD does not matter. The major/minor totals are the fallback.
+  private static (Vector2 Start, Vector2 End) ReadAlignmentOffsets(IMemberSpan span, LocalFrame frame)
+  {
+    try
+    {
+      var alignment = span.Data.Value.Alignment.Value;
+      var start = alignment.StartGlobalOffset.Value;
+      var end = alignment.EndGlobalOffset.Value;
+      return (Project(start), Project(end));
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return (
+        new Vector2(ReadOrZero(span.StartMajorTotalOffset), ReadOrZero(span.StartMinorTotalOffset)),
+        new Vector2(ReadOrZero(span.EndMajorTotalOffset), ReadOrZero(span.EndMinorTotalOffset))
+      );
+    }
+
+    Vector2 Project(Vector3D v)
+    {
+      var offset = new Vector3(v.X, v.Y, v.Z);
+      return new Vector2(Vector3.Dot(offset, frame.XAxis), Vector3.Dot(offset, frame.YAxis));
+    }
+  }
+
+  // Fixed rotation options (0/90/180/270) are not guaranteed to be mirrored in RotationAngle, so they win over it.
+  private static double ReadRotation(IMemberSpan span)
+  {
+    try
+    {
+      return span.RotationOption.Value switch
+      {
+        RotationOption.Degrees0 => 0,
+        RotationOption.Degrees90 => Math.PI / 2,
+        RotationOption.Degrees180 => Math.PI,
+        RotationOption.Degrees270 => 3 * Math.PI / 2,
+        _ => ReadOrZero(span.RotationAngle),
+      };
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return ReadOrZero(span.RotationAngle);
+    }
   }
 
   private static double ReadOrZero(IReadOnlyProperty<double> property)
