@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Autodesk.ProcessPower.DataObjects;
 using Autodesk.ProcessPower.PnIDObjects;
-using Autodesk.ProcessPower.ProjectManager;
 using Microsoft.Extensions.Logging;
 using Speckle.Sdk;
 
@@ -9,13 +8,6 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 
 public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> logger)
 {
-  private enum DocType
-  {
-    PnID,
-    Piping,
-    Other,
-  };
-
   private sealed record PnpGroupConfig(string RelationshipTable, string GroupType, string PartType, string LineNumber);
 
   private readonly PnpGroupConfig _pipingConfig = new("P3dLineGroupPartRelationship", "LineGroup", "Part", "Number");
@@ -31,9 +23,6 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     "SignalLine",
     "Number"
   );
-
-  private static DocType GetDocumentType() =>
-    Enum.TryParse<DocType>(PnPProjectUtils.GetActiveDocumentType(), true, out var docType) ? docType : DocType.Other;
 
   private object? GetRowValue(PnPRow row, string column)
   {
@@ -84,6 +73,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
   /// </summary>
   public bool TryGetGroupInfo(
     PPDL.DataLinksManager dataLinksManager,
+    Plant3dDrawingType drawingType,
     ADB.Entity entity,
     int rowId,
     out LineGroupInfo? groupInfo
@@ -98,16 +88,16 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
 
     try
     {
-      return GetDocumentType() switch
+      return drawingType switch
       {
         // Groups are only supported for LineSegments in PnID, but for Piping, any entity can be part of a group.
-        DocType.PnID => entity is LineSegment
+        Plant3dDrawingType.PnId => entity is LineSegment
           && (
             TryGetGroupInfo(dataLinksManager, rowId, _pnidPipeConfig, out groupInfo)
             || TryGetGroupInfo(dataLinksManager, rowId, _pnidSignalConfig, out groupInfo)
           ),
-        DocType.Piping => TryGetGroupInfo(dataLinksManager, rowId, _pipingConfig, out groupInfo),
-        DocType.Other => false,
+        Plant3dDrawingType.Piping => TryGetGroupInfo(dataLinksManager, rowId, _pipingConfig, out groupInfo),
+        Plant3dDrawingType.Other => false,
         _ => throw new UnreachableException(),
       };
     }
