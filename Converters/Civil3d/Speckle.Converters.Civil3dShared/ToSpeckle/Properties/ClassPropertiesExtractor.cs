@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using Autodesk.Civil.Runtime;
+using Microsoft.Extensions.Logging;
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
@@ -17,6 +18,7 @@ public class ClassPropertiesExtractor
 {
   private const string ASSIGNMENT_PROP = "Assignments";
   private const string DIMENSIONAL_PROP = "Dimensional Properties";
+  private const string PROFILE_ENTITIES_PROP = "Profile Entities";
   private const string SITEID_PROP = "siteId";
   private const string SITENAME_PROP = "siteName";
   private const string SURFACEID_PROP = "surfaceId";
@@ -31,13 +33,18 @@ public class ClassPropertiesExtractor
   private const string POINTS_PROP = "points";
 
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
+  private readonly ILogger<ClassPropertiesExtractor> _logger;
 
   private readonly Dictionary<ADB.ObjectId, string> _catchmentGroupCache = new();
   private readonly Dictionary<ADB.ObjectId, string> _networkCache = new();
 
-  public ClassPropertiesExtractor(IConverterSettingsStore<Civil3dConversionSettings> converterSettings)
+  public ClassPropertiesExtractor(
+    IConverterSettingsStore<Civil3dConversionSettings> converterSettings,
+    ILogger<ClassPropertiesExtractor> logger
+  )
   {
     _converterSettings = converterSettings;
+    _logger = logger;
   }
 
   /// <summary>
@@ -550,60 +557,97 @@ public class ClassPropertiesExtractor
       AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
     }
 
-    var entities = Enumerable
-      .Range(0, profile.Entities.Count)
-      .Select(index => profile.Entities[index])
-      .OrderBy(entity => entity.StartStation)
-      .ToList();
-    Dictionary<string, object?> profileEntitiesDict = new();
-    for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
+    try
     {
-      CDB.ProfileEntity entity = entities[entityIndex];
-      Dictionary<string, object?> entityProperties = new()
+      var entities = Enumerable
+        .Range(0, profile.Entities.Count)
+        .Select(index => profile.Entities[index])
+        .OrderBy(entity => entity.StartStation)
+        .ToList();
+      Dictionary<string, object?> profileEntitiesDict = new();
+      for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
       {
-        ["type"] = entity.EntityType.ToString(),
-        ["startStation"] = entity.StartStation,
-        ["startElevation"] = entity.StartElevation,
-        ["endStation"] = entity.EndStation,
-        ["endElevation"] = entity.EndElevation,
-      };
+        CDB.ProfileEntity entity = entities[entityIndex];
+        Dictionary<string, object?> entityProperties = new()
+        {
+          ["type"] = entity.EntityType.ToString(),
+          ["startStation"] = entity.StartStation,
+          ["startElevation"] = entity.StartElevation,
+          ["endStation"] = entity.EndStation,
+          ["endElevation"] = entity.EndElevation,
+        };
 
-      switch (entity)
-      {
-        case CDB.ProfileTangent tangent:
-          entityProperties["grade"] = tangent.Grade;
-          break;
-        case CDB.ProfileParabolaSymmetric curve:
-          entityProperties["curveType"] = curve.CurveType.ToString();
-          entityProperties["length"] = curve.Length;
-          entityProperties["gradeIn"] = curve.GradeIn;
-          entityProperties["gradeOut"] = curve.GradeOut;
-          break;
-        case CDB.ProfileParabolaAsymmetric curve:
-          entityProperties["curveType"] = curve.CurveType.ToString();
-          entityProperties["gradeIn"] = curve.GradeIn;
-          entityProperties["gradeOut"] = curve.GradeOut;
-          entityProperties["length"] = curve.Length;
-          entityProperties["length1"] = curve.AsymmetricLength1;
-          entityProperties["length2"] = curve.AsymmetricLength2;
-          break;
-        case CDB.ProfileCircular curve:
-          entityProperties["curveType"] = curve.CurveType.ToString();
-          entityProperties["length"] = curve.Length;
-          entityProperties["gradeIn"] = curve.GradeIn;
-          entityProperties["gradeOut"] = curve.GradeOut;
-          entityProperties["radius"] = curve.Radius;
-          break;
-        // unknown entity types keep the generic fields: extra properties must never fail the profile's conversion
-        default:
-          break;
+        switch (entity)
+        {
+          case CDB.ProfileTangent tangent:
+            entityProperties["grade"] = tangent.Grade;
+            break;
+          case CDB.ProfileParabolaSymmetric curve:
+            AddProfileCurveProperties(
+              entityProperties,
+              curve.CurveType.ToString(),
+              curve.Length,
+              curve.GradeIn,
+              curve.GradeOut,
+              curve.PVIStation,
+              curve.PVIElevation
+            );
+            break;
+          case CDB.ProfileParabolaAsymmetric curve:
+            AddProfileCurveProperties(
+              entityProperties,
+              curve.CurveType.ToString(),
+              curve.Length,
+              curve.GradeIn,
+              curve.GradeOut,
+              curve.PVIStation,
+              curve.PVIElevation
+            );
+            entityProperties["asymmetricLength1"] = curve.AsymmetricLength1;
+            entityProperties["asymmetricLength2"] = curve.AsymmetricLength2;
+            break;
+          case CDB.ProfileCircular curve:
+            AddProfileCurveProperties(
+              entityProperties,
+              curve.CurveType.ToString(),
+              curve.Length,
+              curve.GradeIn,
+              curve.GradeOut,
+              curve.PVIStation,
+              curve.PVIElevation
+            );
+            entityProperties["radius"] = curve.Radius;
+            break;
+        }
+
+        profileEntitiesDict[entityIndex.ToString()] = entityProperties;
       }
-
-      profileEntitiesDict[entityIndex.ToString()] = entityProperties;
+      AddDictionaryToDictionary(profileEntitiesDict, properties, PROFILE_ENTITIES_PROP);
     }
-    AddDictionaryToDictionary(profileEntitiesDict, properties, "Profile Entities");
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Failed to extract profile entities");
+    }
 
     return properties;
+  }
+
+  private static void AddProfileCurveProperties(
+    Dictionary<string, object?> properties,
+    string curveType,
+    double length,
+    double gradeIn,
+    double gradeOut,
+    double pviStation,
+    double pviElevation
+  )
+  {
+    properties["curveType"] = curveType;
+    properties["length"] = length;
+    properties["gradeIn"] = gradeIn;
+    properties["gradeOut"] = gradeOut;
+    properties["pviStation"] = pviStation;
+    properties["pviElevation"] = pviElevation;
   }
 
   // Stock (.NET catalog) subassemblies hand back the UNRESOLVED string-resource id of the label as DisplayName
