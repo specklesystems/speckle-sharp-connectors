@@ -91,49 +91,27 @@ public class Plant3dDataExtractor
     PPDL.DataLinksManager dataLinksManager,
     ADB.Entity entity,
     int rowId,
-    Dictionary<string, object?> result
+    Dictionary<string, object?> plant3dSection
   )
   {
     var classHierarchy = _classHierarchyResolver.Resolve(dataLinksManager, entity.ObjectId);
     var hasGroup = _lineGroupResolver.TryGetGroupInfo(dataLinksManager, entity, rowId, out var groupInfo);
 
-    if (classHierarchy is null && (!hasGroup || groupInfo is null))
+    if (classHierarchy is null && !hasGroup)
     {
       return;
     }
 
-    var properties = new Dictionary<string, object>();
-    result["Data Manager"] = properties;
+    var dataManagerSection = Plant3dDataManagerProperties.CreateDataManagerSection(plant3dSection);
 
     if (classHierarchy is not null)
     {
-      properties["Category"] = classHierarchy.Category;
-      for (int i = 0; i < classHierarchy.Levels?.Count; i++)
-      {
-        properties[$"Level {i + 1}"] = classHierarchy.Levels[i];
-      }
+      Plant3dDataManagerProperties.WriteCategory(dataManagerSection, classHierarchy.Category, classHierarchy.Levels);
     }
 
     if (groupInfo is not null)
     {
-      properties["Group Id"] = groupInfo.GroupId;
-      properties["Group Type"] = groupInfo.GroupType;
-      properties["Line Number"] = groupInfo.LineNumber;
-
-      if (groupInfo.Tag is not null)
-      {
-        properties["Group Tag"] = groupInfo.Tag;
-      }
-
-      if (groupInfo.NominalSize is not null)
-      {
-        properties["Group Nominal Size"] = groupInfo.NominalSize;
-      }
-
-      if (groupInfo.NominalSpec is not null)
-      {
-        properties["Group Nominal Spec"] = groupInfo.NominalSpec;
-      }
+      Plant3dDataManagerProperties.WriteLineGroup(dataManagerSection, groupInfo);
     }
   }
 }

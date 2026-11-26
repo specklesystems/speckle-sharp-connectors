@@ -70,7 +70,7 @@ public class Plant3dRootToSpeckleConverter(
         // Merge Plant3D data under "P&ID" key
         if (dataProperties.Count > 0)
         {
-          dataObject.properties["P&ID"] = dataProperties;
+          dataObject.properties[ToSpeckle.Plant3dDataManagerProperties.PID_KEY] = dataProperties;
         }
       }
       else
@@ -81,7 +81,7 @@ public class Plant3dRootToSpeckleConverter(
         }
         if (dataProperties.Count > 0)
         {
-          result["Plant3D Data"] = dataProperties;
+          result[ToSpeckle.Plant3dDataManagerProperties.PLANT3D_DATA_KEY] = dataProperties;
         }
       }
     }

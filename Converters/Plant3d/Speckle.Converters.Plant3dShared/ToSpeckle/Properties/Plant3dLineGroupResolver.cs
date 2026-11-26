@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.ProcessPower.DataObjects;
 using Autodesk.ProcessPower.PnIDObjects;
 using Autodesk.ProcessPower.ProjectManager;
@@ -37,7 +38,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
   private const string NOMINAL_SPEC_KEY = "NominalSpec";
 
   // Many members share a group; cache per scope to avoid repeated group row/property reads.
-  private readonly Dictionary<int, LineGroupInfo?> _groupCache = new();
+  private readonly Dictionary<int, Plant3dLineGroup?> _groupCache = [];
 
   private static DocType GetDocumentType() =>
     Enum.TryParse<DocType>(PnPProjectUtils.GetActiveDocumentType(), true, out var docType) ? docType : DocType.Other;
@@ -59,7 +60,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     PPDL.DataLinksManager dataLinksManager,
     int rowId,
     PnpGroupConfig config,
-    out LineGroupInfo? groupInfo
+    [NotNullWhen(true)] out Plant3dLineGroup? groupInfo
   )
   {
     groupInfo = null;
@@ -82,7 +83,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     return groupInfo is not null;
   }
 
-  private LineGroupInfo? ReadGroupInfo(PPDL.DataLinksManager dataLinksManager, int groupId, PnpGroupConfig config)
+  private Plant3dLineGroup? ReadGroupInfo(PPDL.DataLinksManager dataLinksManager, int groupId, PnpGroupConfig config)
   {
     var database = dataLinksManager.GetPnPDatabase();
     var groupRow = database.GetRow(groupId);
@@ -107,9 +108,9 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
       }
     }
 
-    return new LineGroupInfo(
-      config.GroupType,
+    return new Plant3dLineGroup(
       groupId,
+      config.GroupType,
       lineNumber,
       NullIfEmpty(groupProperties.GetValueOrDefault(TAG_KEY)),
       NullIfEmpty(groupProperties.GetValueOrDefault(NOMINAL_SIZE_KEY)),
@@ -127,7 +128,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     PPDL.DataLinksManager dataLinksManager,
     ADB.Entity entity,
     int rowId,
-    out LineGroupInfo? groupInfo
+    [NotNullWhen(true)] out Plant3dLineGroup? groupInfo
   )
   {
     groupInfo = null;
@@ -160,12 +161,3 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     return false;
   }
 }
-
-public record LineGroupInfo(
-  string GroupType,
-  int GroupId,
-  string LineNumber,
-  string? Tag,
-  string? NominalSize,
-  string? NominalSpec
-);
