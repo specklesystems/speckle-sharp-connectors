@@ -10,24 +10,55 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<CDB.TinSurface, SOG.Mesh> _tinSurfaceConverter;
   private readonly ITypedConverter<CDB.GridSurface, SOG.Mesh> _gridSurfaceConverter;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _pointCollectionConverter;
+  private readonly ITypedConverter<ADB.Curve, ICurve> _curveConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
     ITypedConverter<CDB.TinSurface, SOG.Mesh> tinSurfaceConverter,
     ITypedConverter<CDB.GridSurface, SOG.Mesh> gridSurfaceConverter,
-    ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter
+    ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter,
+    ITypedConverter<ADB.Curve, ICurve> curveConverter
   )
   {
     _solidConverter = solidConverter;
     _tinSurfaceConverter = tinSurfaceConverter;
     _gridSurfaceConverter = gridSurfaceConverter;
     _pointCollectionConverter = pointCollectionConverter;
+    _curveConverter = curveConverter;
   }
 
   public IEnumerable<Base> GetDisplayValue(CDB.Entity entity)
   {
     switch (entity)
     {
+      case CDB.SectionView sectionView:
+        // Explode into transient objects only. The drawing's view and its annotations stay intact.
+        foreach (var curve in SectionViewCurves(sectionView))
+        {
+          yield return curve;
+        }
+        break;
+      case CDB.Profile profile:
+        var profilePoints = CivilLinearGeometry.ProfilePoints(profile);
+        if (profilePoints.Length > 1)
+        {
+          yield return _pointCollectionConverter.Convert(new AG.Point3dCollection(profilePoints));
+        }
+        break;
+
+      case CDB.Section:
+        // Native probes show SectionPoints.Location is (offset, elevation, 0), not WCS.
+        // Reject this conversion until a sample-line-aware transform is validated.
+        throw new NotSupportedException("Section display export is quarantined: offset/elevation must be transformed along the sample line. Corridor sections require a separate geometry extractor.");
+
+      case CDB.SampleLine sampleLine:
+        var vertices = sampleLine.Vertices.Cast<CDB.SampleLineVertex>().Select(v => v.Location).ToArray();
+        if (vertices.Length > 1)
+        {
+          yield return _pointCollectionConverter.Convert(new AG.Point3dCollection(vertices));
+        }
+        break;
+
       // POC: we are sending featurelines as approximated polylines because they are 2.5d curves:
       // they can have line or arc segments, and each vertex can have different elevations.
       // there is no native type that can capture the full 3d representation of these curves.
@@ -75,6 +106,39 @@ public sealed class DisplayValueExtractor
 
       default:
         yield break;
+    }
+  }
+
+  private IEnumerable<Base> SectionViewCurves(ADB.Entity entity)
+  {
+    using var exploded = new ADB.DBObjectCollection();
+    entity.Explode(exploded);
+    try
+    {
+      foreach (ADB.DBObject item in exploded)
+      {
+        if (item is ADB.Curve curve)
+        {
+          foreach (var display in ProcessICurvesForDisplay(new List<ICurve> { _curveConverter.Convert(curve) }))
+          {
+            yield return display;
+          }
+        }
+        else if (item is ADB.BlockReference block)
+        {
+          foreach (var display in SectionViewCurves(block))
+          {
+            yield return display;
+          }
+        }
+      }
+    }
+    finally
+    {
+      foreach (ADB.DBObject item in exploded)
+      {
+        item.Dispose();
+      }
     }
   }
 

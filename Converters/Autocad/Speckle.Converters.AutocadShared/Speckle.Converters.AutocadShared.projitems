@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)AutocadConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AutocadConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AutocadRootToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ReceivedCivilDefinitionStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AutocadConversionContextStack.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AutocadToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\EntityExtensions.cs" />

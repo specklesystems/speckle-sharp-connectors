@@ -30,6 +30,14 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   {
     // first get all class properties, which will be at the root level of props dictionary
     Dictionary<string, object?> properties = _classPropertiesExtractor.GetClassProperties(entity);
+    if (Speckle.Converters.AutocadShared.ToSpeckle.ReceivedCivilDefinitionStore.Read(entity) is { } received)
+    {
+      properties["receivedCivilDefinition"] = received;
+    }
+    if (entity is CDB.Entity civilEntity && Helpers.CivilDefinitionExtractor.Extract(civilEntity) is { } definition)
+    {
+      properties["civilDefinition"] = definition;
+    }
 
     // add part data, property sets, and extension dictionaries to the properties dict
     AddDictionaryToPropertyDictionary(_partDataExtractor.GetPartData(entity), "Part Data", properties);

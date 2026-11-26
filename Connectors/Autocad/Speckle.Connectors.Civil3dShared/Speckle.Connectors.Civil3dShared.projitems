@@ -9,6 +9,7 @@
     <Import_RootNamespace>Speckle.Connectors.Civil3dShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)CivilValidationCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\Civil3dParametersBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\Civil3dReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\Civil3dConnectorModule.cs" />
