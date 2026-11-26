@@ -4,15 +4,5 @@ updates:
     directory: "/" # search in .github/workflows under root `/`
     schedule:
       interval: "weekly" # check for action update every week
-    # Pin updates of the shared workflows in specklesystems/.github, one pull
-    # request per new tag there, with no cooldown. Another repo of the org takes
-    # a new pin first; this repo merges its update after the changed workflows
-    # worked there.
-    groups:
-      dot-github:
-        patterns:
-          - "specklesystems/.github/*"
     cooldown:
       default-days: 7
-      exclude:
-        - "specklesystems/.github/*"
