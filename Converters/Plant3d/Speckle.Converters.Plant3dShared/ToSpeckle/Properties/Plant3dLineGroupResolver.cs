@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.ProcessPower.DataObjects;
 using Autodesk.ProcessPower.PnIDObjects;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,13 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     "Number"
   );
 
+  private const string TAG_KEY = "Tag";
+  private const string NOMINAL_SIZE_KEY = "NominalSize";
+  private const string NOMINAL_SPEC_KEY = "NominalSpec";
+
+  // Many members share a group; cache per scope to avoid repeated group row/property reads.
+  private readonly Dictionary<int, Plant3dLineGroup?> _groupCache = [];
+
   private object? GetRowValue(PnPRow row, string column)
   {
     if (row.Table.Columns.Contains(column))
@@ -41,7 +49,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     PPDL.DataLinksManager dataLinksManager,
     int rowId,
     PnpGroupConfig config,
-    out LineGroupInfo? groupInfo
+    [NotNullWhen(true)] out Plant3dLineGroup? groupInfo
   )
   {
     groupInfo = null;
@@ -54,18 +62,52 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
       return false;
     }
 
+    if (_groupCache.TryGetValue(groupId, out groupInfo))
+    {
+      return groupInfo is not null;
+    }
+
+    groupInfo = ReadGroupInfo(dataLinksManager, groupId, config);
+    _groupCache[groupId] = groupInfo;
+    return groupInfo is not null;
+  }
+
+  private Plant3dLineGroup? ReadGroupInfo(PPDL.DataLinksManager dataLinksManager, int groupId, PnpGroupConfig config)
+  {
     var database = dataLinksManager.GetPnPDatabase();
     var groupRow = database.GetRow(groupId);
     if (groupRow is null)
     {
       logger.LogDebug("Failed to find group row for group ID {GroupId}", groupId);
-      return false;
+      return null;
     }
 
     string lineNumber = GetRowValue(groupRow, config.LineNumber)?.ToString() ?? "";
-    groupInfo = new LineGroupInfo(config.GroupType, groupId, lineNumber);
-    return true;
+
+    var groupProperties = new Dictionary<string, string?>(StringComparer.Ordinal);
+    var allProps = dataLinksManager.GetAllProperties(groupId, true);
+    if (allProps is not null)
+    {
+      foreach (var kvp in allProps)
+      {
+        if (kvp.Key is not null)
+        {
+          groupProperties[kvp.Key] = kvp.Value?.ToString();
+        }
+      }
+    }
+
+    return new Plant3dLineGroup(
+      groupId,
+      config.GroupType,
+      lineNumber,
+      NullIfEmpty(groupProperties.GetValueOrDefault(TAG_KEY)),
+      NullIfEmpty(groupProperties.GetValueOrDefault(NOMINAL_SIZE_KEY)),
+      NullIfEmpty(groupProperties.GetValueOrDefault(NOMINAL_SPEC_KEY))
+    );
   }
+
+  private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
   /// <summary>
   /// Gets the group ID, line number and type for objects that participate in a line group.
@@ -76,7 +118,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     Plant3dDrawingType drawingType,
     ADB.Entity entity,
     int rowId,
-    out LineGroupInfo? groupInfo
+    [NotNullWhen(true)] out Plant3dLineGroup? groupInfo
   )
   {
     groupInfo = null;
@@ -109,5 +151,3 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     return false;
   }
 }
-
-public record LineGroupInfo(string GroupType, int GroupId, string LineNumber);
