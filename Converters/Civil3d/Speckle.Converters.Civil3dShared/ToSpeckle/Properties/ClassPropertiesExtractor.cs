@@ -558,6 +558,8 @@ public class ClassPropertiesExtractor
       AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
     }
 
+    // Layout (FG) profiles only (#1646): surface (EG) profiles can carry thousands of sampled tangents.
+    // Offset, curb-return and superimposed profiles are skipped as well.
     if (profileType != CDB.ProfileType.FG)
     {
       return properties;
@@ -632,7 +634,7 @@ public class ClassPropertiesExtractor
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogWarning(ex, "Failed to extract profile entities");
+      _logger.LogWarning(ex, "Failed to extract profile entities on profile {HandleValue}", profile.Handle.Value);
     }
 
     return properties;
