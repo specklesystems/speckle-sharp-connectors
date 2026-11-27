@@ -1,7 +1,7 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.ProcessPower.DataObjects;
 using Autodesk.ProcessPower.PnIDObjects;
-using Autodesk.ProcessPower.ProjectManager;
 using Microsoft.Extensions.Logging;
 using Speckle.Sdk;
 
@@ -9,13 +9,6 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 
 public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> logger)
 {
-  private enum DocType
-  {
-    PnID,
-    Piping,
-    Other,
-  };
-
   private sealed record PnpGroupConfig(string RelationshipTable, string GroupType, string PartType, string LineNumber);
 
   private readonly PnpGroupConfig _pipingConfig = new("P3dLineGroupPartRelationship", "LineGroup", "Part", "Number");
@@ -32,8 +25,12 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     "Number"
   );
 
-  private static DocType GetDocumentType() =>
-    Enum.TryParse<DocType>(PnPProjectUtils.GetActiveDocumentType(), true, out var docType) ? docType : DocType.Other;
+  private const string TAG_KEY = "Tag";
+  private const string NOMINAL_SIZE_KEY = "NominalSize";
+  private const string NOMINAL_SPEC_KEY = "NominalSpec";
+
+  // Many members share a group; cache per scope to avoid repeated group row/property reads.
+  private readonly Dictionary<int, Plant3dLineGroup?> _groupCache = [];
 
   private object? GetRowValue(PnPRow row, string column)
   {
@@ -52,7 +49,7 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     PPDL.DataLinksManager dataLinksManager,
     int rowId,
     PnpGroupConfig config,
-    out LineGroupInfo? groupInfo
+    [NotNullWhen(true)] out Plant3dLineGroup? groupInfo
   )
   {
     groupInfo = null;
@@ -65,18 +62,52 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
       return false;
     }
 
+    if (_groupCache.TryGetValue(groupId, out groupInfo))
+    {
+      return groupInfo is not null;
+    }
+
+    groupInfo = ReadGroupInfo(dataLinksManager, groupId, config);
+    _groupCache[groupId] = groupInfo;
+    return groupInfo is not null;
+  }
+
+  private Plant3dLineGroup? ReadGroupInfo(PPDL.DataLinksManager dataLinksManager, int groupId, PnpGroupConfig config)
+  {
     var database = dataLinksManager.GetPnPDatabase();
     var groupRow = database.GetRow(groupId);
     if (groupRow is null)
     {
       logger.LogDebug("Failed to find group row for group ID {GroupId}", groupId);
-      return false;
+      return null;
     }
 
     string lineNumber = GetRowValue(groupRow, config.LineNumber)?.ToString() ?? "";
-    groupInfo = new LineGroupInfo(config.GroupType, groupId, lineNumber);
-    return true;
+
+    var groupProperties = new Dictionary<string, string?>(StringComparer.Ordinal);
+    var allProps = dataLinksManager.GetAllProperties(groupId, true);
+    if (allProps is not null)
+    {
+      foreach (var kvp in allProps)
+      {
+        if (kvp.Key is not null)
+        {
+          groupProperties[kvp.Key] = kvp.Value?.ToString();
+        }
+      }
+    }
+
+    return new Plant3dLineGroup(
+      groupId,
+      config.GroupType,
+      lineNumber,
+      NullIfEmpty(groupProperties.GetValueOrDefault(TAG_KEY)),
+      NullIfEmpty(groupProperties.GetValueOrDefault(NOMINAL_SIZE_KEY)),
+      NullIfEmpty(groupProperties.GetValueOrDefault(NOMINAL_SPEC_KEY))
+    );
   }
+
+  private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
   /// <summary>
   /// Gets the group ID, line number and type for objects that participate in a line group.
@@ -84,9 +115,10 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
   /// </summary>
   public bool TryGetGroupInfo(
     PPDL.DataLinksManager dataLinksManager,
+    Plant3dDrawingType drawingType,
     ADB.Entity entity,
     int rowId,
-    out LineGroupInfo? groupInfo
+    [NotNullWhen(true)] out Plant3dLineGroup? groupInfo
   )
   {
     groupInfo = null;
@@ -98,16 +130,16 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
 
     try
     {
-      return GetDocumentType() switch
+      return drawingType switch
       {
         // Groups are only supported for LineSegments in PnID, but for Piping, any entity can be part of a group.
-        DocType.PnID => entity is LineSegment
+        Plant3dDrawingType.PnId => entity is LineSegment
           && (
             TryGetGroupInfo(dataLinksManager, rowId, _pnidPipeConfig, out groupInfo)
             || TryGetGroupInfo(dataLinksManager, rowId, _pnidSignalConfig, out groupInfo)
           ),
-        DocType.Piping => TryGetGroupInfo(dataLinksManager, rowId, _pipingConfig, out groupInfo),
-        DocType.Other => false,
+        Plant3dDrawingType.Piping => TryGetGroupInfo(dataLinksManager, rowId, _pipingConfig, out groupInfo),
+        Plant3dDrawingType.Other => false,
         _ => throw new UnreachableException(),
       };
     }
@@ -119,5 +151,3 @@ public sealed class Plant3dLineGroupResolver(ILogger<Plant3dLineGroupResolver> l
     return false;
   }
 }
-
-public record LineGroupInfo(string GroupType, int GroupId, string LineNumber);

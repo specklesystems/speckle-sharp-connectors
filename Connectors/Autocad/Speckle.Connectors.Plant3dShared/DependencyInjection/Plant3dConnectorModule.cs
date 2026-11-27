@@ -19,6 +19,7 @@ public static class Plant3dConnectorModule
     // add send
     serviceCollection.LoadSend();
     serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Plant3dRootObjectBuilder>();
+    serviceCollection.AddScoped<IArtifactRootObjectBuilder<AutocadRootObject>, Plant3dArtifactRootObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Plant3dSendBinding>();
 
     // automatically detects the Class:IClass interface pattern to register all generated interfaces
